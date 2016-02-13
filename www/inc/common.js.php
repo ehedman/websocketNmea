@@ -3,6 +3,18 @@ var retry = 0;
 var valid;
 var port = 443;
 
+if (typeof debug == 'undefined') {
+    debug = false;
+}
+
+if (typeof update == 'undefined') {
+    update = 2000;
+}
+
+if (typeof do_update == 'undefined') {
+    function do_update() { return 0; }
+}
+
 var Cmd = {
     SpeedOverGround     : "100",
     SpeedThroughWater   : "101",
@@ -46,7 +58,10 @@ function init()
         };
 
         socket.onmessage = function (msg) {
-            var data = pako.inflate(msg.data);
+            var data;
+            if (typeof pako == 'undefined')
+                return;
+            data=pako.inflate(msg.data);
             var strData = String.fromCharCode.apply(null, new Uint16Array(data));
             var n  = strData.lastIndexOf("-");
             valid  = strData.substr(n+1, 3);
