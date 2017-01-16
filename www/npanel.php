@@ -22,7 +22,7 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        <title>Glass Cockpit for leisure boats</title>
+        <title>Glass Cockpit at <?php echo gethostname(); ?></title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">     
         <meta name="description" content="hedmanshome.se Marine GlassCockpit">
         <meta name="author" content="Erland Hedman">
