@@ -1,0 +1,2 @@
+sudo addgroup $1
+sudo adduser --system --disabled-login --disabled-password --no-create-home --home $2 --ingroup $1 $1

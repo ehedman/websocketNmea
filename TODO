@@ -1,0 +1,3 @@
+Limitations as of Februari 2017:
+ The Sumlog settings in the configuration page are not yet implemented.
+ The UDP protocols are not yet fully validated against the multiplexer.
