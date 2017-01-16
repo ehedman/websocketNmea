@@ -19,12 +19,21 @@
 
    //if (count($_POST)) {echo "<pre>"; print_r($_POST); echo "</pre>"; exit;}
 
-    try {
-        $DBH = new PDO('sqlite:'.NAVIDBPATH);
-        $DBH->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-	    $sql = "SELECT * from netif WHERE Id=1";
-        $DBH->exec($sql);
+    if (file_exists (NAVIDBPATH)) {
+        if (count($_POST) && ! is_writable(NAVIDBPATH)) {
+            echo "<pre>The configuration database ".NAVIDBPATH." is not writable!. Giving up save.</pre>";
+            exit;
+        }
+    } else {
+        echo "<pre>The configuration database ".NAVIDBPATH." does not exist. Use wsocknmea to create one.</pre>";
+        exit;
+    }
 
+  try {
+    $DBH = new PDO('sqlite:'.NAVIDBPATH);
+    $DBH->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $sql = "SELECT * from netif WHERE Id=1"; // Force early catch if corrupt
+    $DBH->exec($sql);
 
     $STTYS=array();
     $SNETIFS=array();
@@ -189,9 +198,12 @@
         kplex_config("config-action");
     }
 
-    } catch(PDOException $e) {
-        echo $e->getMessage(); exit;
-    }
+  } catch(PDOException $e) {
+        echo "<pre>The configuration database ".NAVIDBPATH." appears corrupt: ";
+        echo $e->getMessage();
+        echo  ". Delete it and use wsocknmea to create new one.</pre>";
+        exit;
+  }
 
 
 function kplex_config($args)
