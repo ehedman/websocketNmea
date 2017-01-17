@@ -10,7 +10,7 @@
 html>body
 {
     font-family: Tahoma, Helvetica, Geneva, Arial, sans-serif;
-	font-size: 0.9em;
+    font-size: 0.9em;
     margin: 0 0 0 0;
     width: 100%;
     min-width: 256px;
@@ -58,7 +58,7 @@ html>body
     left: 30%;
     font-weight: bold;
     font-size: 5.2em;
-	letter-spacing: 2px;
+    letter-spacing: 2px;
     text-align: center;
     width: 40%;
     z-index: 10;
@@ -76,7 +76,7 @@ html>body
        
     <script type="text/javascript">
         
-function resize()	// Set font relative to window width.
+function resize()    // Set font relative to window width.
 {
     var f_Factor=1;
     var W = window.innerWidth || document.body.clientWidth;
@@ -84,8 +84,8 @@ function resize()	// Set font relative to window width.
     W=W<256?256:W;
     W=W>512?512:W;
     
-	P =  Math.floor (f_Factor*(2.5*W/96));
-	document.body.style.fontSize=P + 'px';
+    P =  Math.floor (f_Factor*(2.5*W/96));
+    document.body.style.fontSize=P + 'px';
 }
 
 $(document).ready(function() {
@@ -94,7 +94,7 @@ $(document).ready(function() {
         $("#LEDpanel").css("top", "57%"); 
     } 
     window.onresize=resize;
-	resize();
+    resize();
 });
 
 

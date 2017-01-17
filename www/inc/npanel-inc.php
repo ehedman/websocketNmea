@@ -12,7 +12,7 @@
      
     putenv('PATH='.getenv('PATH').':'.DOCROOT.'/inc:/usr/local/bin'); 
     
-	if (count($_GET)) $NIGHT = $_GET['Night']=='y'? 1:0; else  $NIGHT = 0;
+    if (count($_GET)) $NIGHT = $_GET['Night']=='y'? 1:0; else  $NIGHT = 0;
     
     $PMESSAGE="";
     $DBH = NULL;
@@ -46,7 +46,7 @@
         $sql = "UPDATE `depth` SET `vwrn`='".$_POST['depth_vwrn']."', `tdb`='".$_POST['depth_transp']."' WHERE `id`=1";
         $DBH->exec($sql);
 
-		$sql = "UPDATE `sumlog` SET `display`='".$_POST['smlog_disp']."', `cal`='".$_POST['smlog_calb']."' WHERE `id`=1";
+        $sql = "UPDATE `sumlog` SET `display`='".$_POST['smlog_disp']."', `cal`='".$_POST['smlog_calb']."' WHERE `id`=1";
         $DBH->exec($sql);
 
         $sql="UPDATE `file` SET `fname`='nofile', `rate`='1', `use`='off' WHERE `Id`=1";
@@ -119,7 +119,7 @@
         $depth_vwrn=$row['vwrn'];
         $depth_transp=$row['tdb'];
 
-		$stmt = $DBH->prepare("SELECT display, cal FROM sumlog LIMIT 1"); 
+        $stmt = $DBH->prepare("SELECT display, cal FROM sumlog LIMIT 1"); 
         $stmt->execute(); 
         $row = $stmt->fetch();
         $smlog_disp=$row['display'];

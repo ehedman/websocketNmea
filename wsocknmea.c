@@ -185,7 +185,7 @@ void printlog(char *format, ...)
     va_list args;
     char buf[200];
     static char oldbuf[200];
-	int ern = errno;
+    int ern = errno;
 
     va_start (args, format);         // Initialize the argument list.
 
@@ -204,7 +204,7 @@ void printlog(char *format, ...)
     }
 
     va_end(args);
-	errno = ern;
+    errno = ern;
 }
 
 static void do_sensors(time_t ts, collected_nmea *cn)
@@ -556,7 +556,7 @@ int  configure(int kpf)
                     sqlite3_prepare_v2(conn, "CREATE TABLE depth (Id INTEGER PRIMARY KEY, vwrn INTEGER, tdb DECIMAL)", -1, &res, &tail);
                     sqlite3_step(res);
 
-					sqlite3_prepare_v2(conn, "CREATE TABLE sumlog (Id INTEGER PRIMARY KEY, display INTEGER, cal INTEGER)", -1, &res, &tail);
+                    sqlite3_prepare_v2(conn, "CREATE TABLE sumlog (Id INTEGER PRIMARY KEY, display INTEGER, cal INTEGER)", -1, &res, &tail);
                     sqlite3_step(res);
 
                     sqlite3_prepare_v2(conn, "CREATE TABLE netif (Id INTEGER PRIMARY KEY, device TEXT, port TEXT, addr TEXT, type TEXT, proto TEXT, use TEXT)", -1, &res, &tail);
@@ -571,7 +571,7 @@ int  configure(int kpf)
                     sqlite3_prepare_v2(conn, "INSERT INTO depth (vwrn,tdb) VALUES (4,1)", -1, &res, &tail);
                     sqlite3_step(res);
 
-					sqlite3_prepare_v2(conn, "INSERT INTO sumlog (display,cal) VALUES (1,2)", -1, &res, &tail);
+                    sqlite3_prepare_v2(conn, "INSERT INTO sumlog (display,cal) VALUES (1,2)", -1, &res, &tail);
                     sqlite3_step(res);
 
                     sqlite3_prepare_v2(conn, "INSERT INTO file (fname,rate,use) VALUES ('nofile',1,'off')", -1, &res, &tail);
@@ -1007,7 +1007,7 @@ void *t_fileFeed()
             fputs(buff, fdo);fflush(fdo);
         }
         if (feof(fdi)) rewind(fdi);
-	    nanosleep((struct timespec[]){{0, (1000000000L-1)/lineRate}}, NULL);
+            nanosleep((struct timespec[]){{0, (1000000000L-1)/lineRate}}, NULL);
     }
 
     fclose(fdi); fclose(fdo);
@@ -1100,19 +1100,18 @@ int main(int argc ,char **argv)
                 break;
             }
 
-
-	if (geteuid() != 0) {
+    if (geteuid() != 0) {
         fprintf(stderr, "Error: this program must start with root privileges\n");
         exit(EXIT_FAILURE);
     }
-	
-	if (strlen(recFile) && !kplex_fork) {
-            fprintf(stderr, "Error: incompatible options -n and -f\n");
-            exit(EXIT_FAILURE);
-        }
 
-	if (kplex_fork) {
-	    // Make sure to restart kplex in case of config change
+    if (strlen(recFile) && !kplex_fork) {
+        fprintf(stderr, "Error: incompatible options -n and -f\n");
+        exit(EXIT_FAILURE);
+    }
+
+    if (kplex_fork) {
+        // Make sure to restart kplex in case of config change
         FILE * cmd = popen("pidof kplex", "r");
         *txtbuf = '\0';
         if (fgets(txtbuf, 20, cmd) != NULL) {
@@ -1123,7 +1122,7 @@ int main(int argc ,char **argv)
             }
         }
         pclose(cmd);
-	}
+    }
 
     if (backGround) {
         fprintf(stderr, "%s daemonizing. Output redirected to syslog\n", argv[0]);
@@ -1205,7 +1204,8 @@ int main(int argc ,char **argv)
     sleep(3);
     memset(&cnmea, 0, sizeof(cnmea));
 
-    // Infinite main loop, to end this server, send signal INT(^c) or TERM
+    // Main loop, to end this server, send signal INT(^c) or TERM
+    // GUI commands WSREBOOT can break this loop requesting a restart.
     // Keep the collected_nmea struct up to date with collected data
 
     while(1) {

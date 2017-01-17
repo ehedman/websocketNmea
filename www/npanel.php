@@ -102,7 +102,7 @@ function do_poll()
 function new_panel()
 {
     var options='toolbar=0,status=0,menubar=0,scrollbars=0,location=0,directories=0,resizable=0,width=1280,height=840';
-	window.open("npanel.php",'_blank',options);
+    window.open("npanel.php",'_blank',options);
 }
 
 function full_screen() {
@@ -200,11 +200,11 @@ $(document).ready(function()
     instrument_indx = i+1;
     
     window.onresize=check_overlap;
-	check_overlap();
-	<?php echo count($_FILES)? 'document.getElementById("config").style.display = "block";':""; ?>
-	document.getElementById("msg").innerHTML="<?php echo $PMESSAGE ?>";
-	
-	init(); // wsClient
+    check_overlap();
+    <?php echo count($_FILES)? 'document.getElementById("config").style.display = "block";':""; ?>
+    document.getElementById("msg").innerHTML="<?php echo $PMESSAGE ?>";
+
+    init(); // wsClient
 });
 
 
