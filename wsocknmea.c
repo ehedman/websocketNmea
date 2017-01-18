@@ -537,7 +537,7 @@ int  configure(int kpf)
 
             switch (rval) {
                 case EACCES:
-                    printlog("Configuration database %s: ", strerror(errno));
+                    printlog("Configuration database %s: ", strerror(rval));
                     return 1;
                 case ENOENT:
                     printlog("Configuration database does not exist. A new empty database will be created");
@@ -589,7 +589,7 @@ int  configure(int kpf)
                     rval = sqlite3_finalize(res);
                     break;
                 default:
-                    printlog("Configuration database initialization failed. Try command line options");
+                    printlog("Configuration database initialization failed: %s. Try command line options", strerror(rval));
                     return 0;
             }
         } else {
