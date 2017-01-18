@@ -58,6 +58,12 @@
 #define GID 33
 #endif
 
+#ifdef REV
+#define SWREV REV
+#else
+#define SWREV __DATE__
+#endif
+
 #define MAX_TTYS    50  // No of serial devices to manage in the db
 #define MAX_NICS    6   // No of nics to manage in the db
 
@@ -1018,7 +1024,7 @@ void *t_fileFeed()
 
 void usage(char *prg)
 {
-    fprintf(stderr, "Usage: %s [ -a nmea-mux ip-address ] [ -p port ] [-w websocket port ]\n [ -s 1/2/3 ] [ -i nic ] [ -n don't fork kplex ] [ -b background ]\n [ -v (verbose) ] [ -f file ] [ -r rate ] [ -u UID ] [ -g GID ]\n", prg);
+    fprintf(stderr, "Usage: %s [ -a nmea-mux ip-address ] [ -p port ] [-w websocket port ]\n [ -s 1/2/3 ] [ -i nic ] [ -n don't fork kplex ] [ -b background ]\n [ -v version ] [ -f file ] [ -r rate ] [ -u UID ] [ -g GID ] [ -d debug ]\n", prg);
     fprintf(stderr, "Where -s 1=unicast, 2=multicast, 3=broadcast UDP sockets\n");
     fprintf(stderr, "Defaults from configuration database:\n");
     configure(0);
@@ -1050,7 +1056,7 @@ int main(int argc ,char **argv)
     recFile[0] = '\0';
     (void)unlink(WSREBOOT);
 
-    while ((c = getopt (argc, argv, "a:bf:hi:np:r:s:vw:")) != -1)
+    while ((c = getopt (argc, argv, "a:bdf:hi:np:r:s:vw:")) != -1)
         switch (c)
             {
             case 'a':
@@ -1058,6 +1064,9 @@ int main(int argc ,char **argv)
                 break;
             case 'b':
                 backGround = 1;
+                break;
+             case 'd':
+                debug = 1;
                 break;          
             case 'f':
                 (void)strcpy(recFile, optarg);
@@ -1085,7 +1094,8 @@ int main(int argc ,char **argv)
                     }
                 break;  
             case 'v':
-                debug = 1;
+                fprintf(stderr, "revision: %s\n", SWREV);
+                exit(EXIT_SUCCESS);
                 break;
             case 'w':
                 wsport = atoi(optarg);

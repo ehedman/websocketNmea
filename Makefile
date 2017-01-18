@@ -60,7 +60,15 @@ INCDIR=/usr/local/include
 CC=gcc
 ARCH=$(shell $(CC) -dumpmachine |  cut -d- -f1 | tr '[:lower:]' '[:upper:]')
 
-CFLAGS=-Wall -O2 -std=gnu99 -pedantic -DARCH=$(ARCH) -DUID=$(UID) -DGID=$(GID) -I$(INCDIR) -DNAVIDBPATH=\"$(NAVIDBPATH)\" -DKPCONFPATH=\"$(KPCONFPATH)\"
+GETC=".git/HEAD"
+
+ifeq ($(shell test -e $(GETC) && echo -n yes),yes)
+CFLAGS=-DREV=\"$(shell git branch -v | awk '{print $$2"-"$$3}')\"
+endif
+
+CFLAGS+= -Wall -O2 -std=gnu99 -pedantic
+CFLAGS+= -DARCH=$(ARCH) -DUID=$(UID) -DGID=$(GID) -I$(INCDIR)
+CFLAGS+= -DNAVIDBPATH=\"$(NAVIDBPATH)\" -DKPCONFPATH=\"$(KPCONFPATH)\"
 
 LDFLAGS=-L$(LIBDIR) -lwebsockets -lsqlite3 -lpthread -lrt -Wl,-rpath=$(LIBDIR)
 
