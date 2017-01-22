@@ -5,7 +5,7 @@
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
         <meta name="viewport" content="initial-scale=6.0, user-scalable=no">
         <script type="text/javascript" src="inc/jquery-2.1.1.min.js"></script>
-        <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&language=sv"></script>
+        <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&language=us"></script>
         <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&libraries=weather"></script>
         
         <style>
@@ -63,15 +63,15 @@ html>body
         <script>
         
 var ut = 0;
-
 var target = 0;
-var update = 1000;
-
+var update = 3000;
 var debug = false;
 var connection = true;
 var map;
-var marker;
-
+var aisupdate = 5;
+var amarkers = [];
+var gmarker;
+var amarker;
 
 function setWindowSize(){
    
@@ -92,44 +92,82 @@ $(document).ready(function()
 function do_update()
 {
     if (connection) {
-        send(Cmd.GoogleMapFeed);
+        if (--aisupdate <= 0) {
+            aisupdate = 5;
+            send(Cmd.GoogleAisFeed);
+        } else {
+            send(Cmd.GoogleMapFeed);
+        }
     } else {
         window.clearInterval(ut);
         reconnect();
     }
 
-    if (target == "Exp" || valid != Cmd.GoogleMapFeed) return;
-    
     window.clearInterval(ut);
-    
 
-    var val = JSON.parse(target);
-    
-    var lap = val.N == "S"? "-":"";
-    var lop = val.E == "W"? "-":"";
-
-    
-    var nmap = new google.maps.LatLng(lap+val.la, lop+val.lo);
-    
-    map.setCenter(nmap, 5);   
-    marker.setPosition(nmap);
-    map.setZoom(parseInt(val.zoom));
+    if (target == "Exp" ) {    
+        setInterval(function () {do_update();}, update);
+        return;
+    }
    
-    marker.setOptions({
-        icon: { 
-                path: google.maps.SymbolPath.FORWARD_OPEN_ARROW,
-                scale: 6,
-                rotation: round_number(val.A,0)   
-            }
-    });
+    if (valid == Cmd.GoogleMapFeed) {
+
+        var val = JSON.parse(target);
+        update = parseInt(val.updt)*1000;
+        var lap = val.N == "S"? "-":"";
+        var lop = val.E == "W"? "-":"";
+ 
+        var nmap = new google.maps.LatLng(lap+val.la, lop+val.lo);
+        map.setCenter(nmap, 5);       
+        map.setZoom(parseInt(val.zoom));
+        gmarker.setMap(null);
+        gmarker = new google.maps.Marker({
+            position: nmap,
+            map: map,
+            icon: { 
+                    path: google.maps.SymbolPath.FORWARD_OPEN_ARROW,
+                    scale: 6,
+                    rotation: round_number(val.A,0)   
+                }
+        });
+
+    } else if (valid == Cmd.GoogleAisFeed) {
+
+
+        var val = JSON.parse(target);
+
+        for(i=0; i<amarkers.length; i++)
+            amarkers[i].setMap(null);
+
+        amarkers = [];
+  
+        for (var i in val) { 
+            var lap = val[i].N == "S"? "-":"";
+            var lop = val[i].E == "W"? "-":"";
+            var nmap = new google.maps.LatLng(lap+val[i].la, lop+val[i].lo);   
+            amarker = new google.maps.Marker({
+                position: nmap,
+                map: map,
+                icon : {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        fillColor: "red",
+                        fillOpacity: 0.5,
+                        scale: 2,
+                        strokeColor:"red",
+                        strokeWeight: 1,
+                       }
+                });
+
+            amarkers.push(amarker);
+        }
+    }
     
-    ut = setInterval(function () {do_update();}, parseInt(val.updt)*1000);
+    ut = setInterval(function () {do_update();}, update);
 }
 
 function initialize() {
     
     var myLatlng = new google.maps.LatLng("51.47879", "-0.010677"); // Greenwich
-    //var myLatlng = new google.maps.LatLng("59.4605333", "018.277273"); // Svinninge
 
     var mapOptions = {
         zoom: 12,
@@ -140,7 +178,7 @@ function initialize() {
   
     map = new google.maps.Map(document.getElementById('googlemaps'), mapOptions);
 
-    marker = new google.maps.Marker({
+    gmarker = new google.maps.Marker({
         position: myLatlng,
         map: map,
         icon: {

@@ -22,11 +22,12 @@ PKGS += libsqlite3-dev sqlite3
 PKGS += libssl-dev
 
 # Source files to be compiled
-SRCS = wsocknmea.c adc-sensors.c
+SRCS = wsocknmea.c adc-sensors.c ais.c
+HDRS = wsocknmea.h
 BIN = wsocknmea
 
 # Where to install web pages
-WWWTOP = /var/www
+WWWTOP = /var/www/navi
 
 # The web-server's runtime user and group belongings
 WO = www-data
@@ -66,15 +67,17 @@ ifeq ($(shell test -e $(GETC) && echo -n yes),yes)
 CFLAGS=-DREV=\"$(shell git branch -v | awk '{print $$2"-"$$3}')\"
 endif
 
-CFLAGS+= -Wall -O2 -std=gnu99 -pedantic
+CFLAGS+= -DAIS
+
+CFLAGS+= -Wall -g -std=gnu99 -pedantic
 CFLAGS+= -DARCH=$(ARCH) -DUID=$(UID) -DGID=$(GID) -I$(INCDIR)
 CFLAGS+= -DNAVIDBPATH=\"$(NAVIDBPATH)\" -DKPCONFPATH=\"$(KPCONFPATH)\"
 
-LDFLAGS=-L$(LIBDIR) -lwebsockets -lsqlite3 -lpthread -lrt -Wl,-rpath=$(LIBDIR)
+LDFLAGS=-L$(LIBDIR) -lwebsockets -lsqlite3 -lais -lpthread -lrt -Wl,-rpath=$(LIBDIR)
 
 all: $(BIN)
 
-$(BIN):	$(SRCS)
+$(BIN):	$(SRCS) $(HDRS)
 	$(CC) $(SRCS) $(CFLAGS) $(LDFLAGS) -o $(BIN)
 
 clean:

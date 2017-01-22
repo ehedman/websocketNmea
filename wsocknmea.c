@@ -36,6 +36,14 @@
 #include <sys/mman.h>
 #include <libwebsockets.h>
 #include <syslog.h>
+#include <math.h>
+#include "wsocknmea.h"
+#ifdef AIS
+#include "portable.h"
+#include "nmea.h"
+#include "sixbit.h"
+#include "vdm_parse.h"
+#endif
 
 // Configuration
 #define NMEAPORT 10110          // Port 10110 is designated by IANA for "NMEA-0183 Navigational Data"
@@ -64,17 +72,18 @@
 #define SWREV __DATE__
 #endif
 
-#define MAX_TTYS    50  // No of serial devices to manage in the db
-#define MAX_NICS    6   // No of nics to manage in the db
+#define MAX_LWSZ    4000    // Max payload size for websockets data (~ 55 AIS ships)    
+#define MAX_TTYS    50      // No of serial devices to manage in the db
+#define MAX_NICS    6       // No of nics to manage in the db
 
-#define MT1800          // Instrument support for ENWA Watermaker 
-#define DOADC           // Analog input volt .... etc.
-
-
-#define POLLRATE    6   // Rate to collect data in ms.
+#define MT1800              // Instrument support for ENWA Watermaker 
+#define DOADC               // Analog input volt .... etc.
 
 
-#define INVALID     4   // Invalidate current sentences after # seconds without a refresh from talker.
+#define POLLRATE    10       // Rate to collect data in ms.
+
+
+#define INVALID     4       // Invalidate current sentences after # seconds without a refresh from talker.
 
 #define NMPARSE(str, nsent) !strncmp(nsent, &str[3], strlen(nsent))
 
@@ -100,6 +109,7 @@ enum requests {
     GPS                 = 121,
     WindSpeedAndAngle   = 130,
     GoogleMapFeed       = 140,
+    GoogleAisFeed       = 141,
     SensorVolt          = 200,
     WaterMakerData      = 210,
     ServerPing          = 900,
@@ -728,10 +738,11 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                   void *in, size_t len)
 {
     int  i, cnt, req, rval = 0;
-    char value [200];
-    unsigned char *buf;
-    memset(value, 0, sizeof(value));
+    char value [MAX_LWSZ];
+    unsigned char buf[LWS_SEND_BUFFER_PRE_PADDING + MAX_LWSZ + LWS_SEND_BUFFER_POST_PADDING];
     time_t ct = time(NULL);
+
+    memset(value, 0, sizeof(value));
 
     switch (reason) {
         case LWS_CALLBACK_ESTABLISHED:
@@ -816,6 +827,41 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                             cnmea.glns,cnmea.glne,cnmea.hdm,iconf.map_zoom,iconf.map_updt,req);
                    break;
                 }
+
+               case GoogleAisFeed: {
+#ifdef AIS
+                    int tot = 0;
+                    char gbuf[40];
+                    struct aisShip_struct *ptr, *dptr;
+                    struct aisShip_struct *head;
+                    head = getShips(MAX_LWSZ-100);
+                               
+                    int glen = sprintf(gbuf, ",'N':'%s','E':'%s'},{", cnmea.glns, cnmea.glne);              
+                  
+                    if (head && glen) {
+
+                        strcpy(value, "[{");
+                        ptr = head;
+
+                        while(ptr->next != NULL) { // Assemble the vessels into a JSON array
+                            if (strlen(value)+glen+strlen(ptr->js)+10 < sizeof(value)) {
+                                strcat(value, ptr->js);
+                                strcat(value, gbuf);
+                            }
+                            free(ptr->js);
+                            dptr = ptr;
+                            ptr = ptr->next;
+                            free(dptr);
+                        }
+
+                        tot = strlen(value);
+                        sprintf(&value[tot-2], "]-%d", req);
+                    }
+#else
+                    sprintf(value, "Exp-%d", req);
+#endif /* AIS */
+                    break;
+                }
                 
                 /*       --- NON NMEA SECTION  ---     */
                 case SensorVolt: {
@@ -860,30 +906,20 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                     break;
            }
 
-           if (!(rval = strlen(value))) return 0;
+           if (!(rval = strlen(value))) { return 0;}
            
            for (i=0; i<rval; i++) // Format valid JSON
                 if (value[i] == '\'') value[i] = '"';
-
-           // Create a buffer to hold our response.
-           // It has to have some pre and post padding as demanded by the websocket protocol.
-           buf = (unsigned char*) malloc(LWS_SEND_BUFFER_PRE_PADDING + sizeof(value) +
-                                                       LWS_SEND_BUFFER_POST_PADDING);
-          
-           sprintf((char*)&buf[LWS_SEND_BUFFER_PRE_PADDING],"%s", value);
-          
+        
+           cnt = sprintf((char*)&buf[LWS_SEND_BUFFER_PRE_PADDING],"%s", value);         
           
            // Log what we recieved and what we're going to send as a response.
            if (debug) {
-                printlog("received command: %s, replying: %.*s", (char *) in, (int) rval, buf + LWS_SEND_BUFFER_PRE_PADDING);
+                printlog("received command: %s, replying: %.*s", (char *) in, (int) cnt, buf + LWS_SEND_BUFFER_PRE_PADDING);
            }
           
            // Send response.
-           // Notice that we have to tell where exactly our response starts. That's
-           // why there's `buf[LWS_SEND_BUFFER_PRE_PADDING]` and how long it is.
-           cnt = lws_write(wsi, &buf[LWS_SEND_BUFFER_PRE_PADDING], rval, LWS_WRITE_TEXT);
-          
-           free(buf);
+           cnt = lws_write(wsi, &buf[LWS_SEND_BUFFER_PRE_PADDING], cnt, LWS_WRITE_TEXT);
 
            if (cnt < 0)
                return -1;
@@ -907,7 +943,7 @@ static struct lws_protocols protocols[] = {
     {
        "nmea-parser-protocol",  // protocol name - very important!
        callback_nmea_parser,    // callback
-       0                        // we don't use any per session data
+       0,                       // we don't use any per session data
     },
     {
        NULL, NULL, 0   /* End of list */
@@ -1175,6 +1211,7 @@ int main(int argc ,char **argv)
     info.ssl_private_key_filepath = key_path;  
     info.gid = -1;
     info.uid = -1;
+    info.max_http_header_data = 1024;
     info.options = opts;
 
     if ((ws_context = lws_create_context(&info)) == NULL) {
@@ -1225,6 +1262,26 @@ int main(int argc ,char **argv)
         unsigned char checksum;
         socklen_t socklen = sizeof(peer_sa);
         struct stat sb;
+#ifdef AIS
+        ais_state ais;
+       // AIS message structures, only parse ones with positions
+       aismsg_1  msg_1;
+       aismsg_2  msg_2;
+       aismsg_3  msg_3;
+       aismsg_4  msg_4;
+       aismsg_9  msg_9;
+       aismsg_15 msg_15;
+       aismsg_18 msg_18;
+       aismsg_19 msg_19;
+    
+       // Position in DD.DDDDDD
+       double lat_dd = 0;
+       double long_ddd = 0;
+       long   userid = 0;
+
+       // Clear out the structures
+       memset( &ais, 0, sizeof( ais_state ) );
+#endif
 
         // Reboot/re-configure request from PHP Gui code
         if (stat(WSREBOOT, &sb) == 0)
@@ -1262,10 +1319,109 @@ int main(int argc ,char **argv)
                 if (txtbuf[i] == '\r' || txtbuf[i] == '\n') txtbuf[i] = '\0';
             }
             if (debug) fprintf( stderr, "Got '%s' as a kplex message. Lenght = %d\n", txtbuf, (int)strlen(txtbuf));
-        
+#ifndef AIS 
             // AIS throw 
             if (!strncmp("AIVDM",&txtbuf[1],5)) continue;
             if (!strncmp("DUAIQ",&txtbuf[1],5)) continue;
+#else
+
+            // Process incoming packets from net
+            if (assemble_vdm( &ais, txtbuf) == 0)
+            {
+                // Get the 6 bit message id
+                ais.msgid = (unsigned char) get_6bit( &ais.six_state, 6 );
+                
+                // process message with appropriate parser
+                switch( ais.msgid ) {
+                    case 1:
+                        if( parse_ais_1( &ais, &msg_1 ) == 0 )
+                        {
+                            userid = msg_1.userid;
+                            pos2ddd( msg_1.latitude, msg_1.longitude, &lat_dd, &long_ddd );
+                        }
+                        break;
+
+                    case 2:
+                        if( parse_ais_2( &ais, &msg_2 ) == 0 )
+                        {
+                            userid = msg_2.userid;
+                            pos2ddd( msg_2.latitude, msg_2.longitude, &lat_dd, &long_ddd );
+                        }
+                        break;
+
+                    case 3:
+                        if( parse_ais_3( &ais, &msg_3 ) == 0 )
+                        {
+                            userid = msg_3.userid;
+                            pos2ddd( msg_3.latitude, msg_3.longitude, &lat_dd, &long_ddd );
+                        }
+                        break;
+
+                    case 4:
+                        if( parse_ais_4( &ais, &msg_4 ) == 0 )
+                        {
+                            userid = msg_4.userid;
+                            pos2ddd( msg_4.latitude, msg_4.longitude, &lat_dd, &long_ddd );
+                        }
+                        break;
+
+                    case 9:
+                        if( parse_ais_9( &ais, &msg_9 ) == 0 )
+                        {
+                            userid = msg_9.userid;
+                            pos2ddd( msg_9.latitude, msg_9.longitude, &lat_dd, &long_ddd );
+                        }
+                        break;
+
+                    case 15: // Not yet fully handled
+                        if( parse_ais_15( &ais, &msg_15 ) == 0 )
+                        {
+                            userid = msg_15.userid;
+                            if( msg_15.num_reqs > 0 )
+                            {
+                                printlog("dest #1   : %ld\n", msg_15.destid1 );
+                                printlog("msgid #1  : %d\n", msg_15.msgid1_1 );
+                                printlog("offset #1 : %d\n", msg_15.offset1_1 );
+                            }
+                            if( msg_15.num_reqs > 1 )
+                            {
+                                printlog("msgid #2  : %d\n", msg_15.msgid1_2 );
+                                printlog("offset #2 : %d\n", msg_15.offset1_2 );
+                            }
+                            if( msg_15.num_reqs > 2 )
+                            {
+                                printlog("dest #2     : %ld\n", msg_15.destid2 );
+                                printlog("msgid #2.1  : %d\n", msg_15.msgid2_1 );
+                                printlog("offset #2.1 : %d\n", msg_15.offset2_1 );
+                            }
+                        }
+                        break;
+
+                    case 18:
+                        if( parse_ais_18( &ais, &msg_18 ) == 0 )
+                        {
+                            userid = msg_18.userid;
+                            pos2ddd( msg_18.latitude, msg_18.longitude, &lat_dd, &long_ddd );
+                        }
+                        break;
+
+                    case 19:
+                        if( parse_ais_19( &ais, &msg_19 ) == 0 )
+                        {
+                            userid = msg_19.userid;
+                            pos2ddd( msg_19.latitude, msg_19.longitude, &lat_dd, &long_ddd );
+                        }
+                        break;
+                }  /* switch msgid */
+                if (debug) {
+                    printlog( "MESSAGE ID: %d\n", ais.msgid );
+                    printlog( "USER ID   : %ld\n", userid );
+                    printlog( "POSITION  : %0.6f %0.6f\n", fabs(lat_dd), fabs(long_ddd ));
+                }
+                (void)addShip(ais.msgid, userid, fabs(lat_dd), fabs(long_ddd));
+
+            }  /* if */
+#endif
 
             checksum = 0;
             if (cs > 0) {

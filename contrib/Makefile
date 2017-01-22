@@ -1,8 +1,12 @@
-all: kplex lighttpd1.4-lighttpd-1.4.33 libwebsockets
+all: kplex lighttpd1.4-lighttpd-1.4.33 libwebsockets aisparser
 
 kplex:
 	git clone https://github.com/stripydog/kplex.git
 	cd kplex && make CFLAGS="-O2 -Wall"
+
+aisparser:
+	git clone https://github.com/bcl/aisparser.git
+	cd aisparser/c/so && make linux
 
 libwebsockets:
 	git clone -b v2.1-stable https://github.com/warmcat/libwebsockets.git
@@ -19,7 +23,7 @@ mod_websocket:
 	git clone https://github.com/nori0428/mod_websocket.git
 	cd mod_websocket && ./bootstrap; 
 
-install: lighttpd1.4-lighttpd-1.4.33 kplex libwebsockets
+install: lighttpd1.4-lighttpd-1.4.33 kplex libwebsockets aisparser
 	@if [ -x /usr/sbin/lighttpd ]; then \
 		echo "INSTALLED LIGHTTPD ABOUT TO BE REPLACED"; \
 		sudo apt-get remove lighttpd; \
@@ -34,10 +38,17 @@ install: lighttpd1.4-lighttpd-1.4.33 kplex libwebsockets
 	sudo rm -f /usr/local/lib/libwebsockets.so.*
 	sudo install libwebsockets/build/lib/libwebsockets.so.* -m 0755 -g root -o root -D /usr/local/lib
 	cd  /usr/local/lib && sudo ln -fs libwebsockets.so.* libwebsockets.so
+	sudo install aisparser/c/so/libais.so.1.* -m 0755 -g root -o root -D /usr/local/lib
+	cd /usr/local/lib && sudo ln -fs libais.so.1.* libais.so.1
+	cd /usr/local/lib && sudo ln -fs libais.so.1 libais.so
+	sudo install aisparser/c/src/portable.h -m 0664 -o root -g root /usr/local/include
+	sudo install aisparser/c/src/nmea.h -m 0664 -o root -g root /usr/local/include
+	sudo install aisparser/c/src/sixbit.h -m 0664 -o root -g root /usr/local/include
+	sudo install aisparser/c/src/vdm_parse.h -m 0664 -o root -g root /usr/local/include
 
 install-configs:
 	cd configs &&  make TOP=$(TOP) WO=$(WO) WG=$(WG) install-configs
 clean:
-	rm -rf kplex lighttpd1.4-lighttpd-1.4.33 mod_websocket libwebsockets
+	rm -rf kplex lighttpd1.4-lighttpd-1.4.33 mod_websocket libwebsockets aisparser
 	rm -f lighttpd-1.4.33.tar.gz
 

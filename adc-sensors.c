@@ -5,13 +5,12 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <linux/spi/spidev.h>
+#include "wsocknmea.h"
 
 /*
  * ADC code for MCP3208 SPI Chip 12 bit ADC
  * This code has been tested on an RPI 3
  */
-
-extern void printlog(char *format, ...);
 
 static struct spi {
     int spiFd;

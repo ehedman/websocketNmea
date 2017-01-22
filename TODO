@@ -1,3 +1,5 @@
-Limitations as of Februari 2017:
+Limitations as of january 2017:
  The Sumlog settings in the configuration page are not yet implemented.
  The UDP protocols are not yet fully validated against the multiplexer.
+ The AIS function for the google map view is brand new and may have some stability issues still.
+   To remove the AIS function, edit the makefile and remove the CFLAG for AIS.

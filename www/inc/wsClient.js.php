@@ -11,6 +11,7 @@ var Cmd = {
     GPS                 : "121",
     WindSpeedAndAngle   : "130",
     GoogleMapFeed       : "140",
+    GoogleAisFeed       : "141",
     SensorVolt          : "200",
     WaterMakerData      : "210",
     ServerPing          : "900",
