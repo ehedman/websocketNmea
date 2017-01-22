@@ -24,7 +24,7 @@ Currently there are nine virtual instrument working:
     Wind        : Real, Relative and speed
     Depth       : With low water warning and water temp
     Compass     : With heading
-    Goggle Map  : With current satellite view
+    Goggle Map  : With current satellite view and AIS radar view
     Volt meter  : From ADC
     Clock       : The vessels time
     GPS         : Lo, Lat and Heading
