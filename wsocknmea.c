@@ -936,17 +936,18 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
 static struct lws_protocols protocols[] = {
     // First protocol must always be HTTP handler
     {
-       "http-only",     // name
-       callback_http,   // callback
-       0                // per_session_data_size
+        "http-only",    // name
+        callback_http,  // callback
+        0               // per_session_data_size
     },
     {
-       "nmea-parser-protocol",  // protocol name - very important!
-       callback_nmea_parser,    // callback
-       0,                       // we don't use any per session data
+        "nmea-parser-protocol", // protocol name - very important!
+        callback_nmea_parser,   // callback
+        0,                      // we don't use any per session data
+        MAX_LWSZ*2              // Max frame size
     },
     {
-       NULL, NULL, 0   /* End of list */
+        NULL, NULL, 0   /* End of list */
     }
 };
 
@@ -1259,20 +1260,21 @@ int main(int argc ,char **argv)
 
         int i, cnt, cs;
         time_t ts;
-        unsigned char checksum;
+        uint8_t checksum;
         socklen_t socklen = sizeof(peer_sa);
         struct stat sb;
 #ifdef AIS
         ais_state ais;
-       // AIS message structures, only parse ones with positions
-       aismsg_1  msg_1;
-       aismsg_2  msg_2;
-       aismsg_3  msg_3;
-       aismsg_4  msg_4;
-       aismsg_9  msg_9;
-       aismsg_15 msg_15;
-       aismsg_18 msg_18;
-       aismsg_19 msg_19;
+        // AIS message structures
+        aismsg_1  msg_1;
+        aismsg_2  msg_2;
+        aismsg_3  msg_3;
+        aismsg_4  msg_4;
+        aismsg_5  msg_5;
+        aismsg_9  msg_9;
+        aismsg_18 msg_18;
+        aismsg_19 msg_19;
+        aismsg_24 msg_24;
     
        // Position in DD.DDDDDD
        double lat_dd = 0;
@@ -1300,7 +1302,6 @@ int main(int argc ,char **argv)
 
         memset(txtbuf, 0, sizeof(txtbuf));
         
-        cs = 0;     // Chekcsum portion at end of nmea string 
 
         if (socketType == SOCK_STREAM) {
             cnt = recv(muxFd, txtbuf, sizeof(txtbuf), 0);
@@ -1312,132 +1313,31 @@ int main(int argc ,char **argv)
             if (errno == EAGAIN) {usleep(3000); continue;}
             printlog("Error rerading NMEA-socket: %s", strerror(errno));
             sleep(2);
+            continue;
         } else if (cnt > 0) {
 
+            if (debug) fprintf( stderr, "Got '%s' as a mux message. Lenght = %d\n", txtbuf, (int)strlen(txtbuf));
+
+            cs = checksum = 0;     // Chekcsum portion at end of nmea string 
             for (i = 0; i < cnt; i++) {
                 if (txtbuf[i] == '*') cs=i+1;
-                if (txtbuf[i] == '\r' || txtbuf[i] == '\n') txtbuf[i] = '\0';
+                if (txtbuf[i] == '\r' || txtbuf[i] == '\n') { txtbuf[i] = '\0'; break; }
             }
-            if (debug) fprintf( stderr, "Got '%s' as a kplex message. Lenght = %d\n", txtbuf, (int)strlen(txtbuf));
-#ifndef AIS 
-            // AIS throw 
-            if (!strncmp("AIVDM",&txtbuf[1],5)) continue;
-            if (!strncmp("DUAIQ",&txtbuf[1],5)) continue;
-#else
 
-            // Process incoming packets from net
-            if (assemble_vdm( &ais, txtbuf) == 0)
-            {
-                // Get the 6 bit message id
-                ais.msgid = (unsigned char) get_6bit( &ais.six_state, 6 );
-                
-                // process message with appropriate parser
-                switch( ais.msgid ) {
-                    case 1:
-                        if( parse_ais_1( &ais, &msg_1 ) == 0 )
-                        {
-                            userid = msg_1.userid;
-                            pos2ddd( msg_1.latitude, msg_1.longitude, &lat_dd, &long_ddd );
-                        }
-                        break;
-
-                    case 2:
-                        if( parse_ais_2( &ais, &msg_2 ) == 0 )
-                        {
-                            userid = msg_2.userid;
-                            pos2ddd( msg_2.latitude, msg_2.longitude, &lat_dd, &long_ddd );
-                        }
-                        break;
-
-                    case 3:
-                        if( parse_ais_3( &ais, &msg_3 ) == 0 )
-                        {
-                            userid = msg_3.userid;
-                            pos2ddd( msg_3.latitude, msg_3.longitude, &lat_dd, &long_ddd );
-                        }
-                        break;
-
-                    case 4:
-                        if( parse_ais_4( &ais, &msg_4 ) == 0 )
-                        {
-                            userid = msg_4.userid;
-                            pos2ddd( msg_4.latitude, msg_4.longitude, &lat_dd, &long_ddd );
-                        }
-                        break;
-
-                    case 9:
-                        if( parse_ais_9( &ais, &msg_9 ) == 0 )
-                        {
-                            userid = msg_9.userid;
-                            pos2ddd( msg_9.latitude, msg_9.longitude, &lat_dd, &long_ddd );
-                        }
-                        break;
-
-                    case 15: // Not yet fully handled
-                        if( parse_ais_15( &ais, &msg_15 ) == 0 )
-                        {
-                            userid = msg_15.userid;
-                            if( msg_15.num_reqs > 0 )
-                            {
-                                printlog("dest #1   : %ld\n", msg_15.destid1 );
-                                printlog("msgid #1  : %d\n", msg_15.msgid1_1 );
-                                printlog("offset #1 : %d\n", msg_15.offset1_1 );
-                            }
-                            if( msg_15.num_reqs > 1 )
-                            {
-                                printlog("msgid #2  : %d\n", msg_15.msgid1_2 );
-                                printlog("offset #2 : %d\n", msg_15.offset1_2 );
-                            }
-                            if( msg_15.num_reqs > 2 )
-                            {
-                                printlog("dest #2     : %ld\n", msg_15.destid2 );
-                                printlog("msgid #2.1  : %d\n", msg_15.msgid2_1 );
-                                printlog("offset #2.1 : %d\n", msg_15.offset2_1 );
-                            }
-                        }
-                        break;
-
-                    case 18:
-                        if( parse_ais_18( &ais, &msg_18 ) == 0 )
-                        {
-                            userid = msg_18.userid;
-                            pos2ddd( msg_18.latitude, msg_18.longitude, &lat_dd, &long_ddd );
-                        }
-                        break;
-
-                    case 19:
-                        if( parse_ais_19( &ais, &msg_19 ) == 0 )
-                        {
-                            userid = msg_19.userid;
-                            pos2ddd( msg_19.latitude, msg_19.longitude, &lat_dd, &long_ddd );
-                        }
-                        break;
-                }  /* switch msgid */
-                if (debug) {
-                    printlog( "MESSAGE ID: %d\n", ais.msgid );
-                    printlog( "USER ID   : %ld\n", userid );
-                    printlog( "POSITION  : %0.6f %0.6f\n", fabs(lat_dd), fabs(long_ddd ));
-                }
-                (void)addShip(ais.msgid, userid, fabs(lat_dd), fabs(long_ddd));
-
-            }  /* if */
-#endif
-
-            checksum = 0;
             if (cs > 0) {
                 for (i=0; i < cs-1; i++) {
-                    if (txtbuf[i] == '$') continue;
-                    checksum ^= (unsigned char)txtbuf[i];
+                    if (txtbuf[i] == '$' || txtbuf[i] == '!') continue;
+                    checksum ^= (uint8_t)txtbuf[i];
                 }
             }            
             
-            if ( !cs || (checksum != strtol(&txtbuf[cs], NULL, 16))) {
+            if ( !cs || (checksum != (uint8_t)strtol(&txtbuf[cs], NULL, 16))) {
                 if (debug) {
-                    printlog("Checksum error in nmea sentence: %02x/%02x - %s", checksum, (unsigned int)strtol(&txtbuf[cs], NULL, 16), txtbuf);
+                    printlog("Checksum error in nmea sentence: 0x%02x/0x%02x - '%s'/'%s', pos %d", \
+                        checksum, (uint8_t)strtol(&txtbuf[cs], NULL, 16), txtbuf, &txtbuf[cs], cs);
                 }
                 continue;
             }
-
             // Priority parsing order and logic:
             // See http://freenmea.net/docs and other sources out there
             
@@ -1564,6 +1464,100 @@ int main(int argc ,char **argv)
                     continue;
                 }
             }
+#ifdef AIS
+            // Process incoming AIS packets from the net
+            if (*txtbuf == '!' && assemble_vdm(&ais, txtbuf) == 0)
+            {
+                // Get the 6 bit message id
+                ais.msgid = (unsigned char) get_6bit( &ais.six_state, 6 );
+                
+                // process message with appropriate parser
+                switch( ais.msgid ) {
+                    case 1:
+                        if( parse_ais_1( &ais, &msg_1 ) == 0 ) {
+                            userid = msg_1.userid;
+                            pos2ddd( msg_1.latitude, msg_1.longitude, &lat_dd, &long_ddd );
+                        }
+                        break;
+
+                    case 2:
+                        if( parse_ais_2( &ais, &msg_2 ) == 0 ) {
+                            userid = msg_2.userid;
+                            pos2ddd( msg_2.latitude, msg_2.longitude, &lat_dd, &long_ddd );
+                        }
+                        break;
+
+                    case 3:
+                        if( parse_ais_3( &ais, &msg_3 ) == 0 ) {
+                            userid = msg_3.userid;
+                            pos2ddd( msg_3.latitude, msg_3.longitude, &lat_dd, &long_ddd );
+                        }
+                        break;
+
+                    case 4:
+                        if( parse_ais_4( &ais, &msg_4 ) == 0 ) {
+                            userid = msg_4.userid;
+                            pos2ddd( msg_4.latitude, msg_4.longitude, &lat_dd, &long_ddd );
+                        }
+                        break;
+
+                    case 5:
+                        if( parse_ais_5( &ais, &msg_5 ) == 0 ) {
+                            if (debug) {
+                                printlog( "MMSI        : %09ld\n", msg_5.userid );
+                                printlog( "Callsign    : %s\n", msg_5.callsign );
+                                printlog( "Name        : %s\n", msg_5.name );
+                                printlog( "Destination : %s\n", msg_5.dest );
+                            }
+                            (void)addShip(0, msg_5.userid, 0, 0, msg_5.name);
+                        }
+                        break;
+
+                    case 9:
+                        if( parse_ais_9( &ais, &msg_9 ) == 0 ) {
+                            userid = msg_9.userid;
+                            pos2ddd( msg_9.latitude, msg_9.longitude, &lat_dd, &long_ddd );
+                        }
+                        break;
+
+                    case 18:
+                        if( parse_ais_18( &ais, &msg_18 ) == 0 ) {
+                            userid = msg_18.userid;
+                            pos2ddd( msg_18.latitude, msg_18.longitude, &lat_dd, &long_ddd );
+                        }
+                        break;
+
+                    case 19:
+                        if( parse_ais_19( &ais, &msg_19 ) == 0 ) {
+                            userid = msg_19.userid;
+                            pos2ddd( msg_19.latitude, msg_19.longitude, &lat_dd, &long_ddd );
+                        }
+                        break;
+
+                    case 24:
+                        if( parse_ais_24( &ais, &msg_24 ) == 0 ) {      
+					        if (msg_24.flags & 1) {
+                                if (debug) {
+                                    printlog("MMSI     : %09ld\n", msg_24.userid );
+						            printlog("Name : %s\n", msg_24.name );
+                                }
+                                (void)addShip(0, msg_24.userid, 0, 0, msg_24.name);
+					        }
+					        if ((msg_24.flags & 2) && debug) {
+						        printlog("Callsign : %s\n", msg_24.callsign );
+					        }                       
+                        }
+                        break;
+
+                }
+                if (debug) {
+                    printlog( "MESSAGE ID: %d\n", ais.msgid );
+                    printlog( "USER ID   : %ld\n", userid );
+                    printlog( "POSITION  : %0.6f %0.6f\n", fabs(lat_dd), fabs(long_ddd));
+                }
+                (void)addShip(ais.msgid, userid, fabs(lat_dd), fabs(long_ddd), NULL);
+            }
+#endif
        }
     }
 

@@ -6,14 +6,13 @@
         <meta name="viewport" content="initial-scale=6.0, user-scalable=no">
         <script type="text/javascript" src="inc/jquery-2.1.1.min.js"></script>
         <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&language=us"></script>
-        <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&libraries=weather"></script>
         
         <style>
     
 html>body
 {
     font-family: Tahoma, Helvetica, Geneva, Arial, sans-serif;
-	font-size: 0.9em;
+    font-size: 0.9em;
     margin: 0 0 0 0;
     width: 100%;
     min-width: 256px;
@@ -25,24 +24,29 @@ html>body
       
 #googlemaps {
     position:absolute;
-    top: 4%;
-    left: 4%;
-    height: 90%;
-    width: 90%;
+    top: 9%;
+    left: 9%;
+    height: 82%;
+    width: 82%;
     max-height: 512px;
     border-radius:50%;
     -moz-border-radius:50%;
     background-color: black;
-    z-index: 0;
-    visibility: hidden;  
+    z-index: 1;
+    visibility: hidden;
 }
 
 #instrument
 {
-    position: relative;
-    border: 0;
+    position:absolute;
+    height: 100%;
     width: 100%;
-    z-index: 10;
+    max-height: 512px;
+    border-radius:50%;
+    border-radius:50%;
+    -moz-border-radius:50%;
+    background-color: black;
+    z-index: 0;
 }
 
 #main {
@@ -71,7 +75,6 @@ var map;
 var aisupdate = 5;
 var amarkers = [];
 var gmarker;
-var amarker;
 
 function setWindowSize(){
    
@@ -86,7 +89,7 @@ function setWindowSize(){
 $(document).ready(function()
 { 
     window.onresize=setWindowSize;
-	setWindowSize();  
+        setWindowSize();  
 });
 
 function do_update()
@@ -145,14 +148,15 @@ function do_update()
             var lap = val[i].N == "S"? "-":"";
             var lop = val[i].E == "W"? "-":"";
             var nmap = new google.maps.LatLng(lap+val[i].la, lop+val[i].lo);   
-            amarker = new google.maps.Marker({
+            var amarker = new google.maps.Marker({
                 position: nmap,
+                title: val[i].name == "unknown"? null:val[i].name,
                 map: map,
                 icon : {
                         path: google.maps.SymbolPath.CIRCLE,
                         fillColor: "red",
                         fillOpacity: 0.5,
-                        scale: 2,
+                        scale: 4,
                         strokeColor:"red",
                         strokeWeight: 1,
                        }
@@ -182,19 +186,10 @@ function initialize() {
         position: myLatlng,
         map: map,
         icon: {
-                path: google.maps.SymbolPath.FORWARD_OPEN_ARROW,
+                path: google.maps.SymbolPath.CIRCLE,
                 scale: 6,
-                rotation: 0,
         }
-    });
-    
-    var weatherLayer = new google.maps.weather.WeatherLayer({
-        temperatureUnits: google.maps.weather.TemperatureUnit.CELSCIUS
-    });
-    weatherLayer.setMap(map);
-
-    var cloudLayer = new google.maps.weather.CloudLayer();
-    cloudLayer.setMap(map);
+    });    
     
     google.maps.event.addListener(map, 'tilesloaded', function(){
         document.getElementById('googlemaps').style.position = 'absolute';
@@ -212,8 +207,8 @@ google.maps.event.addDomListener(window, 'load', initialize);
     </head>
     <body onload="init()">
         <div id="main">
-            <div id="googlemaps"></div>
             <img id="instrument" src="img/empty.png" alt="instrument">
+            <div id="googlemaps"></div>
         </div>        
         <div id="logpanel"></div>
         <script type="text/javascript" src="inc/wsClient.js.php"></script>  

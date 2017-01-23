@@ -12,7 +12,7 @@ struct aisShip_struct
     struct aisShip_struct *next;
 };
 
-extern int addShip(int msgid, long userid, double lat_dd, double long_ddd);
+extern int addShip(int msgid, long userid, double lat_dd, double long_ddd, char *name);
 extern struct aisShip_struct *getShips(int size);
 #endif /* AIS */
 
