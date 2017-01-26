@@ -37,13 +37,12 @@
 #include <libwebsockets.h>
 #include <syslog.h>
 #include <math.h>
+#include <portable.h>
+#include <nmea.h>
+#include <sixbit.h>
+#include <vdm_parse.h>
 #include "wsocknmea.h"
-#ifdef AIS
-#include "portable.h"
-#include "nmea.h"
-#include "sixbit.h"
-#include "vdm_parse.h"
-#endif
+
 
 // Configuration
 #define NMEAPORT 10110          // Port 10110 is designated by IANA for "NMEA-0183 Navigational Data"
@@ -72,7 +71,7 @@
 #define SWREV __DATE__
 #endif
 
-#define MAX_LWSZ    4000    // Max payload size for websockets data (~ 55 AIS ships)    
+#define MAX_LWSZ    4000    // Max payload size for websockets data (~ 50 AIS ships)    
 #define MAX_TTYS    50      // No of serial devices to manage in the db
 #define MAX_NICS    6       // No of nics to manage in the db
 
@@ -829,7 +828,7 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                 }
 
                case GoogleAisFeed: {
-#ifdef AIS
+
                     int tot = 0;
                     char gbuf[40];
                     struct aisShip_struct *ptr, *dptr;
@@ -856,10 +855,9 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
 
                         tot = strlen(value);
                         sprintf(&value[tot-2], "]-%d", req);
-                    }
-#else
-                    sprintf(value, "Exp-%d", req);
-#endif /* AIS */
+
+                    } else sprintf(value, "Exp-%d", req);
+
                     break;
                 }
                 
@@ -1255,7 +1253,6 @@ int main(int argc ,char **argv)
     // Main loop, to end this server, send signal INT(^c) or TERM
     // GUI commands WSREBOOT can break this loop requesting a restart.
     // Keep the collected_nmea struct up to date with collected data
-
     while(1) {
 
         int i, cnt, cs;
@@ -1263,27 +1260,32 @@ int main(int argc ,char **argv)
         uint8_t checksum;
         socklen_t socklen = sizeof(peer_sa);
         struct stat sb;
-#ifdef AIS
+
         ais_state ais;
+        int ais_rval;
+        long   userid = 0;
+        char *name = NULL;
+        int trueh = 0;
+
         // AIS message structures
         aismsg_1  msg_1;
         aismsg_2  msg_2;
         aismsg_3  msg_3;
         aismsg_4  msg_4;
         aismsg_5  msg_5;
-        aismsg_9  msg_9;
         aismsg_18 msg_18;
         aismsg_19 msg_19;
+        aismsg_21 msg_21;
         aismsg_24 msg_24;
-    
-       // Position in DD.DDDDDD
-       double lat_dd = 0;
-       double long_ddd = 0;
-       long   userid = 0;
+            
+        // Position in DD.DDDDDD
+        double lat_dd = 0;
+        double long_ddd = 0;
+        double sog = 0.1;
+       
+        // Clear out the structures
+        memset( &ais, 0, sizeof( ais_state ) );
 
-       // Clear out the structures
-       memset( &ais, 0, sizeof( ais_state ) );
-#endif
 
         // Reboot/re-configure request from PHP Gui code
         if (stat(WSREBOOT, &sb) == 0)
@@ -1316,8 +1318,8 @@ int main(int argc ,char **argv)
             continue;
         } else if (cnt > 0) {
 
-            if (debug) fprintf( stderr, "Got '%s' as a mux message. Lenght = %d\n", txtbuf, (int)strlen(txtbuf));
-
+            
+ 
             cs = checksum = 0;     // Chekcsum portion at end of nmea string 
             for (i = 0; i < cnt; i++) {
                 if (txtbuf[i] == '*') cs=i+1;
@@ -1338,6 +1340,9 @@ int main(int argc ,char **argv)
                 }
                 continue;
             }
+
+            if (debug) fprintf( stderr, "Got '%s' as a mux message. Lenght = %d\n", txtbuf, (int)strlen(txtbuf));
+
             // Priority parsing order and logic:
             // See http://freenmea.net/docs and other sources out there
             
@@ -1464,100 +1469,108 @@ int main(int argc ,char **argv)
                     continue;
                 }
             }
-#ifdef AIS
-            // Process incoming AIS packets from the net
-            if (*txtbuf == '!' && assemble_vdm(&ais, txtbuf) == 0)
-            {
-                // Get the 6 bit message id
-                ais.msgid = (unsigned char) get_6bit( &ais.six_state, 6 );
+
+            if (txtbuf[0] != '!') continue;
+
+            // AIS is handled last ....
+
+            ais_rval = assemble_vdm(&ais, txtbuf);
+
+            // Get the 6 bit message id
+            ais.msgid = (unsigned char) get_6bit( &ais.six_state, 6 );
                 
-                // process message with appropriate parser
-                switch( ais.msgid ) {
-                    case 1:
-                        if( parse_ais_1( &ais, &msg_1 ) == 0 ) {
-                            userid = msg_1.userid;
-                            pos2ddd( msg_1.latitude, msg_1.longitude, &lat_dd, &long_ddd );
-                        }
-                        break;
+            // process message with appropriate parser
+            switch( ais.msgid ) {
+                case 1: // Message 1,2,3 - Position Report
+                    if( !ais_rval && parse_ais_1( &ais, &msg_1 ) == 0 ) {
+                        userid = msg_1.userid;
+                        pos2ddd( msg_1.latitude, msg_1.longitude, &lat_dd, &long_ddd );
+                        trueh = msg_1.true;
+                        sog =  msg_1.sog;
+                    }
+                    break;
 
-                    case 2:
-                        if( parse_ais_2( &ais, &msg_2 ) == 0 ) {
-                            userid = msg_2.userid;
-                            pos2ddd( msg_2.latitude, msg_2.longitude, &lat_dd, &long_ddd );
-                        }
-                        break;
+                case 2:
+                    if( !ais_rval && parse_ais_2( &ais, &msg_2 ) == 0 ) {
+                        userid = msg_2.userid;
+                        pos2ddd( msg_2.latitude, msg_2.longitude, &lat_dd, &long_ddd );
+                        trueh = msg_2.true;
+                        sog =  msg_2.sog;
+                    }
+                    break;
 
-                    case 3:
-                        if( parse_ais_3( &ais, &msg_3 ) == 0 ) {
-                            userid = msg_3.userid;
-                            pos2ddd( msg_3.latitude, msg_3.longitude, &lat_dd, &long_ddd );
-                        }
-                        break;
+                case 3:
+                    if( !ais_rval && parse_ais_3( &ais, &msg_3 ) == 0 ) {
+                        userid = msg_3.userid;
+                        pos2ddd( msg_3.latitude, msg_3.longitude, &lat_dd, &long_ddd );
+                        trueh = msg_3.true;
+                        sog =  msg_3.sog;
+                    }
+                    break;
 
-                    case 4:
-                        if( parse_ais_4( &ais, &msg_4 ) == 0 ) {
-                            userid = msg_4.userid;
-                            pos2ddd( msg_4.latitude, msg_4.longitude, &lat_dd, &long_ddd );
-                        }
-                        break;
+                case 4: // Message 4 - Base station report
+                   if( !ais_rval && parse_ais_4( &ais, &msg_4 ) == 0 ) {
+                        userid = msg_4.userid;
+                        pos2ddd( msg_4.latitude, msg_4.longitude, &lat_dd, &long_ddd );
+                    }
+                    break;
 
-                    case 5:
-                        if( parse_ais_5( &ais, &msg_5 ) == 0 ) {
-                            if (debug) {
-                                printlog( "MMSI        : %09ld\n", msg_5.userid );
-                                printlog( "Callsign    : %s\n", msg_5.callsign );
-                                printlog( "Name        : %s\n", msg_5.name );
-                                printlog( "Destination : %s\n", msg_5.dest );
-                            }
-                            (void)addShip(0, msg_5.userid, 0, 0, msg_5.name);
-                        }
-                        break;
+                case 5: // Message 5: Ship static and voyage related data 
+                    if( parse_ais_5( &ais, &msg_5 ) == 0 ) {
+                        userid = msg_5.userid;
+                        name = msg_5.name;
+                        if (name !=NULL && strlen(name)) ais_rval = 0;
+                    }
+                    break;
 
-                    case 9:
-                        if( parse_ais_9( &ais, &msg_9 ) == 0 ) {
-                            userid = msg_9.userid;
-                            pos2ddd( msg_9.latitude, msg_9.longitude, &lat_dd, &long_ddd );
-                        }
-                        break;
+                case 18: // Message 18 - Class B Position Report 
+                    if( !ais_rval && parse_ais_18( &ais, &msg_18 ) == 0 ) {
+                        userid = msg_18.userid;
+                        pos2ddd( msg_18.latitude, msg_18.longitude, &lat_dd, &long_ddd );
+                        trueh = msg_18.true;
+                        sog =  msg_18.sog;
+                    }
+                    break;
 
-                    case 18:
-                        if( parse_ais_18( &ais, &msg_18 ) == 0 ) {
-                            userid = msg_18.userid;
-                            pos2ddd( msg_18.latitude, msg_18.longitude, &lat_dd, &long_ddd );
-                        }
-                        break;
+                case 19: // Message 19 - Extended Class B equipment position report 
+                    if( !ais_rval && parse_ais_19( &ais, &msg_19 ) == 0 ) {
+                        userid = msg_19.userid;
+                        pos2ddd( msg_19.latitude, msg_19.longitude, &lat_dd, &long_ddd );
+                        name = msg_19.name;
+                        trueh = msg_19.true;
+                        sog =  msg_19.sog;
+                    }
+                    break;
 
-                    case 19:
-                        if( parse_ais_19( &ais, &msg_19 ) == 0 ) {
-                            userid = msg_19.userid;
-                            pos2ddd( msg_19.latitude, msg_19.longitude, &lat_dd, &long_ddd );
-                        }
-                        break;
+                case 21: // Message 21 - Aids To Navigation Report 
+                    if( !ais_rval && parse_ais_21( &ais, &msg_21 ) == 0 ) { 
+                        userid = msg_21.userid;                         
+                        name = msg_21.name;
+                    }
+                    break;
 
-                    case 24:
-                        if( parse_ais_24( &ais, &msg_24 ) == 0 ) {      
-					        if (msg_24.flags & 1) {
-                                if (debug) {
-                                    printlog("MMSI     : %09ld\n", msg_24.userid );
-						            printlog("Name : %s\n", msg_24.name );
-                                }
-                                (void)addShip(0, msg_24.userid, 0, 0, msg_24.name);
-					        }
-					        if ((msg_24.flags & 2) && debug) {
-						        printlog("Callsign : %s\n", msg_24.callsign );
-					        }                       
-                        }
-                        break;
+                case 24: // Message 24 - Class B/CS Static Data Report - Part A 
+                    if( !ais_rval && parse_ais_24( &ais, &msg_24 ) == 0 ) {      
+                        if (msg_24.flags & 1) {
+                            userid = msg_24.userid;
+                            name = msg_24.name;
+					    }                     
+                    }
+                    break;
 
-                }
-                if (debug) {
-                    printlog( "MESSAGE ID: %d\n", ais.msgid );
-                    printlog( "USER ID   : %ld\n", userid );
-                    printlog( "POSITION  : %0.6f %0.6f\n", fabs(lat_dd), fabs(long_ddd));
-                }
-                (void)addShip(ais.msgid, userid, fabs(lat_dd), fabs(long_ddd), NULL);
+                default: continue; break;
+
             }
-#endif
+            if (debug) {
+                printlog( "MESSAGE ID   : %d", ais.msgid );
+                printlog( "NAME         : %s", name );
+                printlog( "USER ID      : %ld", userid );
+                printlog( "POSITION     : %0.6f %0.6f", fabs(lat_dd), fabs(long_ddd));
+                printlog( "TRUE HEADING : %ld", trueh );
+                printlog( "SOG          : %0.1f", sog );
+            }
+            if (!ais_rval)
+                (void)addShip(ais.msgid, userid, fabs(lat_dd), fabs(long_ddd), trueh, sog, name);
        }
     }
 

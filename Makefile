@@ -67,8 +67,6 @@ ifeq ($(shell test -e $(GETC) && echo -n yes),yes)
 CFLAGS=-DREV=\"$(shell git branch -v | awk '{print $$2"-"$$3}')\"
 endif
 
-CFLAGS+= -DAIS
-
 CFLAGS+= -Wall -g -std=gnu99 -pedantic
 CFLAGS+= -DARCH=$(ARCH) -DUID=$(UID) -DGID=$(GID) -I$(INCDIR)
 CFLAGS+= -DNAVIDBPATH=\"$(NAVIDBPATH)\" -DKPCONFPATH=\"$(KPCONFPATH)\"

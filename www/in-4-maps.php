@@ -126,10 +126,15 @@ function do_update()
         gmarker.setMap(null);
         gmarker = new google.maps.Marker({
             position: nmap,
+            title: "<?php echo gethostname(); ?>",
             map: map,
             icon: { 
                     path: google.maps.SymbolPath.FORWARD_OPEN_ARROW,
-                    scale: 6,
+                    scale: 3,
+                    fillColor: "red",
+                    fillOpacity: 0.5,
+                    strokeColor:"red",
+                    trokeWeight: 1,
                     rotation: round_number(val.A,0)   
                 }
         });
@@ -147,18 +152,21 @@ function do_update()
         for (var i in val) { 
             var lap = val[i].N == "S"? "-":"";
             var lop = val[i].E == "W"? "-":"";
-            var nmap = new google.maps.LatLng(lap+val[i].la, lop+val[i].lo);   
+            var nmap = new google.maps.LatLng(lap+val[i].la, lop+val[i].lo); 
+            var symbp = google.maps.SymbolPath.FORWARD_OPEN_ARROW; 
+            if (val[i].sog <= 0.1) { val[i].trueh = 0; symbp = google.maps.SymbolPath.CIRCLE; }
             var amarker = new google.maps.Marker({
                 position: nmap,
-                title: val[i].name == "unknown"? null:val[i].name,
+                title: val[i].name,
                 map: map,
                 icon : {
-                        path: google.maps.SymbolPath.CIRCLE,
-                        fillColor: "red",
+                        path: symbp,
+                        fillColor: "yellow",
                         fillOpacity: 0.5,
-                        scale: 4,
+                        scale: 3,
                         strokeColor:"red",
                         strokeWeight: 1,
+                        rotation: round_number(val[i].trueh,0)   
                        }
                 });
 

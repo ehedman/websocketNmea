@@ -1,5 +1,5 @@
 Limitations as of january 2017:
  The Sumlog settings in the configuration page are not yet implemented.
  The UDP protocols are not yet fully validated against the multiplexer.
- The AIS function for the google map view is brand new and may have some stability issues still.
-   To remove the AIS function, edit the makefile and remove the CFLAG for AIS.
+ There are some sequence issues with AIS message 5 that has to be investigated further.
+ As a temporary measure a patch is applied to aisparser/c/src/vdm_parse.c and a special handling implemented in wsocknmea.c
