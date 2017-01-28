@@ -79,7 +79,7 @@
 #define DOADC               // Analog input volt .... etc.
 
 
-#define POLLRATE    10       // Rate to collect data in ms.
+#define POLLRATE    0       // Rate to collect data in ms.
 
 
 #define INVALID     4       // Invalidate current sentences after # seconds without a refresh from talker.
@@ -381,7 +381,6 @@ static char *getf(int pos, char *str)
 static int nmea_sock_open(int kplex_fork)
 {
     u_int yes = 1;
-    long flags;
     struct ip_mreq mreq;
 
     if (muxFd > 0)
@@ -450,11 +449,6 @@ static int nmea_sock_open(int kplex_fork)
             return 1;
         }
     }
-
-    // Set socket nonblocking 
-    flags = fcntl(muxFd, F_GETFL, NULL);
-    flags |= O_NONBLOCK;
-    fcntl(muxFd, F_SETFL, flags);
 
     return 0;
 }
@@ -1069,7 +1063,7 @@ int main(int argc ,char **argv)
 {
 
     int wsport;
-    char txtbuf[200];
+    char txtbuf[300];
     int opts = 0;
     int c;
     int kplex_fork = 1;
@@ -1265,6 +1259,8 @@ int main(int argc ,char **argv)
         int ais_rval;
         long   userid = 0;
         char *name = NULL;
+        char txtbuf_p1[200];
+        unsigned char ais_msgid_p1;
         int trueh = 0;
 
         // AIS message structures
@@ -1283,10 +1279,6 @@ int main(int argc ,char **argv)
         double long_ddd = 0;
         double sog = 0.1;
        
-        // Clear out the structures
-        memset( &ais, 0, sizeof( ais_state ) );
-
-
         // Reboot/re-configure request from PHP Gui code
         if (stat(WSREBOOT, &sb) == 0)
             break;
@@ -1304,6 +1296,8 @@ int main(int argc ,char **argv)
 
         memset(txtbuf, 0, sizeof(txtbuf));
         
+        // Clear out the ais structures if done with the message
+        if (!ais_msgid_p1) memset( &ais, 0, sizeof(ais_state));      
 
         if (socketType == SOCK_STREAM) {
             cnt = recv(muxFd, txtbuf, sizeof(txtbuf), 0);
@@ -1312,14 +1306,12 @@ int main(int argc ,char **argv)
         }
        
         if (cnt < 0) {
-            if (errno == EAGAIN) {usleep(3000); continue;}
+            if (errno == EAGAIN) continue;
             printlog("Error rerading NMEA-socket: %s", strerror(errno));
             sleep(2);
             continue;
         } else if (cnt > 0) {
 
-            
- 
             cs = checksum = 0;     // Chekcsum portion at end of nmea string 
             for (i = 0; i < cnt; i++) {
                 if (txtbuf[i] == '*') cs=i+1;
@@ -1470,14 +1462,28 @@ int main(int argc ,char **argv)
                 }
             }
 
-            if (txtbuf[0] != '!') continue;
+            if (*txtbuf != '!') continue;
 
             // AIS is handled last ....
 
             ais_rval = assemble_vdm(&ais, txtbuf);
 
+            if (ais_rval == 1) { // We need to assemble part 2 of the message
+                (void)strcpy(txtbuf_p1, txtbuf);
+                ais_msgid_p1 = ais.msgid = (unsigned char)get_6bit( &ais.six_state, 6 );
+                continue;
+            } else if (ais_msgid_p1) {
+                (void)strcat(txtbuf, txtbuf_p1);
+                *txtbuf_p1 = '\0';
+            }
+
             // Get the 6 bit message id
-            ais.msgid = (unsigned char) get_6bit( &ais.six_state, 6 );
+            if (!ais_msgid_p1)
+                ais.msgid = (unsigned char)get_6bit( &ais.six_state, 6 );
+            else { // Do with part 2
+                ais.msgid = ais_msgid_p1;
+                ais_msgid_p1 = 0;
+            }
                 
             // process message with appropriate parser
             switch( ais.msgid ) {
@@ -1516,10 +1522,9 @@ int main(int argc ,char **argv)
                     break;
 
                 case 5: // Message 5: Ship static and voyage related data 
-                    if( parse_ais_5( &ais, &msg_5 ) == 0 ) {
+                    if( !ais_rval && parse_ais_5( &ais, &msg_5 ) == 0 ) {
                         userid = msg_5.userid;
                         name = msg_5.name;
-                        if (name !=NULL && strlen(name)) ais_rval = 0;
                     }
                     break;
 
@@ -1571,6 +1576,7 @@ int main(int argc ,char **argv)
             }
             if (!ais_rval)
                 (void)addShip(ais.msgid, userid, fabs(lat_dd), fabs(long_ddd), trueh, sog, name);
+            if (debug && ais_rval) printlog("AIS return=%d, msgid=%d  msg='%s'\n", ais_rval, ais.msgid, txtbuf); 
        }
     }
 

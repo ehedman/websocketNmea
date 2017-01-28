@@ -94,6 +94,9 @@ int addShip(int msgid, long userid, double lat_dd, double long_ddd, int trueh, d
         int upd = 0;
         int len;
 
+        if (!(len = strlen(name)))
+            return 0;
+
         (void)sprintf(buf, "SELECT COUNT('userid') FROM ais WHERE userid = '%ld'", userid);
 
         if (sqlite3_prepare_v2(conn, buf, -1, &res, &tail) == SQLITE_OK) {
@@ -102,9 +105,6 @@ int addShip(int msgid, long userid, double lat_dd, double long_ddd, int trueh, d
             (void)sqlite3_finalize(res);
         }
         
-        if (!(len = strlen(name)))
-            return 0;
-
         for (i=0; i <len; i++) {
             if (name[i] == '@' || !isprint(name[i])) {
                 name[i] = '\0';

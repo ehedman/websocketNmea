@@ -6,9 +6,6 @@ kplex:
 
 aisparser:
 	git clone https://github.com/bcl/aisparser.git
-	@if [ -f aisparser/c/src/vdm_parse.c ] && [ -f aisparser.patch ]; then \
-		patch -p 1 < aisparser.patch; \
-	fi
 	cd aisparser/c/so && make linux
 
 libwebsockets:
