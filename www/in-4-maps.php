@@ -1,3 +1,19 @@
+<?php
+
+    define('DOCROOT', dirname(__FILE__)); 
+    define('NAVIDBPATH', DOCROOT.'/inc/navi.db');
+
+    if (file_exists (NAVIDBPATH)) {
+        $DBH = new PDO('sqlite:'.NAVIDBPATH);
+
+        $stmt = $DBH->prepare("SELECT aisname from ais LIMIT 1"); 
+        $stmt->execute(); 
+        $row = $stmt->fetch();
+        $aisname=$row['aisname'];
+        $stmt->closeCursor();
+    } else $aisname = "My Ship";
+?>
+
 <!DOCTYPE html>
 <html>
     <head>
@@ -72,9 +88,11 @@ var update = 3000;
 var debug = false;
 var connection = true;
 var map;
-var aisupdate = 5;
+var aisupdate = 2;
+var stationary = 0.3;
 var amarkers = [];
 var gmarker;
+var first = true;
 
 function setWindowSize(){
    
@@ -96,7 +114,7 @@ function do_update()
 {
     if (connection) {
         if (--aisupdate <= 0) {
-            aisupdate = 5;
+            aisupdate = 2;
             send(Cmd.GoogleAisFeed);
         } else {
             send(Cmd.GoogleMapFeed);
@@ -115,49 +133,119 @@ function do_update()
    
     if (valid == Cmd.GoogleMapFeed) {
 
+
         var val = JSON.parse(target);
         update = parseInt(val.updt)*1000;
         var lap = val.N == "S"? "-":"";
         var lop = val.E == "W"? "-":"";
  
         var nmap = new google.maps.LatLng(lap+val.la, lop+val.lo);
-        map.setCenter(nmap, 5);       
-        map.setZoom(parseInt(val.zoom));
-        gmarker.setMap(null);
-        gmarker = new google.maps.Marker({
-            position: nmap,
-            title: "<?php echo gethostname(); ?>",
-            map: map,
-            icon: { 
-                    path: google.maps.SymbolPath.FORWARD_OPEN_ARROW,
-                    scale: 3,
-                    fillColor: "red",
-                    fillOpacity: 0.5,
-                    strokeColor:"red",
-                    trokeWeight: 1,
-                    rotation: round_number(val.A,0)   
-                }
-        });
+        map.setCenter(nmap, 5);
+        if (first == true) {     
+            map.setZoom(parseInt(val.zoom));      
+        }
+        
+        if (first) {
+            gmarker = new google.maps.Marker({
+                position: nmap,
+                title: "<?php echo $aisname; ?>",
+                map: map,
+                icon: { 
+                        path: google.maps.SymbolPath.FORWARD_OPEN_ARROW,
+                        scale: 3,
+                        fillColor: "red",
+                        fillOpacity: 0.5,
+                        strokeColor:"red",
+                        strokeWeight: 1,
+                        rotation: round_number(val.A,0)   
+                    }
+            });
+            first = false;
+        } else {
+            gmarker.setPosition(nmap);
+            gmarker.setIcon({
+                path: google.maps.SymbolPath.FORWARD_OPEN_ARROW,
+                scale: 3,
+                fillColor: "red",
+                fillOpacity: 0.5,
+                strokeColor:"red",
+                strokeWeight: 1,
+                rotation: round_number(val.A,0)
+            })
+        }
 
     } else if (valid == Cmd.GoogleAisFeed) {
 
 
         var val = JSON.parse(target);
 
-        for(i=0; i<amarkers.length; i++)
-            amarkers[i].setMap(null);
+        var emarkers = [];
 
-        amarkers = [];
-  
-        for (var i in val) { 
+        for (var c in val) { // build list of existing markers to update  
+            for(var m=0; m<amarkers.length; m++) {      
+                if (val[c].userid == amarkers[m].get('userid')) {
+                    var lap = val[c].N == "S"? "-":"";
+                    var lop = val[c].E == "W"? "-":"";
+                    var newLatLng = new google.maps.LatLng(lap+val[c].la, lop+val[c].lo);
+                    amarkers[m].setPosition(newLatLng);
+                    var symbp = google.maps.SymbolPath.FORWARD_OPEN_ARROW; 
+                    if (val[c].sog <= stationary || val[c].trueh == 360) { val[c].trueh = 0; symbp = google.maps.SymbolPath.CIRCLE; }
+                    if (val[c].name == "n.n") val[c].name = val[c].userid;
+                    amarkers[m].setTitle(val[c].name + (val[c].sog >stationary? " - SOG " +val[c].sog:""));
+                    amarkers[m].setIcon({
+                        path: symbp,
+                        fillColor: "yellow",
+                        fillOpacity: 0.5,
+                        scale: 3,
+                        strokeColor:"red",
+                        strokeWeight: 1,
+                        rotation: round_number(val[c].trueh,0)
+                    })
+                    emarkers.push(amarkers[m]);
+                }    
+            }
+        }
+
+        // Check if markers are to be deleted
+        for(var a=0; a<amarkers.length; a++) {
+            var u = amarkers[a].get('userid');
+            var found = false;
+            for (var i in val) {
+                if (val[i].userid == u) {
+                    found = true;
+                    break;
+                }
+            }
+            if (found == false)
+                amarkers[a].setMap(null); 
+        }
+
+        amarkers = []; 
+
+        // (re)bebuild markerlist and add new
+        for (var i in val) {
+
+            var found = false;
+            for(var e=0; e<emarkers.length; e++) {
+                if (emarkers[e].get('userid') == val[i].userid) {
+                    found = true;
+                    amarkers.push(emarkers[e]);
+                    break;
+                }
+            }
+
+            if (found == true) continue;
+ 
+            // New marker
             var lap = val[i].N == "S"? "-":"";
             var lop = val[i].E == "W"? "-":"";
             var nmap = new google.maps.LatLng(lap+val[i].la, lop+val[i].lo); 
             var symbp = google.maps.SymbolPath.FORWARD_OPEN_ARROW; 
-            if (val[i].sog <= 0.1) { val[i].trueh = 0; symbp = google.maps.SymbolPath.CIRCLE; }
+            if (val[i].sog <= stationary || val[c].trueh == 360) { val[i].trueh = 0; symbp = google.maps.SymbolPath.CIRCLE; }
+            if (val[i].name == "n.n") val[i].name = val[i].userid;
             var amarker = new google.maps.Marker({
                 position: nmap,
-                title: val[i].name,
+                title: val[i].name + (val[i].sog >stationary? " - SOG " +val[i].sog:""),
                 map: map,
                 icon : {
                         path: symbp,
@@ -166,10 +254,11 @@ function do_update()
                         scale: 3,
                         strokeColor:"red",
                         strokeWeight: 1,
-                        rotation: round_number(val[i].trueh,0)   
+                        rotation: round_number(val[i].trueh,0)
                        }
                 });
 
+            amarker.set('userid', val[i].userid);
             amarkers.push(amarker);
         }
     }

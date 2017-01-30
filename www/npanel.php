@@ -335,6 +335,12 @@ function set_used_nwdev(dev)
     obj.value = document.getElementById("nwdev-"+dev).checked == true? "on":"off";
 }
 
+function setaisuse(obj)
+{
+
+    document.getElementById("aisuse").value = obj.checked==true? "1":"0";
+}
+
 function nifstypeset(dev, stat)
 {
     document.getElementById("nifstype-"+dev).style.display = stat == 1? "block":"none";
@@ -368,7 +374,6 @@ function nifstypeset(dev, stat)
             <option value="Night">Night</option>
             <option value="Day">Day</option>
         </select>
-        <!-- <input title="New panel" type="button" onclick="new_panel();" value="New"> -->
         <input title="Settings" type="button" onclick="do_config();" value="Settings">
         <input title="Fullscreen/F11" type="button" value="Fullscreen" onclick="full_screen()">
     </div>
@@ -406,7 +411,9 @@ function nifstypeset(dev, stat)
     <input type="hidden" name="MAX_FILE_SIZE" value="<?php echo MAXFILESIZE; ?>">
     <input id="nttys" name="nttys" value="0" type="hidden">
     <input id="nnetifs" name="nnetifs" value="0" type="hidden">
+    <input type="hidden" name="aisuse" id="aisuse" value="<?php echo $aisuse; ?>">
     <input type="button" id="quitb" value="quit" onclick="done_config(0);">
+ 
                         
     <table style="padding:6px;padding-top:30px">
         <tr>
@@ -420,7 +427,7 @@ function nifstypeset(dev, stat)
             <tr>
                 <td class="contentBox">
                     <h2>Google Map</h2>
-                    Zoom: <select name="map_zoom" title="Zoom factor">
+                    Zoom: <select name="map_zoom" title="Initial zoom factor">
                           <option <?php echo $map_zoom==10? "selected ":""; ?>value="10">10</option>
                           <option <?php echo $map_zoom==12? "selected ":""; ?>value="12">12</option>
                           <option <?php echo $map_zoom==14? "selected ":""; ?>value="14">14</option>
@@ -434,6 +441,14 @@ function nifstypeset(dev, stat)
                           <option <?php echo $map_updt==10? "selected ":""; ?>value="10">10</option>
                           <option <?php echo $map_updt==12? "selected ":""; ?>value="12">12</option>
                     </select> 
+                </td>
+            </tr>
+             <tr>
+                <td class="contentBox">
+                    <h2>AIS</h2>
+                    Vessel Name<br><input type="text" name="aisname" title="This vessel's name" id="aisname" maxlength="60" value="<?php echo $aisname ?>"><br>
+                    Vessel Userid<br><input type="text" name="aisid" title="This vessel's i.d - nine digits" maxlength="9" value="<?php echo $aisid ?>"><br>
+                    Use<input type="checkbox" onclick="setaisuse(this);" title="Show AIS on Google Map"<?php echo $aisuse==1? " checked=checked":""; ?>>
                 </td>
             </tr>
             <tr>

@@ -79,7 +79,7 @@
 #define DOADC               // Analog input volt .... etc.
 
 
-#define POLLRATE    0       // Rate to collect data in ms.
+#define POLLRATE    5       // Rate to collect data in ms.
 
 
 #define INVALID     4       // Invalidate current sentences after # seconds without a refresh from talker.
@@ -153,6 +153,14 @@ typedef struct {
 } in_configs;
 
 static in_configs iconf;
+
+typedef struct {
+    long    my_userid;  // AIS own user i.d
+    char    my_name[80];// AIS own name
+    int     my_useais;  // AIS use or not
+} in_aisconfigs;
+
+static in_aisconfigs aisconf;
 
 typedef struct {
     // Dynamic data from sensors
@@ -382,6 +390,7 @@ static int nmea_sock_open(int kplex_fork)
 {
     u_int yes = 1;
     struct ip_mreq mreq;
+    long flags;
 
     if (muxFd > 0)
         close(muxFd);
@@ -449,6 +458,11 @@ static int nmea_sock_open(int kplex_fork)
             return 1;
         }
     }
+
+    // Set socket nonblocking
+    flags = fcntl(muxFd, F_GETFL, NULL);
+    flags |= O_NONBLOCK;
+    fcntl(muxFd, F_SETFL, flags);
 
     return 0;
 }
@@ -574,6 +588,9 @@ int  configure(int kpf)
                     sqlite3_prepare_v2(conn, "CREATE TABLE file (Id INTEGER PRIMARY KEY, fname TEXT, rate INTEGER, use TEXT)", -1, &res, &tail);
                     sqlite3_step(res);
 
+                    sqlite3_prepare_v2(conn, "CREATE TABLE ais (Id INTEGER PRIMARY KEY, aisname TEXT, aisid BIGINT, aisuse INTEGER)", -1, &res, &tail);
+                    sqlite3_step(res);
+
                     sqlite3_prepare_v2(conn, "INSERT INTO gmap (zoom,updt) VALUES (14,6)", -1, &res, &tail);
                     sqlite3_step(res);
 
@@ -581,6 +598,9 @@ int  configure(int kpf)
                     sqlite3_step(res);
 
                     sqlite3_prepare_v2(conn, "INSERT INTO sumlog (display,cal) VALUES (1,2)", -1, &res, &tail);
+                    sqlite3_step(res);
+
+                    sqlite3_prepare_v2(conn, "INSERT INTO ais (aisname,aisid,aisuse) VALUES ('my yacht',366881180,1)", -1, &res, &tail);
                     sqlite3_step(res);
 
                     sqlite3_prepare_v2(conn, "INSERT INTO file (fname,rate,use) VALUES ('nofile',1,'off')", -1, &res, &tail);
@@ -623,6 +643,14 @@ int  configure(int kpf)
     rval = sqlite3_prepare_v2(conn, "select tdb from depth", -1, &res, &tail);        
     if (rval == SQLITE_OK && sqlite3_step(res) == SQLITE_ROW) {
             iconf.depth_transp = sqlite3_column_double(res, 0);
+    }
+
+    // AIS
+    rval = sqlite3_prepare_v2(conn, "select aisname,aisid,aisuse from ais", -1, &res, &tail);        
+    if (rval == SQLITE_OK && sqlite3_step(res) == SQLITE_ROW) {
+            (void)strcpy(aisconf.my_name, (char*)sqlite3_column_text(res, 0));
+            aisconf.my_userid = (long)sqlite3_column_int(res, 1);
+            aisconf.my_useais = sqlite3_column_int(res, 2);
     }
 
     // Still in file feed config mode?
@@ -1257,11 +1285,13 @@ int main(int argc ,char **argv)
 
         ais_state ais;
         int ais_rval;
-        long   userid = 0;
-        char *name = NULL;
+        long   userid;
+        char *name;
+        int r_limit;
         char txtbuf_p1[200];
         unsigned char ais_msgid_p1;
-        int trueh = 0;
+        int trueh;
+        int cog;
 
         // AIS message structures
         aismsg_1  msg_1;
@@ -1278,6 +1308,8 @@ int main(int argc ,char **argv)
         double lat_dd = 0;
         double long_ddd = 0;
         double sog = 0.1;
+        name = NULL;
+        userid = trueh = 0;
        
         // Reboot/re-configure request from PHP Gui code
         if (stat(WSREBOOT, &sb) == 0)
@@ -1462,7 +1494,7 @@ int main(int argc ,char **argv)
                 }
             }
 
-            if (*txtbuf != '!') continue;
+            if (*txtbuf != '!' || !aisconf.my_useais) continue;
 
             // AIS is handled last ....
 
@@ -1484,7 +1516,7 @@ int main(int argc ,char **argv)
                 ais.msgid = ais_msgid_p1;
                 ais_msgid_p1 = 0;
             }
-                
+              
             // process message with appropriate parser
             switch( ais.msgid ) {
                 case 1: // Message 1,2,3 - Position Report
@@ -1493,6 +1525,7 @@ int main(int argc ,char **argv)
                         pos2ddd( msg_1.latitude, msg_1.longitude, &lat_dd, &long_ddd );
                         trueh = msg_1.true;
                         sog =  msg_1.sog;
+                        cog = msg_1.cog;
                     }
                     break;
 
@@ -1502,6 +1535,7 @@ int main(int argc ,char **argv)
                         pos2ddd( msg_2.latitude, msg_2.longitude, &lat_dd, &long_ddd );
                         trueh = msg_2.true;
                         sog =  msg_2.sog;
+                        cog = msg_2.cog;
                     }
                     break;
 
@@ -1511,17 +1545,19 @@ int main(int argc ,char **argv)
                         pos2ddd( msg_3.latitude, msg_3.longitude, &lat_dd, &long_ddd );
                         trueh = msg_3.true;
                         sog =  msg_3.sog;
+                        cog = msg_2.cog;
                     }
                     break;
 
                 case 4: // Message 4 - Base station report
-                   if( !ais_rval && parse_ais_4( &ais, &msg_4 ) == 0 ) {
+                   if( r_limit == 10 && !ais_rval && parse_ais_4( &ais, &msg_4 ) == 0 ) {
                         userid = msg_4.userid;
                         pos2ddd( msg_4.latitude, msg_4.longitude, &lat_dd, &long_ddd );
+                        name = "BASE STATION";
                     }
                     break;
 
-                case 5: // Message 5: Ship static and voyage related data 
+                case 5: // Message 5: Ship static and voyage related data  
                     if( !ais_rval && parse_ais_5( &ais, &msg_5 ) == 0 ) {
                         userid = msg_5.userid;
                         name = msg_5.name;
@@ -1566,16 +1602,24 @@ int main(int argc ,char **argv)
                 default: continue; break;
 
             }
+
             if (debug) {
                 printlog( "MESSAGE ID   : %d", ais.msgid );
                 printlog( "NAME         : %s", name );
                 printlog( "USER ID      : %ld", userid );
                 printlog( "POSITION     : %0.6f %0.6f", fabs(lat_dd), fabs(long_ddd));
-                printlog( "TRUE HEADING : %ld", trueh );
-                printlog( "SOG          : %0.1f", sog );
+                printlog( "TRUE HEADING : %ld", trueh);
+                printlog( "SOG          : %0.1f", sog/10 );
             }
-            if (!ais_rval)
-                (void)addShip(ais.msgid, userid, fabs(lat_dd), fabs(long_ddd), trueh, sog, name);
+            if (!ais_rval && userid != aisconf.my_userid) {
+                sog = sog == 1023? 0 : sog;
+                if (trueh == 511) {
+                    trueh = cog >= 3600? 360: cog/10; 
+                }
+                
+                (void)addShip(ais.msgid, userid, fabs(lat_dd), fabs(long_ddd), trueh, sog/10, name);
+            }
+            if (++r_limit > 10) r_limit = 0;
             if (debug && ais_rval) printlog("AIS return=%d, msgid=%d  msg='%s'\n", ais_rval, ais.msgid, txtbuf); 
        }
     }

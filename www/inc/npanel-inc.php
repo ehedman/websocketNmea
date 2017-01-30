@@ -17,7 +17,7 @@
     $PMESSAGE="";
     $DBH = NULL;
 
-   //if (count($_POST)) {echo "<pre>"; print_r($_POST); echo "</pre>"; exit;}
+   //if (count($_POST)) {echo "<pre>"; print_r($_POST); echo "</pre>";}
 
     if (file_exists (NAVIDBPATH)) {
         if (count($_POST) && ! is_writable(NAVIDBPATH)) {
@@ -50,6 +50,9 @@
         $DBH->exec($sql);
 
         $sql="UPDATE `file` SET `fname`='nofile', `rate`='1', `use`='off' WHERE `Id`=1";
+        $DBH->exec($sql);
+
+        $sql="UPDATE `ais` SET `aisname`='".$_POST['aisname']."', `aisid`='".$_POST['aisid']."', `aisuse`='".$_POST['aisuse']."' WHERE `Id`=1";
         $DBH->exec($sql);
 
         if (($n=intval($_POST['nttys'])) > 0) {
@@ -124,7 +127,14 @@
         $row = $stmt->fetch();
         $smlog_disp=$row['display'];
         $smlog_calb=$row['cal'];
-        
+
+        $stmt = $DBH->prepare("SELECT aisname, aisid, aisuse FROM ais LIMIT 1"); 
+        $stmt->execute(); 
+        $row = $stmt->fetch();
+        $aisname=$row['aisname'];
+        $aisid=$row['aisid'];
+        $aisuse=$row['aisuse'];
+
         $stmt = $DBH->prepare('SELECT name, baud, dir, use FROM ttys ORDER BY Id');
         $stmt->execute(); 
         

@@ -61,10 +61,10 @@ int addShip(int msgid, long userid, double lat_dd, double long_ddd, int trueh, d
     
     if ((lat_dd + long_ddd) && userid) {
 
-        (void)sprintf(buf, "SELECT userid FROM ais WHERE userid = '%ld'", userid);
+        (void)sprintf(buf, "SELECT userid FROM ais WHERE userid = %ld", userid);
 
         if (sqlite3_prepare_v2(conn, buf, -1, &res, &tail) == SQLITE_OK && sqlite3_step(res) == SQLITE_ROW) {
-            (void)sprintf(buf, "UPDATE ais SET msgid = '%d', userid = '%ld', lat_dd = '%0.6f', long_ddd = '%0.6f', sog = '%0.1f', trueh = '%d', ts = '%ld' WHERE userid = '%ld'", \
+            (void)sprintf(buf, "UPDATE ais SET msgid = '%d', userid = %ld, lat_dd = %0.6f, long_ddd = %0.6f, sog = %0.1f, trueh = %d, ts = %ld WHERE userid = %ld", \
             msgid, userid, lat_dd, long_ddd, sog, trueh, time(NULL), userid);
 
             if (sqlite3_prepare_v2(conn, buf, -1, &res1, &tail) != SQLITE_OK)
@@ -75,21 +75,22 @@ int addShip(int msgid, long userid, double lat_dd, double long_ddd, int trueh, d
             (void)sqlite3_finalize(res1);
             (void)sqlite3_finalize(res);
 
-            return 0;
+        } else {
+            (void)sqlite3_finalize(res);
+
+            (void)sprintf(buf, "INSERT INTO ais (msgid,userid,lat_dd,long_ddd,sog,trueh,name,ts) VALUES (%d,%ld,%0.6f,%0.6f,%0.1f,%d,'n.n',%ld)", \
+                msgid, userid, lat_dd, long_ddd, sog, trueh, time(NULL));
+
+            if (sqlite3_prepare_v2(conn, buf, -1, &res, &tail) != SQLITE_OK)
+                printlog("sqlite3 insert: ", (char*)sqlite3_errmsg(conn));
+            else if (sqlite3_step(res) != SQLITE_DONE)
+                printlog("sqlite3 insert step: %s", (char*)sqlite3_errmsg(conn));
+
+            (void)sqlite3_finalize(res);
         }
-        (void)sqlite3_finalize(res);
-
-        (void)sprintf(buf, "INSERT INTO ais (msgid,userid,lat_dd,long_ddd,sog,trueh,name,ts) VALUES (%d,%ld,%0.6f,%0.6f,%0.1f,%d,'n.n',%ld)", \
-            msgid, userid, lat_dd, long_ddd, sog, trueh, time(NULL));
-
-        if (sqlite3_prepare_v2(conn, buf, -1, &res, &tail) != SQLITE_OK)
-            printlog("sqlite3 insert: ", (char*)sqlite3_errmsg(conn));
-        else if (sqlite3_step(res) != SQLITE_DONE)
-            printlog("sqlite3 insert step: %s", (char*)sqlite3_errmsg(conn));
-
-        (void)sqlite3_finalize(res);
-
-    } else if (name != NULL && userid) { // msg_5, msg_24
+    }
+    
+    if (name != NULL && userid) { // msg_5, msg_24
 
         int upd = 0;
         int len;
@@ -118,7 +119,7 @@ int addShip(int msgid, long userid, double lat_dd, double long_ddd, int trueh, d
         }
         
         if (upd) {
-            (void)sprintf(buf, "UPDATE ais SET name = '%s', ts = '%ld'  WHERE userid = '%ld'", name, time(NULL), userid);
+            (void)sprintf(buf, "UPDATE ais SET name = '%s', ts = %ld  WHERE userid = %ld", name, time(NULL), userid);
             if (sqlite3_prepare_v2(conn, buf, -1, &res, &tail) == SQLITE_OK)
                 (void)sqlite3_step(res);    
             (void)sqlite3_finalize(res); 
@@ -130,7 +131,7 @@ int addShip(int msgid, long userid, double lat_dd, double long_ddd, int trueh, d
         } 
     }
 
-    (void)sprintf(buf, "DELETE from ais WHERE ts < '%ld'", time(NULL)-MAX_LIVE);
+    (void)sprintf(buf, "DELETE from ais WHERE ts < %ld", time(NULL)-MAX_LIVE);
 
     if (sqlite3_prepare_v2(conn, buf, -1, &res, &tail) != SQLITE_OK) {
         printlog("sqlite3 delete old: %s", (char*)sqlite3_errmsg(conn));
@@ -164,7 +165,7 @@ struct aisShip_struct *getShips(int maxSize)
         if (!cnt) return NULL;
     }
 
-    (void)sprintf(buf, "DELETE from ais WHERE ts < '%ld'", time(NULL)-MAX_LIVE);
+    (void)sprintf(buf, "DELETE from ais WHERE ts < %ld", time(NULL)-MAX_LIVE);
 
     if (sqlite3_prepare_v2(conn, buf, -1, &res, &tail) != SQLITE_OK) {
         printlog("sqlite3 delete old: %s", (char*)sqlite3_errmsg(conn));
@@ -174,7 +175,7 @@ struct aisShip_struct *getShips(int maxSize)
 
     (void)sqlite3_finalize(res);
 
-    (void)sprintf(buf, "SELECT * from ais WHERE lat_dd > '0.0' AND ts > '%ld'", time(NULL)-MAX_INACTIVE);
+    (void)sprintf(buf, "SELECT * from ais WHERE lat_dd > 0.0 AND ts > %ld", time(NULL)-MAX_INACTIVE);
 
     if (sqlite3_prepare_v2(conn, buf, -1, &res, &tail) != SQLITE_OK) {
         printlog("sqlite3 select for row: %s", (char*)sqlite3_errmsg(conn));

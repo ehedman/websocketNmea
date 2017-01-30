@@ -63,6 +63,8 @@ In the "Network properties" field, select the device  you want to bind the netwo
 When the newtwork settings are saved do the following:
 In "Replay from file", select the demo file, choose rate 24 and then hit "Play".
 After a few moment the instruments should be activated.
+ NOTE: Leave the default AIS "Vessel Userid" as 366881180 in order to not have double and garbled representation of your own ship.
+       For real use and if you have an AIS transponder (not receiver only) it is important to add your real AIS user id to this field.
 
 The LED in the upper left corner will continuously monitor the connection:
 RED     : No response from the server.
