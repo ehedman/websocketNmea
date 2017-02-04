@@ -56,7 +56,7 @@ static int createDb(void)
                     }
 
                     (void)sqlite3_finalize(res1);
-                }
+                } else { printlog("sqlite3 select from abuddies table: %s", (char*)sqlite3_errmsg(conn1)); (void)sqlite3_finalize(res1); }
             } else printlog("sqlite3 step buddy table: %s", (char*)sqlite3_errmsg(conn));
         } else printlog("sqlite3 create buddies table: %s", (char*)sqlite3_errmsg(conn));
     } else printlog("sqlite3 open navidb for buddy transfers: %s", (char*)sqlite3_errmsg(conn1));
