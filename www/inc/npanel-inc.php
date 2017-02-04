@@ -16,6 +16,7 @@
     
     $PMESSAGE="";
     $DBH = NULL;
+    $KEY = NULL;
 
    //if (count($_POST)) {echo "<pre>"; print_r($_POST); echo "</pre>";}
 
@@ -42,6 +43,12 @@
 
         $sql = "UPDATE `gmap` SET `zoom`='".$_POST['map_zoom']."', `updt`='".$_POST['map_updt']."' WHERE `id`=1";
         $DBH->exec($sql);
+
+        if (strlen($_POST['gkey'])) {
+            $key = $_POST['gkey'] == "invalid"? "": $_POST['gkey'];
+            $sql = "UPDATE `gmap` SET `key`='".$key."' WHERE `id`=1";
+            $DBH->exec($sql);
+        }
         
         $sql = "UPDATE `depth` SET `vwrn`='".$_POST['depth_vwrn']."', `tdb`='".$_POST['depth_transp']."' WHERE `id`=1";
         $DBH->exec($sql);
@@ -52,7 +59,7 @@
         $sql="UPDATE `file` SET `fname`='nofile', `rate`='1', `use`='off' WHERE `Id`=1";
         $DBH->exec($sql);
 
-        $sql="UPDATE `ais` SET `aisname`='".$_POST['aisname']."', `aisid`='".$_POST['aisid']."', `aisuse`='".$_POST['aisuse']."' WHERE `Id`=1";
+        $sql="UPDATE `ais` SET `aisname`='".strtoupper($_POST['aisname'])."', `aisid`='".$_POST['aisid']."', `aisuse`='".$_POST['aisuse']."' WHERE `Id`=1";
         $DBH->exec($sql);
 
         if (($n=intval($_POST['nttys'])) > 0) {
@@ -110,11 +117,12 @@
     }
     
     if ($DBH) {    
-        $stmt = $DBH->prepare("SELECT zoom, updt FROM gmap LIMIT 1"); 
+        $stmt = $DBH->prepare("SELECT zoom, updt, key FROM gmap LIMIT 1"); 
         $stmt->execute(); 
         $row = $stmt->fetch();
         $map_zoom=$row['zoom'];
         $map_updt=$row['updt'];
+        $KEY = $row['key'];
         
         $stmt = $DBH->prepare("SELECT vwrn, tdb FROM depth LIMIT 1"); 
         $stmt->execute(); 

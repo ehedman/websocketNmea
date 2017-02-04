@@ -48,9 +48,6 @@
 #define NMEAPORT 10110          // Port 10110 is designated by IANA for "NMEA-0183 Navigational Data"
 #define NMEAADDR "127.0.0.1"    // localhost for TCP for UDP use 239.194.4.4 for a multicast address
 #define WSPORT 9000             // Port for the websocket protocol (to be allowed by firewall)
-#ifndef NAVIDBPATH
-#define NAVIDBPATH  "/etc/default/navi.db"      // Configuration database writable for webserver
-#endif
 #ifndef KPCONFPATH
 #define KPCONFPATH  "/etc/default/kplex.conf"   // KPlex configuration file writable for webserver
 #endif
@@ -109,6 +106,7 @@ enum requests {
     WindSpeedAndAngle   = 130,
     GoogleMapFeed       = 140,
     GoogleAisFeed       = 141,
+    GoogleAisBuddy      = 142,
     SensorVolt          = 200,
     WaterMakerData      = 210,
     ServerPing          = 900,
@@ -156,6 +154,7 @@ static in_configs iconf;
 
 typedef struct {
     long    my_userid;  // AIS own user i.d
+    long    my_buddy;   // AIS new buddy
     char    my_name[80];// AIS own name
     int     my_useais;  // AIS use or not
 } in_aisconfigs;
@@ -515,6 +514,7 @@ int  configure(int kpf)
     sqlite3 *conn;
     sqlite3_stmt *res;
     const char *tail, *cast;
+    char *ptr, buf[100];
     int rval = 0;
     int i, fd;
     struct stat sb;
@@ -570,7 +570,10 @@ int  configure(int kpf)
                             return 1;
                     }
 
-                    sqlite3_prepare_v2(conn, "CREATE TABLE gmap(Id INTEGER PRIMARY KEY, zoom INTEGER, updt INTEGER)", -1, &res, &tail);
+                    sqlite3_prepare_v2(conn, "CREATE TABLE rev(Id INTEGER PRIMARY KEY,  rev TEXT)", -1, &res, &tail);
+                    sqlite3_step(res);
+
+                    sqlite3_prepare_v2(conn, "CREATE TABLE gmap(Id INTEGER PRIMARY KEY, zoom INTEGER, updt INTEGER, key TEXT)", -1, &res, &tail);
                     sqlite3_step(res);
   
                     sqlite3_prepare_v2(conn, "CREATE TABLE ttys (Id INTEGER PRIMARY KEY,  name TEXT, baud TEXT, dir TEXT, use TEXT)", -1, &res, &tail);
@@ -590,6 +593,17 @@ int  configure(int kpf)
 
                     sqlite3_prepare_v2(conn, "CREATE TABLE ais (Id INTEGER PRIMARY KEY, aisname TEXT, aisid BIGINT, aisuse INTEGER)", -1, &res, &tail);
                     sqlite3_step(res);
+
+                    sqlite3_prepare_v2(conn, "CREATE TABLE abuddies (Id INTEGER PRIMARY KEY, userid BIGINT)", -1, &res, &tail);
+                    sqlite3_step(res);
+#ifdef REV
+                    sprintf(buf, "INSERT INTO rev (rev) VALUES ('%s')", REV);
+#else
+                    sprintf(buf, "INSERT INTO rev (rev) VALUES ('unknown')");
+#endif
+                    sqlite3_prepare_v2(conn, buf, -1, &res, &tail);
+                    sqlite3_step(res);
+
 
                     sqlite3_prepare_v2(conn, "INSERT INTO gmap (zoom,updt) VALUES (14,6)", -1, &res, &tail);
                     sqlite3_step(res);
@@ -628,6 +642,18 @@ int  configure(int kpf)
         }
     }
 
+#ifdef REV
+    // Check revision av database
+    rval = sqlite3_prepare_v2(conn, "select rev from rev", -1, &res, &tail);        
+    if (rval == SQLITE_OK && sqlite3_step(res) == SQLITE_ROW) {
+            if(strcmp((ptr=(char*)sqlite3_column_text(res, 0)), REV)) {
+                printlog("Warning: Database version missmatch in %s", NAVIDBPATH);
+                printlog("Expected %s but current revision is %s", REV, ptr);
+                printlog("You may have to remove %s and restart this program to get it rebuilt and then configure the settings from the GUI", NAVIDBPATH);
+            }
+    }
+#endif
+
     // Google Map Service 
     rval = sqlite3_prepare_v2(conn, "select zoom,updt from gmap", -1, &res, &tail);        
     if (rval == SQLITE_OK && sqlite3_step(res) == SQLITE_ROW) {
@@ -654,14 +680,18 @@ int  configure(int kpf)
     }
 
     // Still in file feed config mode?
-    if ((fd=open(KPCONFPATH, O_RDONLY)) > 0) {
-        char buf[100];      
+    if ((fd=open(KPCONFPATH, O_RDONLY)) > 0) {    
         if (read(fd, buf, sizeof(buf)) >0 && strstr(buf, FIFOKPLEX) != NULL) {
             rval = sqlite3_prepare_v2(conn, "select fname,rate from file", -1, &res, &tail);        
             if (rval == SQLITE_OK && sqlite3_step(res) == SQLITE_ROW) {
                     (void)strcpy(recFile, (char*)sqlite3_column_text(res, 0));
                     lineRate = sqlite3_column_int(res, 1);
-            } 
+            }            
+            if (access( FIFOKPLEX, F_OK ) == -1) { // Must exist from now on ..
+                if (mkfifo(FIFOKPLEX, (mode_t)0664)) {
+                    printlog("Error create kplex fifo: %s", strerror(errno));
+                }
+            }
         }
         (void)close(fd);
     }
@@ -720,6 +750,42 @@ int  configure(int kpf)
     return 0; 
 }
 
+void handle_buddy(long userid)
+{
+    sqlite3 *conn;
+    sqlite3_stmt *res;
+    const char *tail;
+    char sql[60];
+
+    (void)sqlite3_open_v2(NAVIDBPATH, &conn, SQLITE_OPEN_READWRITE, 0);
+    if (conn == NULL) {
+        printlog("Failed to open database %s to add a buddy: ", (char*)sqlite3_errmsg(conn));
+        aisconf.my_buddy = 0;
+        return;
+    }
+
+    (void)sprintf(sql, "SELECT userid FROM abuddies WHERE userid = %ld", userid);
+    if (sqlite3_prepare_v2(conn, sql, -1, &res, &tail) == SQLITE_OK && sqlite3_step(res) == SQLITE_ROW) {
+        (void)sqlite3_finalize(res);
+        (void)sprintf(sql, "DELETE FROM abuddies WHERE userid = %ld", userid);
+        if (sqlite3_prepare_v2(conn, sql, -1, &res, &tail) == SQLITE_OK) {
+            (void)sqlite3_step(res);
+        } else userid = 0;
+        (void)sqlite3_finalize(res);
+    } else {
+        (void)sqlite3_finalize(res);
+        (void)sprintf(sql, "INSERT INTO abuddies (userid) VALUES (%ld)", userid);  
+        if (sqlite3_prepare_v2(conn, sql, -1, &res, &tail) ==  SQLITE_OK) {
+            (void)sqlite3_step(res);
+        } else  userid = 0;
+        (void)sqlite3_finalize(res);       
+    }
+
+    (void)sqlite3_close(conn);
+
+    aisconf.my_buddy = userid;  // Leave it to be picked up later by addShip()
+}
+
 #define MAX_LONGITUDE 180
 #define MAX_LATITUDE   90
 
@@ -761,6 +827,7 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
     int  i, cnt, req, rval = 0;
     char value [MAX_LWSZ];
     unsigned char buf[LWS_SEND_BUFFER_PRE_PADDING + MAX_LWSZ + LWS_SEND_BUFFER_POST_PADDING];
+    char *args = NULL;
     time_t ct = time(NULL);
 
     memset(value, 0, sizeof(value));
@@ -773,6 +840,10 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
             break;
 
         case LWS_CALLBACK_RECEIVE: {
+
+            if ((args=index(in, '-')) != NULL)
+                *args++ = '\0';
+
             switch ((req=atoi((char*)in)))
             {   // Handle client (virtual instruments) enumerated requests.
                 // Reply with simple JSON 
@@ -843,9 +914,9 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                     if (ct - cnmea.gll_ts > INVALID*4)
                         sprintf(value, "Exp-%d", req);
                     else
-                        sprintf(value, "{'la':'%f','lo':'%f','N':'%s','E':'%s','A':'%.0f','zoom':'%d','updt':'%d'}-%d", \
+                        sprintf(value, "{'la':'%f','lo':'%f','N':'%s','E':'%s','A':'%.0f','zoom':'%d','updt':'%d','myname':'%s'}-%d", \
                             dms2dd(atof(cnmea.gll),"m"),dms2dd(atof(cnmea.glo),"m"), \
-                            cnmea.glns,cnmea.glne,cnmea.hdm,iconf.map_zoom,iconf.map_updt,req);
+                            cnmea.glns,cnmea.glne,cnmea.hdm,iconf.map_zoom,iconf.map_updt,aisconf.my_name,req);
                    break;
                 }
 
@@ -881,6 +952,13 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                     } else sprintf(value, "Exp-%d", req);
 
                     break;
+                }
+
+                case GoogleAisBuddy: {
+                        if (args != NULL && strlen(args)) {
+                            handle_buddy(atol(args));
+                        }
+                        break;
                 }
                 
                 /*       --- NON NMEA SECTION  ---     */
@@ -1045,18 +1123,19 @@ void *t_fileFeed()
     char buff[250];
    
     FILE *fdi, *fdo;
-    
-    if ((fdi=fopen(recFile,"r")) == NULL) {
-        printlog("Error open feed file: %s", strerror(errno));
-        pthread_exit(&rval);
-    }
-    
+       
     if (access( FIFOKPLEX, F_OK ) == -1) {
         if (mkfifo(FIFOKPLEX, (mode_t)0664)) {
             printlog("Error create kplex fifo: %s", strerror(errno));
             pthread_exit(&rval);
         }
     }
+
+    if ((fdi=fopen(recFile,"r")) == NULL) {
+        printlog("Error open feed file: %s", strerror(errno));
+        pthread_exit(&rval);
+    }
+
     if ((fdo=fopen(FIFOKPLEX,"w+")) == NULL) {
         printlog("Error to set permission on kplex fifo: %s", strerror(errno));
         pthread_exit(&rval);
@@ -1271,6 +1350,7 @@ int main(int argc ,char **argv)
     
     sleep(3);
     memset(&cnmea, 0, sizeof(cnmea));
+    aisconf.my_buddy = 0;
 
     // Main loop, to end this server, send signal INT(^c) or TERM
     // GUI commands WSREBOOT can break this loop requesting a restart.
@@ -1617,7 +1697,8 @@ int main(int argc ,char **argv)
                     trueh = cog >= 3600? 360: cog/10; 
                 }
                 
-                (void)addShip(ais.msgid, userid, fabs(lat_dd), fabs(long_ddd), trueh, sog/10, name);
+                (void)addShip(ais.msgid, userid, fabs(lat_dd), fabs(long_ddd), trueh, sog/10, name, aisconf.my_buddy);
+                aisconf.my_buddy = 0;
             }
             if (++r_limit > 10) r_limit = 0;
             if (debug && ais_rval) printlog("AIS return=%d, msgid=%d  msg='%s'\n", ais_rval, ais.msgid, txtbuf); 

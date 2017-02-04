@@ -61,10 +61,10 @@ Then click on the setting tab:
 In the "Network properties" field, select the device  you want to bind the network traffic to, typically eth0 or wlan0. Then click on "Use" and then "Save". Don't bother about the initial 127.0.0.1 address - the system will figure it out after the save.
 
 When the newtwork settings are saved do the following:
-In "Replay from file", select the demo file, choose rate 24 and then hit "Play".
+In "Replay from file", select the demo file, choose rate 13 and then hit "Play".
 After a few moment the instruments should be activated.
  NOTE: Leave the default AIS "Vessel Userid" as 366881180 in order to not have double and garbled representation of your own ship.
-       For real use and if you have an AIS transponder (not receiver only) it is important to add your real AIS user id to this field.
+       For real use and if you have an AIS transponder (not receiver only) it may be necessary to add your real AIS user id to this field.
 
 The LED in the upper left corner will continuously monitor the connection:
 RED     : No response from the server.
@@ -73,6 +73,17 @@ GREEN   : RMC traffic OK.
 
 If the demo runs OK, then you can try to configure the serial section to pick up devices such as GPS, wind etc.
 You can also re-arrange the main frame by clicking on any instruemnt and adjust the size with Ctrl+/Ctrl-.
+The input area for such clicks is the lower or only LED panel on an instrument or at the center of instruments without LED panels.
+
+The Google Map chart area will react to standard actions such as zoom and move and if the if AIS is active, a click on a vessel icon will
+add or remove the vessel as a "buddy" with a different color. A mouse hover over a vessel icon will expose the vessels name and speed.
+Vessels with a circular icon represents a stand still (< 0.3 knots) as reported in a AIS message from the ship.
+Vessels will be deactivated and finally removed from the internal AIS list if they are not renewing their AIS messages within a specified time.
+A click on the metal frame or just outside the frame will replace the instrument with a new one as explained  above.
+
+It should be quite easy to design a customized html frame container for the instruments with a different layout with only "<iframe src="http://<your i.p>/in-#-someInstruments.php"> as the fix point for a number of instruments.
+The instruments ability to replace themself with a click follows the instruemnts by design.
+To test just one stand-alone instrument you can address the instument directly with "http://<your i.p>/in-4-maps.php".
 
 NOTES:
  The stock versions (from Debian) of lighttpd and libwebsockets cannot be used due to obsolescence or missing features.

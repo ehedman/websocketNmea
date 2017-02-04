@@ -1,19 +1,3 @@
-<?php
-
-    define('DOCROOT', dirname(__FILE__)); 
-    define('NAVIDBPATH', DOCROOT.'/inc/navi.db');
-
-    if (file_exists (NAVIDBPATH)) {
-        $DBH = new PDO('sqlite:'.NAVIDBPATH);
-
-        $stmt = $DBH->prepare("SELECT aisname from ais LIMIT 1"); 
-        $stmt->execute(); 
-        $row = $stmt->fetch();
-        $aisname=$row['aisname'];
-        $stmt->closeCursor();
-    } else $aisname = "My Ship";
-?>
-
 <!DOCTYPE html>
 <html>
     <head>
@@ -22,9 +6,27 @@
         <meta name="viewport" content="initial-scale=6.0, user-scalable=no">
         <script type="text/javascript" src="inc/jquery-2.1.1.min.js"></script>
         <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&language=us"></script>
-        
+<?php
+        define('DOCROOT', dirname(__FILE__));
+        define('NAVIDBPATH', DOCROOT.'/inc/navi.db');
+
+        $key = "";
+        if (file_exists (NAVIDBPATH)) {
+            try {
+                $DBH = new PDO('sqlite:'.NAVIDBPATH);
+                $DBH->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); 
+                $stmt = $DBH->prepare("SELECT key from gmap WHERE Id=1"); 
+                $stmt->execute(); 
+                $row = $stmt->fetch();
+                $key=$row['key'];
+            } catch(PDOException $e) {}
+        }
+        if (strlen($key)) { ?>
+        <script async defer src="https://maps.googleapis.com/maps/api/js?key=<?php echo $key; ?>&callback=initMap" type="text/javascript"></script><?php } ?>
+
+
         <style>
-    
+      
 html>body
 {
     font-family: Tahoma, Helvetica, Geneva, Arial, sans-serif;
@@ -148,7 +150,7 @@ function do_update()
         if (first) {
             gmarker = new google.maps.Marker({
                 position: nmap,
-                title: "<?php echo $aisname; ?>",
+                title: val.myname,
                 map: map,
                 icon: { 
                         path: google.maps.SymbolPath.FORWARD_OPEN_ARROW,
@@ -180,6 +182,7 @@ function do_update()
         var val = JSON.parse(target);
 
         var emarkers = [];
+        
 
         for (var c in val) { // build list of existing markers to update  
             for(var m=0; m<amarkers.length; m++) {      
@@ -191,10 +194,10 @@ function do_update()
                     var symbp = google.maps.SymbolPath.FORWARD_OPEN_ARROW; 
                     if (val[c].sog <= stationary || val[c].trueh == 360) { val[c].trueh = 0; symbp = google.maps.SymbolPath.CIRCLE; }
                     if (val[c].name == "n.n") val[c].name = val[c].userid;
-                    amarkers[m].setTitle(val[c].name + (val[c].sog >stationary? " - SOG " +val[c].sog:""));
+                    amarkers[m].setTitle(val[c].name + (val[c].sog >stationary? " | SOG " +val[c].sog:""));
                     amarkers[m].setIcon({
                         path: symbp,
-                        fillColor: "yellow",
+                        fillColor: val[c].buddyid==0?"yellow":"white",
                         fillOpacity: 0.5,
                         scale: 3,
                         strokeColor:"red",
@@ -239,13 +242,14 @@ function do_update()
             // New marker
             var lap = val[i].N == "S"? "-":"";
             var lop = val[i].E == "W"? "-":"";
+            var name = val[i].name;
             var nmap = new google.maps.LatLng(lap+val[i].la, lop+val[i].lo); 
             var symbp = google.maps.SymbolPath.FORWARD_OPEN_ARROW; 
             if (val[i].sog <= stationary || val[c].trueh == 360) { val[i].trueh = 0; symbp = google.maps.SymbolPath.CIRCLE; }
             if (val[i].name == "n.n") val[i].name = val[i].userid;
             var amarker = new google.maps.Marker({
                 position: nmap,
-                title: val[i].name + (val[i].sog >stationary? " - SOG " +val[i].sog:""),
+                title: val[i].name + (val[i].sog >stationary? " | SOG " +val[i].sog:""),
                 map: map,
                 icon : {
                         path: symbp,
@@ -259,6 +263,12 @@ function do_update()
                 });
 
             amarker.set('userid', val[i].userid);
+            google.maps.event.addListener(amarker, 'click', function() {
+                var name = this.get('title').split("|");
+                if (confirm("Save/Remove " + name[0] + " from buddyList?")) {
+                    send(Cmd.GoogleAisBuddy + "-" + this.get('userid'));
+                }
+            });
             amarkers.push(amarker);
         }
     }
@@ -284,6 +294,10 @@ function initialize() {
         map: map,
         icon: {
                 path: google.maps.SymbolPath.CIRCLE,
+                fillColor: "red",
+                fillOpacity: 0.5,
+                strokeColor:"red",
+                strokeWeight: 1,
                 scale: 6,
         }
     });    
@@ -304,11 +318,11 @@ google.maps.event.addDomListener(window, 'load', initialize);
     </head>
     <body onload="init()">
         <div id="main">
-            <img id="instrument" src="img/empty.png" alt="instrument">
+            <img id="instrument" src="img/empty.png" alt="instrument" onclick="nextinstrument();">
             <div id="googlemaps"></div>
         </div>        
         <div id="logpanel"></div>
-        <script type="text/javascript" src="inc/wsClient.js.php"></script>  
+        <script type="text/javascript" src="inc/common.js.php"></script>  
     </body>
 </html>
 

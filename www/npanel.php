@@ -172,20 +172,11 @@ function check_overlap()
 // No need to edit this file for new instruments
 // Just place them in the fs here as in-*.php
 var instrument_indx = 0;
-var instrument = [<?php 
-    $items = array();
-    exec("cd ".DOCROOT."; ls -l in-*.php | awk '{ print \$NF }'", $items);
-    $n = count($items);
-    for ($i=0; $i<$n; $i++) {
-        echo "'".$items[$i]."'";
-        if ($i < $n-1) echo ',';
-    } ?>];
-
 
 $(document).ready(function()
 { 
 
-    var maxi = instrument.length;
+    var maxi = instruments.length;
     var i = 0;
     var frs = [ document.getElementById("left_fr"),
                 document.getElementById("right_fr"),
@@ -195,7 +186,7 @@ $(document).ready(function()
                 
     for (i=0; i < maxi; i++) {
         if (i >= frs.length) break;
-        frs[i].src = instrument[i];
+        frs[i].src = instruments[i];
     }
     instrument_indx = i+1;
     
@@ -204,7 +195,7 @@ $(document).ready(function()
     <?php echo count($_FILES)? 'document.getElementById("config").style.display = "block";':""; ?>
     document.getElementById("msg").innerHTML="<?php echo $PMESSAGE ?>";
 
-    init(); // wsClient
+    init(); // common.js.php
 });
 
 
@@ -228,14 +219,6 @@ function collision($div1, $div2)
       if (b1 < y2 || y1 > b2 || r1 < x2 || x1 > r2)
         return false;
       return true;
-}
-
-function iframeclick(obj)
-{
-    obj.contentWindow.document.body.onclick = function() {
-        obj.src = instrument[instrument_indx++];
-        if (instrument_indx >= instrument.length) instrument_indx = 0;
-    }
 }
 
 function isDecimal(num)
@@ -274,6 +257,31 @@ function do_config()
     document.getElementById("config").style.display = "block";
 }
 
+function enter_key()
+{
+    var key = prompt("Please enter your Google Map Key"<?php echo strlen($KEY)? ',"'.$KEY.'"':""; ?>);
+
+    document.getElementById("msg").innerHTML="";
+    
+    if (key.length) {
+        if (!/^[a-z0-9]+$/i.test(key)) {
+            document.getElementById("msg").innerHTML="Invalid key string";
+            return;
+        }
+        document.getElementById("msg").innerHTML="Your key: '"+key+"', now save your configuration";
+        document.getElementById("gkey").value = key;
+        return;
+    }  
+}
+
+function delete_key()
+{
+    var key = "<?php echo $KEY; ?>";
+
+    document.getElementById("msg").innerHTML="Your key: '"+key+"', is to be deleted. Now save your configuration";
+    document.getElementById("gkey").value = "invalid";
+}
+
 function done_config(val)
 {
     var f = document.getElementById("form");
@@ -282,6 +290,22 @@ function done_config(val)
         document.getElementById("config").style.display = "none";
         f.POST_ACTION.value = "OK";
         return;
+    }
+    var l;
+    if ((l=document.getElementById("aisid").value.length) >0) {
+        if (l != 9) {
+            document.getElementById("msg").innerHTML="Invalid lenght in field 'Vessel Userid'. Should be 9 digits";
+            return false;
+        }
+        if (isDecimal(document.getElementById("aisid").value) == false) {
+            document.getElementById("msg").innerHTML="Invalid digit(s) in field 'Vessel Userid'";
+            return false;
+        }
+    }
+
+    if (/[^0-9a-zA-Z/\s]/gi.test(document.getElementById("aisname").value)) {
+        document.getElementById("msg").innerHTML="Invalid character(s) in field 'Vessel Name'";
+        return false;
     }
     
     var nip=f.nnetifs.value;
@@ -307,9 +331,7 @@ function done_config(val)
         }
     }
 
-    //f.POST_ACTION.value = "OK";
     f.submit();
-
 }
 
 function submit_file()
@@ -382,25 +404,25 @@ function nifstypeset(dev, stat)
     
     <div id="top_section">
         <div id="left_div">   
-            <iframe src="tbd" id="left_fr" onload="iframeclick(this)">
+            <iframe src="tbd" id="left_fr">
                 <p>Your browser does not support iframes.</p>
             </iframe>
         </div>
         <div id="right_div">       
-            <iframe src="tbd" id="right_fr" onload="iframeclick(this)"></iframe>
+            <iframe src="tbd" id="right_fr"></iframe>
         </div>     
          <div id="center_div">       
-            <iframe src="tbd" id="center_fr" onload="iframeclick(this)"></iframe>
+            <iframe src="tbd" id="center_fr""></iframe>
         </div>
     </div>
         
     <div id="bottom_section"> 
         <div id="show_bottom">    
             <div id="left_div_b">
-                <iframe src="tbd" id="left_fr_b" onload="iframeclick(this)"></iframe> 
+                <iframe src="tbd" id="left_fr_b"></iframe> 
             </div>
             <div id="right_div_b">       
-                <iframe src="tbd" id="right_fr_b" onload="iframeclick(this)"></iframe>
+                <iframe src="tbd" id="right_fr_b"></iframe>
             </div>          
         </div>  
     </div>
@@ -412,6 +434,7 @@ function nifstypeset(dev, stat)
     <input id="nttys" name="nttys" value="0" type="hidden">
     <input id="nnetifs" name="nnetifs" value="0" type="hidden">
     <input type="hidden" name="aisuse" id="aisuse" value="<?php echo $aisuse; ?>">
+    <input type="hidden" name="gkey" id="gkey" value="">
     <input type="button" id="quitb" value="quit" onclick="done_config(0);">
  
                         
@@ -440,14 +463,16 @@ function nifstypeset(dev, stat)
                           <option <?php echo $map_updt==8?  "selected ":""; ?>value="8">8</option>
                           <option <?php echo $map_updt==10? "selected ":""; ?>value="10">10</option>
                           <option <?php echo $map_updt==12? "selected ":""; ?>value="12">12</option>
-                    </select> 
+                    </select><br>
+                    Enter : <input type="button" value="key" title="Enter a Google Map Key" onclick="enter_key();">
+                    <?php if (strlen($KEY)) { ?>Delete : <input type="button" value="key" title="Delete the Google Map Key" onclick="delete_key();"><?php } ?>
                 </td>
             </tr>
              <tr>
                 <td class="contentBox">
                     <h2>AIS</h2>
-                    Vessel Name<br><input type="text" name="aisname" title="This vessel's name" id="aisname" maxlength="60" value="<?php echo $aisname ?>"><br>
-                    Vessel Userid<br><input type="text" name="aisid" title="This vessel's i.d - nine digits" maxlength="9" value="<?php echo $aisid ?>"><br>
+                    Vessel Name<br><input type="text" style="text-transform:uppercase" name="aisname" title="This vessel's name" id="aisname" maxlength="20" value="<?php echo $aisname ?>"><br>
+                    Vessel Userid<br><input type="text" name="aisid" id="aisid" title="This vessel's i.d (MMSI) - nine digits" maxlength="9" value="<?php echo $aisid ?>"><br>
                     Use<input type="checkbox" onclick="setaisuse(this);" title="Show AIS on Google Map"<?php echo $aisuse==1? " checked=checked":""; ?>>
                 </td>
             </tr>
@@ -556,7 +581,7 @@ function nifstypeset(dev, stat)
     </div>
     
     <div id="logpanel"></div>      
-    <script type="text/javascript" src="inc/wsClient.js.php"></script>
+    <script type="text/javascript" src="inc/common.js.php"></script>
        
     </body>
 </html>
