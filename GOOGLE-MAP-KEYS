@@ -1,0 +1,18 @@
+If you instead of a map gets a gray background with a warning, then you may have exceeded the number of free accesses to the Google Maps API.
+
+The google map instrument uses the Google Map API Version 3.
+
+Google has changed the Google Maps API on June 22nd 2016, requiring a mandatory Google API key for all sites, which call the Google Maps API services for the first time after June 22nd 2016.
+
+Get a Key/Authentication:
+If you're using the API under the standard plan, you must use an API key set up in a project of your choice.
+
+Users of the standard API:
+
+    Free until exceeding 25,000 map loads per 24 hours.
+
+Read more and generate a key at:
+https://developers.google.com/maps/documentation/javascript/get-api-key
+
+You can enter your obtained key into your websocket NMEA application through the web GUI in the  setup settings section.
+
