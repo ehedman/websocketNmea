@@ -77,7 +77,7 @@ The input area for such clicks is the lower or only LED panel on an instrument o
 
 The Google Map chart area will react to standard actions such as zoom and move and if the if AIS is active, a click on a vessel icon will
 add or remove the vessel as a "buddy" with a different color. A mouse hover over a vessel icon will expose the vessels name and speed.
-Vessels with a circular icon represents a stand still (< 0.3 knots) as reported in a AIS message from the ship.
+Vessels with a circular icon represents a stand still (< 0.3 knots) as reported in an AIS message from the ship.
 Vessels will be deactivated and finally removed from the internal AIS list if they are not renewing their AIS messages within a specified time.
 A click on the metal frame or just outside the frame will replace the instrument with a new one as explained  above.
 
