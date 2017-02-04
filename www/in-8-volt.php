@@ -119,10 +119,10 @@ function do_poll()
     </head>
      <body onload="init()">
         <div id="instrument">
-            <img src="img/sneedle.png" id="needle">
+            <img src="img/sneedle.png" id="needle" onclick="nextinstrument();">
         </div>
         <div id="LEDpanel"></div>
         <div id="logpanel"></div>
-        <script type="text/javascript" src="inc/wsClient.js.php"></script>
+        <script type="text/javascript" src="inc/common.js.php"></script>
     </body>
 </html>

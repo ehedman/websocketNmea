@@ -161,11 +161,11 @@ function do_poll()
     </head>
     <body onload="init()">
         <div id="main">
-            <div id="LEDpanel"></div>
+            <div id="LEDpanel"  onclick="nextinstrument();"></div>
             <div id="instrument"><img src="img/needle1.png" alt="" id="needle"></div>
             <div id="SOGpanel">&nbsp;</div>
         </div>
         <div id="logpanel"></div>
-        <script type="text/javascript" src="inc/wsClient.js.php"></script>
+        <script type="text/javascript" src="inc/common.js.php"></script>
     </body>
 </html>

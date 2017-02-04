@@ -142,8 +142,6 @@ function do_poll()
     
     if (1) {
     if ((c_angle >= 180 && angle <= 180) || (c_angle <= 180  && angle >= 180)) {
-        // document.getElementById("logpanel").innerHTML="DONT ROT TO "+angle;
-        //$("#needle").rotate({animateTo:rangle,duration:4000,easing: $.easing.easeInQutSine, direction: false})
         $("#needle").rotate({animateTo:rangle,duration:1});
     } else {
         $("#needle").rotate({animateTo:rangle,duration:4000,easing: $.easing.easeInQutSine});
@@ -164,10 +162,10 @@ function do_poll()
     </head>
     <body onload="init()">
         <div id="main">
-            <div id="LEDpanel"></div>
-            <div id="instrument"><img src="img/crose.png" alt="" id="needle"></div>
+            <div id="LEDpanel" onclick="nextinstrument();"></div>
+            <div id="instrument"><img src="img/crose.png" alt="" id="needle" onclick="nextinstrument();"></div>
         </div>
         <div id="logpanel"></div>
-        <script type="text/javascript" src="inc/wsClient.js.php"></script>
+        <script type="text/javascript" src="inc/common.js.php"></script>
     </body>  
 </html>

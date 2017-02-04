@@ -149,10 +149,10 @@ function do_poll()
         <div id="main">
             <div id="LEDpanel1"></div>
             <div id="LEDpanel2"></div>
-            <div id="LEDpanel3"></div>
+            <div id="LEDpanel3" onclick="nextinstrument();"></div>
             <div><img src="img/gps.png" alt="gps" id="instrument"></div>
         </div>
         <div id="logpanel"></div>
-        <script type="text/javascript" src="inc/wsClient.js.php"></script>
+        <script type="text/javascript" src="inc/common.js.php"></script>
     </body>  
 </html>

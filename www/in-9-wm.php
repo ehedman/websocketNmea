@@ -182,9 +182,9 @@ function do_poll()
             <div id="LEDpanel2"></div>
             <div id="LEDpanel3"></div>
             <div id="LEDpanel4"></div>
-            <div><img src="img/wm.png" alt="watermaker" id="instrument"></div>
+            <div><img src="img/wm.png" alt="watermaker" id="instrument" onclick="nextinstrument();"></div>
         </div>
         <div id="logpanel"></div>
-        <script type="text/javascript" src="inc/wsClient.js.php"></script>
+        <script type="text/javascript" src="inc/common.js.php"></script>
     </body>  
 </html>

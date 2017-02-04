@@ -192,7 +192,7 @@ function do_poll()
     
     <body onload="init()">
         <div id="main">
-            <div id="LEDpanel"></div>
+            <div id="LEDpanel" onclick="nextinstrument();"></div>
             <div id="instrument">
                 <img src="img/needle1.png" alt="" id="needle">
                 <img src="img/needle-black.png" alt="" id="needle1">
@@ -201,7 +201,7 @@ function do_poll()
             <div id="ANGpanel">&nbsp;</div>
         </div>
         <div id="logpanel"></div>
-        <script type="text/javascript" src="inc/wsClient.js.php"></script>
+        <script type="text/javascript" src="inc/common.js.php"></script>
     </body>  
     
 </html>
