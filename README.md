@@ -32,6 +32,7 @@ Currently there are nine virtual instrument working:
 
 Tested runtime environment:
 - Odroid XU3 (Ubuntu 15.04)
+- X86 (Ubuntu 16)
 - Raspberry Pi Model 3 (Debian wheezy)
 - Linux Mint 17/18
 - Browsers: Firefox, IE, Chrome
