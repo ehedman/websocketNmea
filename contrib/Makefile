@@ -34,6 +34,7 @@ install: lighttpd1.4-lighttpd-1.4.33 kplex libwebsockets aisparser
 	cd kplex && sudo make BINDIR=/usr/local/bin install
 	cd lighttpd1.4-lighttpd-1.4.33 && sudo make install
 	sudo install libwebsockets/lib/libwebsockets.h -m 0664 -o root -g root /usr/local/include
+	sudo install libwebsockets/build/lws_config.h -m 0664 -o root -g root /usr/local/include
 	sudo install libwebsockets/build/lib/libwebsockets.a -m 0644 -g root -o root -D /usr/local/lib
 	sudo rm -f /usr/local/lib/libwebsockets.so.*
 	sudo install libwebsockets/build/lib/libwebsockets.so.* -m 0755 -g root -o root -D /usr/local/lib

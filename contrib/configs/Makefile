@@ -20,6 +20,7 @@ install-configs:
 			pidof lighttpd  >/dev/null 2>&1; \
 			if [ $$? -eq 0 ]; then \
 				sudo install -m 0644 -g root -o root /tmp/lighttpd.conf -D /usr/local/etc/lighttpd.conf; \
+				sudo install -m 0755 -g root -o root lighttpd -D /etc/init.d/lighttpd; \
 				sudo systemctl unmask lighttpd.service  > /dev/null 2>&1; \
 				sudo update-rc.d lighttpd defaults; \
 				sudo  service lighttpd restart; \
@@ -29,6 +30,7 @@ install-configs:
 			fi \
 		else \
 			sudo install -m 0644 -g root -o root /tmp/lighttpd.conf -D /usr/local/etc/lighttpd.conf; \
+			sudo install -m 0755 -g root -o root lighttpd -D /etc/init.d/lighttpd; \
 			sudo systemctl unmask lighttpd.service  > /dev/null 2>&1; \
 			sudo update-rc.d lighttpd defaults; \
 			sudo service lighttpd restart; \
