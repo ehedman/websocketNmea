@@ -64,7 +64,8 @@ ARCH=$(shell $(CC) -dumpmachine |  cut -d- -f1 | tr '[:lower:]' '[:upper:]')
 GETC=".git/HEAD"
 
 ifeq ($(shell test -e $(GETC) && echo -n yes),yes)
-CFLAGS=-DREV=\"$(shell git branch -v | awk '{print $$2"-"$$3}')\"
+#CFLAGS=-DREV=\"$(shell git rev-parse HEAD)\"
+CFLAGS=-DREV=\"$(shell git log --pretty=format:'%h' -n 1)\"
 endif
 
 CFLAGS+= -Wall -g -std=gnu99 -pedantic

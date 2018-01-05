@@ -111,7 +111,7 @@ function round_number(num, dec) {
 var instruments = [<?php
     define('DOCROOT', dirname(__FILE__)); 
     $items = array();
-    exec("cd ".DOCROOT."/../; ls -l in-*.php | awk '{ print \$NF }'", $items);
+    exec("cd ".DOCROOT."/../; /bin/echo 'for file in $(ls in-*|cut -d\- -f2|sort -n); do ls in-\${file}-*.php; done' > /tmp/in-list; bash /tmp/in-list; rm -f /tmp/in-list", $items);
     $n = count($items);
     for ($i=0; $i<$n; $i++) {
         echo "'".$items[$i]."'";

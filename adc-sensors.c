@@ -33,9 +33,8 @@ enum modes {
 #define ADBZ    24
 #define IOMAX   6
 #define MAXTRY  10
-#define IOWAIT  200000
+#define IOWAIT  600000
 #define MAXAGE  20
-
 
 #define CHAisNOTUSED    0
 #define CHAisCLAIMED    1
@@ -96,6 +95,7 @@ static int getPrompt(void)
 void *t_devMgm()
 {
     char cmdFmt[ADBZ];
+    char rbuf[ADBZ];
     size_t cnt;
     extern int errno;
 
@@ -134,25 +134,29 @@ void *t_devMgm()
                 continue;
             } else {
                 memset(adChannel[chn].adBuffer, 0 , ADBZ);
+                memset(rbuf, 0 , ADBZ);
+                cnt = 0;
                 for (int try = 0; try < MAXTRY; try++)
                 {
-                    usleep(IOWAIT); //printf("RETRY %s %d\n", cmdFmt, chn);
-                    cnt = read(serialDev.fd, adChannel[chn].adBuffer, ADBZ); // Get the value
+                    usleep(IOWAIT); //printf("RETRY %s %d\n", rbuf, cnt);
+                    cnt = read(serialDev.fd, rbuf, ADBZ); // Get the value
                     if (cnt == -1 && errno == EAGAIN) continue;
                     if (adChannel[chn].status == CHAisCLAIMED && cnt > 1) {
                         adChannel[chn].status = CHAisREADY;
                         break;
                     }
-                    if (cnt >1) {
-                        printf("got %s, %d\n", adChannel[chn].adBuffer, cnt);
+                    if (cnt >0) {
                         adChannel[chn].age = time(NULL);
-                        break;
+                        strcat(adChannel[chn].adBuffer, rbuf);
+                        //printf("catting=%s <- %s\n", adChannel[chn].adBuffer, rbuf);
                     }
                 }
+                //printf("got %s\n", adChannel[chn].adBuffer);
                 (void)tcflush(serialDev.fd, TCIFLUSH);
             }
         }
     }
+    /* NOT REACHED */
 }
 
 static int portConfigure(int fd)
@@ -183,12 +187,12 @@ static int portConfigure(int fd)
 
     SerialPortSettings.c_iflag &= ~(IXON | IXOFF | IXANY);  // Disable XON/XOFF flow control both i/p and o/p
     SerialPortSettings.c_iflag &= ~(ICANON | ECHO | ECHOE | ISIG);  // Non Cannonical mode
-
+    
     SerialPortSettings.c_oflag &= ~OPOST;   // No Output Processing
 
     // Setting Time outs
-    SerialPortSettings.c_cc[VMIN] = 2;  // Read at least 2 characters 
-    //SerialPortSettings.c_cc[VTIME] = 10; // Wait 1 sec
+    SerialPortSettings.c_cc[VMIN] = 2;     // Read at least 2 characters 
+    //SerialPortSettings.c_cc[VTIME] = 10;  // Wait 1 sec
 
 
     if((tcsetattr(fd,TCSANOW,&SerialPortSettings)) != 0) {  // Set the attributes to the termios structure
@@ -253,9 +257,8 @@ float adcRead(int a2dChannel)
     }
 
     if (strlen(adChannel[a2dChannel].adBuffer)) {
-        printlog("received=%s\n", adChannel[a2dChannel].adBuffer);
+        //printlog("received=%s\n", adChannel[a2dChannel].adBuffer);
         adChannel[a2dChannel].curVal = atof(adChannel[a2dChannel].adBuffer);
-        memset(adChannel[a2dChannel].adBuffer, 0, ADBZ);
     }
 
     if (adChannel[a2dChannel].age < time(NULL) - MAXAGE)
@@ -264,7 +267,7 @@ float adcRead(int a2dChannel)
     return adChannel[a2dChannel].curVal;
 }
 
-#else   // MCP3208
+#else   // MCP3208 http://robsraspberrypi.blogspot.se/2016/01/raspberry-pi-adding-analogue-inputs.html
 /*
  * ADC code for MCP3208 SPI Chip 12 bit ADC
  * This code has been tested on an RPI 3
@@ -373,7 +376,7 @@ static int spiWriteRead( unsigned char *data, int length){
      return ioctl (spiDev.spiFd, SPI_IOC_MESSAGE(length), &spi);
 }
 
-int adcRead(int a2dChannel)
+float adcRead(int a2dChannel)
 {
     int a2dVal;
     unsigned char data[3];
@@ -393,7 +396,7 @@ int adcRead(int a2dChannel)
     data[1] = 0x0F & data[1];
     a2dVal = (data[1] << 8) | data[2]; 
 
-    return (a2dVal);
+    return (float)(a2dVal);
 }
 #endif
 

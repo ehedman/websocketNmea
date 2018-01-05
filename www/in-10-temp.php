@@ -66,8 +66,8 @@ var target = 0;
 var ticks = 2000;
 var update = 2000;
 
-var maxangle = 240;
-var offset = 95;
+var maxangle = 136;
+var offset = 43;
 var maxtemp = 50;
 var scaleoffset = 8;
 
@@ -98,7 +98,9 @@ function do_poll()
     if (valid != Cmd.SensorTemp) return;
     
     var val = JSON.parse(target);
-     
+
+    val.temp -= 25;
+ 
     document.getElementById("needle").style.opacity = "100";
 
     document.getElementById("LEDpanel").innerHTML=val.temp;
@@ -111,7 +113,7 @@ function do_poll()
     
     var angle = (val.temp-scaleoffset) * (maxangle/maxtemp);
     
-    $("#needle").rotate({animateTo:(angle*2)+offset}); 
+    $("#needle").rotate({animateTo:(angle*1.2)+offset});
 
 }
     </script>
