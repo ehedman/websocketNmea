@@ -8,7 +8,7 @@ The instruments can be accessed individually as a web page or assembled into a f
 
 The frameset in this application pacakge that assembles the instrument into one page also features a control panel to set user preferences and the look of the panel.
 
-The communication mechanism between that server and the instrument uses two paralell paths: the standard http protocol to instantiate the instrument and the websocket protocol (port 9000) to show realtime data typically (but not always) shown as arrows that turns on top of a scale.
+The communication mechanism between that server and the instrument uses two paralell paths: the standard http protocol to instantiate the instrument and the websocket protocol (port 443) to show realtime data typically (but not always) shown as arrows that turns on top of a scale.
 
 The wsocknmea daemon is not directly involved in the (nmea) data acquisition but relies on a server daemon dedicated for this purpose that has the capability to do just that and then feed the nmea sentences to the network by means of TCP or UDP data streams.
 

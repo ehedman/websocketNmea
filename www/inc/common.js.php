@@ -1,7 +1,7 @@
 var socket;
 var retry = 0;
 var valid;
-var port = 9000;
+var port = 443;
 
 var Cmd = {
     SpeedOverGround     : "100",
@@ -14,6 +14,8 @@ var Cmd = {
     GoogleAisFeed       : "141",
     GoogleAisBuddy      : "142",
     SensorVolt          : "200",
+    SensorCurr          : "201",
+    SensorTemp          : "202",
     WaterMakerData      : "210",
     ServerPing          : "900",
     TimeOfDAy           : "901",

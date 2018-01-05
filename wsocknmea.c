@@ -47,7 +47,7 @@
 // Configuration
 #define NMEAPORT 10110          // Port 10110 is designated by IANA for "NMEA-0183 Navigational Data"
 #define NMEAADDR "127.0.0.1"    // localhost for TCP for UDP use 239.194.4.4 for a multicast address
-#define WSPORT 9000             // Port for the websocket protocol (to be allowed by firewall)
+#define WSPORT 443              // Port for the websocket protocol (to be allowed by firewall)
 #ifndef KPCONFPATH
 #define KPCONFPATH  "/etc/default/kplex.conf"   // KPlex configuration file writable for webserver
 #endif
@@ -72,10 +72,6 @@
 #define MAX_TTYS    50      // No of serial devices to manage in the db
 #define MAX_NICS    6       // No of nics to manage in the db
 
-#define MT1800              // Instrument support for ENWA Watermaker 
-#define DOADC               // Analog input volt .... etc.
-
-
 #define POLLRATE    5       // Rate to collect data in ms.
 
 
@@ -83,16 +79,31 @@
 
 #define NMPARSE(str, nsent) !strncmp(nsent, &str[3], strlen(nsent))
 
+#if defined (MCP3208) || defined (UK1104)
+#define DOADC
+#endif
+
 #ifdef DOADC
-extern int adcInit(char *device, int a2dChannel);
-extern int adcRead(int a2dChannel);
-#define     ADCDEV          "/dev/spidev0.0"
+extern int adcInit(char *device, int a2dChannel); // device exaple "/dev/ttyUSB3" or "/dev/spidev0.0"
+extern float adcRead(int a2dChannel);
+#define COLDTEMP    25      // Max minus temp in C on instrument scale
+#ifdef UK1104
+#define     ADCTICKSVOLT    0.02    // Must be adjusted to hw voltage divider resistance network etc.
+#define     VOLTLOWLEVEL    400     // No of adc ticks repesenting the threshold shown as the lowest level on the instrument.
+#define     CURRLOWLEVEL    400
+#define     ADCTICKSCURR    0.02
+#define     TEMPLOWLEVEL    -25.0
+#else   // MCP3208
 #define     ADCTICKSVOLT    0.0065  // Must be adjusted to hw voltage divider resistance network etc.
 #define     VOLTLOWLEVEL    1230    // No of adc ticks repesenting the threshold shown as the lowest level on the instrument.
+#define     CURRLOWLEVEL    1024
+#define     ADCTICKSCURR    0.005
+#endif
 
 enum adcChannels {
     voltChannel = 0,
-    currChannel = 1
+    currChannel,
+    tempChannel = TPMCH,    // Reserved to return real temp as float value
 };
 #endif
 
@@ -108,6 +119,8 @@ enum requests {
     GoogleAisFeed       = 141,
     GoogleAisBuddy      = 142,
     SensorVolt          = 200,
+    SensorCurr          = 201,
+    SensorTemp          = 202,
     WaterMakerData      = 210,
     ServerPing          = 900,
     TimeOfDAy           = 901,
@@ -148,6 +161,7 @@ typedef struct {
     int     depth_vwrn;     // Depth visual low warning
     int     depth_swrn;     // Audiable low warning
     float   depth_transp;   // Depth of transponer
+    char    adc_dev[40];    // ADC in /dev
 } in_configs;
 
 static in_configs iconf;
@@ -185,8 +199,13 @@ typedef struct {
     char    glo[40];    // Position Longitude
     char    glns[2];    // North (N) or South (S)
     char    glne[2];    // East (E) or West (W)
-    float   volt;       // Sensor Volt (non NMEA)
+    // Sensors non NMEA
+    float   volt;       // Sensor Volt
     time_t  volt_ts;    // Volt Timestamp
+    float   curr;       // Sensor Current
+    time_t  curr_ts;    // Current Timestamp
+    float   temp;       // Sensor Temp
+    time_t  temp_ts;    // Temp Timestamp
 #ifdef MT1800
     float   cond;       // Condictivity from Watermaker
     time_t  cond_ts;    // Conductivity Timestamp
@@ -238,25 +257,65 @@ static void do_sensors(time_t ts, collected_nmea *cn)
 #endif
 
 #ifdef DOADC
-    int a2dVal;
-    static int acnt;
-    static int avvolt;
-    static float aadc[10]; // No of samples to collect
+    float a2dVal;
+    static int vcnt;
+    static int ccnt;
+    static float avvolt;
+    static float avcurr;
+    static float sampvolt[10];  // No of samples to collect in ticks
+    static float sampcurr[10];
+#ifdef UK1104
+    static int tcnt;
+    static float avtemp;
+    static float samptemp[10];  // No of samples to collect in float
+#endif
 
     a2dVal = adcRead(voltChannel);
     // Calculate an average in case of ADC drifts.
     if (a2dVal >= VOLTLOWLEVEL) {  // example: 1230 ticks == 8 volt
-        aadc[acnt] = (a2dVal);
-        if (++acnt > sizeof(aadc)/sizeof(float)) {
-            acnt = avvolt = 0;
-            for (int i=0; i < sizeof(aadc)/sizeof(float); i++) {
-                avvolt += aadc[i];
+        sampvolt[vcnt] = a2dVal;
+        if (++vcnt > sizeof(sampvolt)/sizeof(float)) {
+            vcnt = avvolt = 0;
+            for (int i=0; i < sizeof(sampvolt)/sizeof(float); i++) {
+                avvolt += sampvolt[i];
             }
-            avvolt /= sizeof(aadc)/sizeof(float);
+            avvolt /= sizeof(sampvolt)/sizeof(float);
         }
         cn->volt = avvolt * ADCTICKSVOLT;
         cn->volt_ts = ts;
     }
+
+    a2dVal = adcRead(currChannel);
+    // Calculate an average in case of ADC drifts.
+    if (a2dVal >= CURRLOWLEVEL) {
+        sampcurr[ccnt] = a2dVal;
+        if (++ccnt > sizeof(sampcurr)/sizeof(float)) {
+            ccnt = avcurr = 0;
+            for (int i=0; i < sizeof(sampcurr)/sizeof(float); i++) {
+                avcurr += sampcurr[i];
+            }
+            avcurr /= sizeof(sampcurr)/sizeof(float);
+        }
+        cn->curr = avcurr * ADCTICKSCURR;
+        cn->curr_ts = ts;
+    }
+
+#ifdef UK1104
+    a2dVal = adcRead(tempChannel);  // UK1104 returns temp in C - not ticks
+    // Calculate an average in case of ADC drifts.
+    if (a2dVal >= TEMPLOWLEVEL) {
+        samptemp[tcnt] = a2dVal;
+        if (++tcnt > sizeof(samptemp)/sizeof(float)) {
+            tcnt = avtemp = 0;
+            for (int i=0; i < sizeof(samptemp)/sizeof(float); i++) {
+                avtemp += samptemp[i];
+            }
+            avtemp /= sizeof(samptemp)/sizeof(float);
+        }
+        cn->temp = avtemp;
+        cn->temp_ts = ts;
+    }
+#endif
 
 #else
     // Just for demo
@@ -596,6 +655,13 @@ int  configure(int kpf)
 
                     sqlite3_prepare_v2(conn, "CREATE TABLE abuddies (Id INTEGER PRIMARY KEY, userid BIGINT)", -1, &res, &tail);
                     sqlite3_step(res);
+
+                    sqlite3_prepare_v2(conn, "CREATE TABLE devadc(Id INTEGER PRIMARY KEY,  device TEXT)", -1, &res, &tail);
+                    sqlite3_step(res);
+                    
+                    sprintf(buf, "INSERT INTO devadc (device) VALUES ('%s')", "/dev/null");
+                    sqlite3_prepare_v2(conn, buf, -1, &res, &tail);
+                    sqlite3_step(res);
 #ifdef REV
                     sprintf(buf, "INSERT INTO rev (rev) VALUES ('%s')", REV);
 #else
@@ -603,7 +669,6 @@ int  configure(int kpf)
 #endif
                     sqlite3_prepare_v2(conn, buf, -1, &res, &tail);
                     sqlite3_step(res);
-
 
                     sqlite3_prepare_v2(conn, "INSERT INTO gmap (zoom,updt) VALUES (14,6)", -1, &res, &tail);
                     sqlite3_step(res);
@@ -669,6 +734,12 @@ int  configure(int kpf)
     rval = sqlite3_prepare_v2(conn, "select tdb from depth", -1, &res, &tail);        
     if (rval == SQLITE_OK && sqlite3_step(res) == SQLITE_ROW) {
             iconf.depth_transp = sqlite3_column_double(res, 0);
+    }
+
+    // ADC device
+    rval = sqlite3_prepare_v2(conn, "select device from devadc", -1, &res, &tail);        
+    if (rval == SQLITE_OK && sqlite3_step(res) == SQLITE_ROW) {
+            (void)strcpy(iconf.adc_dev, (char*)sqlite3_column_text(res, 0));
     }
 
     // AIS
@@ -853,7 +924,7 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                 // Json reply {"speedog":"4.46"}-SpeedOverGround
                 // where tail -SpeedOverGround and Exp-SpeedOverGround is for
                 // target validation to be split out before parsing the json string.
-           
+         
                 case SpeedOverGround: {
                     if (ct - cnmea.rmc_ts > INVALID || cnmea.rmc == 0)
                         sprintf(value, "Exp-%d", req);
@@ -967,6 +1038,22 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                         sprintf(value, "Exp-%d", req);
                     else
                         sprintf(value, "{'volt':'%.1f'}-%d", cnmea.volt, req);
+                    break;
+                }
+
+                case SensorCurr: {
+                    if (ct - cnmea.curr_ts > INVALID*10)
+                        sprintf(value, "Exp-%d", req);
+                    else
+                        sprintf(value, "{'curr':'%.1f'}-%d", cnmea.curr, req);
+                    break;
+                }
+
+                case SensorTemp: {
+                    if (ct - cnmea.temp_ts > INVALID*10)
+                        sprintf(value, "Exp-%d", req);
+                    else
+                        sprintf(value, "{'temp':'%.1f'}-%d", cnmea.temp + COLDTEMP, req);
                     break;
                 }
 #ifdef MT1800
@@ -1345,7 +1432,13 @@ int main(int argc ,char **argv)
 #endif
 
 #ifdef DOADC
-    (void)adcInit(ADCDEV, voltChannel);
+    if (strcmp(iconf.adc_dev, "/dev/null")) {
+        (void)adcInit(iconf.adc_dev, voltChannel);
+        (void)adcInit(iconf.adc_dev, currChannel);
+#ifdef UK1104
+        (void)adcInit(iconf.adc_dev, tempChannel);
+#endif
+    }
 #endif
     
     sleep(3);

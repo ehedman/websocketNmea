@@ -1,12 +1,270 @@
+
 #include <stdio.h>
 #include <sys/types.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <stdlib.h>
 #include <sys/ioctl.h>
 #include <linux/spi/spidev.h>
+#include <pthread.h>
+#include <termios.h> 
+#include <unistd.h>
+#include <errno.h>
 #include "wsocknmea.h"
 
+
+#ifdef UK1104   // https://www.canakit.com/
+
+enum modes {
+    DigIn = 1,
+    DigOut,
+    AnaogIn,
+    TempIn
+};
+
+#define UK1104P         "\r\n"
+#define PUK1104         "::"
+#define CHxSETMOD       "CH%d.SETMOD%d\r\n"
+#define CHxGETANALOG    "CH%d.GETANALOG\r\n"
+#define CHxGETTEMP      "CH%d.GETTEMP\r\n"
+#define RELxON          "REL%d.ON\r\n"
+
+#define ADBZ    24
+#define IOMAX   6
+#define MAXTRY  10
+#define IOWAIT  200000
+#define MAXAGE  20
+
+
+#define CHAisNOTUSED    0
+#define CHAisCLAIMED    1
+#define CHAisREADY      2
+
+static struct serial {
+    int fd;
+} serialDev;
+
+struct adData
+{
+    char adBuffer[ADBZ];
+    float curVal;
+    size_t count;
+    int mode;
+    int status;
+    time_t age;
+};
+
+static struct adData adChannel[IOMAX];
+
+static int getPrompt(void)
+{
+    char buffer[ADBZ];
+    size_t cnt;
+    int rval = 1;
+    extern int errno;
+
+    if (!serialDev.fd) return 1;
+
+    (void)tcflush(serialDev.fd, TCIFLUSH);
+
+    (void)sprintf(buffer, UK1104P);
+    cnt = write(serialDev.fd, buffer, strlen(buffer)); // Write the UK1104 init wake up string
+    if (cnt != strlen(buffer)) {
+        printlog("UK1104: Error in sending get prompt string");
+        return rval;
+    }
+
+    memset(buffer, 0 , ADBZ);
+    for (int try = 0; try < MAXTRY; try++)
+    {
+        usleep(IOWAIT);
+        cnt = read(serialDev.fd, buffer, ADBZ); // Get the response
+        if (cnt == -1 && errno == EAGAIN) continue;
+        if (cnt > 1 && !strcmp(buffer, PUK1104)) {
+            rval = 0;
+            break;
+        }
+    }
+
+    (void)tcflush(serialDev.fd, TCIFLUSH);
+
+    return rval;
+}
+
+// Reader thread
+void *t_devMgm()
+{
+    char cmdFmt[ADBZ];
+    size_t cnt;
+    extern int errno;
+
+    while(1)
+    {
+        for (int chn = 0; chn < IOMAX; chn++)
+        {
+            if (adChannel[chn].status == CHAisNOTUSED)
+                continue;
+
+            if (adChannel[chn].status == CHAisCLAIMED) {
+                sprintf(cmdFmt, CHxSETMOD, chn, adChannel[chn].mode);
+            } else {               
+                switch (adChannel[chn].mode)
+                {
+                    case AnaogIn:
+                        sprintf(cmdFmt, CHxGETANALOG, chn);
+                    break;
+                    case TempIn:
+                        sprintf(cmdFmt, CHxGETTEMP, chn);
+                    break;
+                    default:
+                    break;
+                }              
+            }
+#if 0
+            if (getPrompt()) {
+                printlog("UK1104: Error in getting the ready prompt");
+                continue;
+            }
+#endif
+
+            cnt = write(serialDev.fd, cmdFmt, strlen(cmdFmt));  // Write the command string
+            if (cnt != strlen(cmdFmt)) {
+                printlog("UK1104: Error in sending command %s", cmdFmt);
+                continue;
+            } else {
+                memset(adChannel[chn].adBuffer, 0 , ADBZ);
+                for (int try = 0; try < MAXTRY; try++)
+                {
+                    usleep(IOWAIT); //printf("RETRY %s %d\n", cmdFmt, chn);
+                    cnt = read(serialDev.fd, adChannel[chn].adBuffer, ADBZ); // Get the value
+                    if (cnt == -1 && errno == EAGAIN) continue;
+                    if (adChannel[chn].status == CHAisCLAIMED && cnt > 1) {
+                        adChannel[chn].status = CHAisREADY;
+                        break;
+                    }
+                    if (cnt >1) {
+                        printf("got %s, %d\n", adChannel[chn].adBuffer, cnt);
+                        adChannel[chn].age = time(NULL);
+                        break;
+                    }
+                }
+                (void)tcflush(serialDev.fd, TCIFLUSH);
+            }
+        }
+    }
+}
+
+static int portConfigure(int fd)
+{
+
+    struct termios SerialPortSettings;
+    static pthread_attr_t attr;  
+    static pthread_t t1;
+    int detachstate;
+
+    if (serialDev.fd) return 0;
+
+    tcgetattr(fd, &SerialPortSettings);     // Get the current attributes of the Serial port
+
+    /* Setting the Baud rate */
+    cfsetispeed(&SerialPortSettings,B9600); // Set Read  Speed as 9600
+    cfsetospeed(&SerialPortSettings,B9600); // Set Write Speed as 9600
+
+    /* 8N1 Mode */
+    SerialPortSettings.c_cflag &= ~PARENB;  // Disables the Parity Enable bit(PARENB),So No Parity
+    SerialPortSettings.c_cflag &= ~CSTOPB;  // CSTOPB = 2 Stop bits,here it is cleared so 1 Stop bit
+    SerialPortSettings.c_cflag &= ~CSIZE;   // Clears the mask for setting the data size
+    SerialPortSettings.c_cflag |=  CS8;     // Set the data bits = 8
+
+    SerialPortSettings.c_cflag &= ~CRTSCTS;         // No Hardware flow Control
+    SerialPortSettings.c_cflag |= CREAD | CLOCAL;   // Enable receiver,Ignore Modem Control lines
+
+
+    SerialPortSettings.c_iflag &= ~(IXON | IXOFF | IXANY);  // Disable XON/XOFF flow control both i/p and o/p
+    SerialPortSettings.c_iflag &= ~(ICANON | ECHO | ECHOE | ISIG);  // Non Cannonical mode
+
+    SerialPortSettings.c_oflag &= ~OPOST;   // No Output Processing
+
+    // Setting Time outs
+    SerialPortSettings.c_cc[VMIN] = 2;  // Read at least 2 characters 
+    //SerialPortSettings.c_cc[VTIME] = 10; // Wait 1 sec
+
+
+    if((tcsetattr(fd,TCSANOW,&SerialPortSettings)) != 0) {  // Set the attributes to the termios structure
+        printlog("UK1104: Error in setting serial attributes");
+        return 1;
+    } else
+        printlog("UK1104: BaudRate = 9600, StopBits = 1,  Parity = none");
+
+    tcflush(fd, TCIFLUSH);  // Discards old data in the rx buffer
+
+    (void)memset(adChannel, 0, sizeof(adChannel));
+    pthread_attr_init(&attr);
+    detachstate = PTHREAD_CREATE_DETACHED;
+    pthread_attr_setdetachstate(&attr, detachstate);
+    pthread_create(&t1, &attr, t_devMgm, NULL); // Start the reader thread
+
+    return 0;
+}
+
+int adcInit(char *device, int a2dChannel)
+{
+    int fd;
+
+    if (a2dChannel > IOMAX-1) {
+        printlog("UK1104: Error channel must be less than %d not  %d", IOMAX, a2dChannel+1);
+        return 1;
+    }
+    
+    if (adChannel[a2dChannel].status) {
+        printlog("UK1104: ADC Channel %d already claimed", a2dChannel);
+        return 0;
+    }
+
+    if (!serialDev.fd) {
+        if ((fd = open(device, O_RDWR | O_NOCTTY | O_NDELAY )) <0) {
+            printlog("UK1104: ADC Could not open device %s", device);
+            return 1;
+        }
+    }
+
+    if (portConfigure(fd)) {
+        close(fd);
+        serialDev.fd = 0;
+        return 1;
+    }
+    serialDev.fd = fd;
+
+    fcntl(serialDev.fd, F_SETFL, FNDELAY);  // Non-blockning   
+
+    adChannel[a2dChannel].mode = a2dChannel == TPMCH? TempIn : AnaogIn;
+    adChannel[a2dChannel].status = CHAisCLAIMED;
+
+    return 0;
+}
+
+float adcRead(int a2dChannel)
+{
+
+    if (adChannel[a2dChannel].status != CHAisREADY) {
+        //printlog("ADC: Channel %d not in initialized", a2dChannel);
+        return 0;
+    }
+
+    if (strlen(adChannel[a2dChannel].adBuffer)) {
+        printlog("received=%s\n", adChannel[a2dChannel].adBuffer);
+        adChannel[a2dChannel].curVal = atof(adChannel[a2dChannel].adBuffer);
+        memset(adChannel[a2dChannel].adBuffer, 0, ADBZ);
+    }
+
+    if (adChannel[a2dChannel].age < time(NULL) - MAXAGE)
+        adChannel[a2dChannel].curVal = 0;   // Zero out aged values
+
+    return adChannel[a2dChannel].curVal;
+}
+
+#else   // MCP3208
 /*
  * ADC code for MCP3208 SPI Chip 12 bit ADC
  * This code has been tested on an RPI 3
@@ -60,7 +318,7 @@ static int spiOpen(char * devspi)
 }
 
 // Init ADC
-int mcp3208SpiInit(char *devspi, unsigned char spiMode, unsigned int spiSpeed, unsigned char spibitsPerWord)
+static int mcp3208SpiInit(char *devspi, unsigned char spiMode, unsigned int spiSpeed, unsigned char spibitsPerWord)
 {
      spiDev.mode = spiMode ;
      spiDev.bitsPerWord = spibitsPerWord;
@@ -137,6 +395,7 @@ int adcRead(int a2dChannel)
 
     return (a2dVal);
 }
+#endif
 
 
 

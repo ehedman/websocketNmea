@@ -27,7 +27,7 @@ HDRS = wsocknmea.h
 BIN = wsocknmea
 
 # Where to install web pages
-WWWTOP = /var/www
+WWWTOP = /var/www/navi
 
 # The web-server's runtime user and group belongings
 WO = www-data
