@@ -148,7 +148,7 @@ function do_poll()
     <body onload="init()">
         <div id="main">
             <div id="instrument"><img src="img/needle1.png" alt="" id="minutes"></div>
-            <img src="img/needle-black.png" id="seconds" onclick="nextinstrument();">
+            <img src="img/needle-black.png" id="seconds" title="Click to shift instrument" onclick="nextinstrument();">
             <img src="img/needle.png" id="hours" onclick="nextinstrument();">
         </div>
         <div id="logpanel"></div>

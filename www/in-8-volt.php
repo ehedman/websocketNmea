@@ -119,7 +119,7 @@ function do_poll()
     </head>
      <body onload="init()">
         <div id="instrument">
-            <img src="img/sneedle.png" id="needle" onclick="nextinstrument();">
+            <img src="img/sneedle.png" id="needle" title="Click to shift instrument" onclick="nextinstrument();">
         </div>
         <div id="LEDpanel"></div>
         <div id="logpanel"></div>

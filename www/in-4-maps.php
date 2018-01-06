@@ -318,7 +318,7 @@ google.maps.event.addDomListener(window, 'load', initialize);
     </head>
     <body onload="init()">
         <div id="main">
-            <img id="instrument" src="img/empty.png" alt="instrument" onclick="nextinstrument();">
+            <img id="instrument" src="img/empty.png" title="Click to shift instrument" alt="instrument" onclick="nextinstrument();">
             <div id="googlemaps"></div>
         </div>        
         <div id="logpanel"></div>

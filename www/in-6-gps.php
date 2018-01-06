@@ -149,7 +149,7 @@ function do_poll()
         <div id="main">
             <div id="LEDpanel1"></div>
             <div id="LEDpanel2"></div>
-            <div id="LEDpanel3" onclick="nextinstrument();"></div>
+            <div id="LEDpanel3" title="Click to shift instrument" onclick="nextinstrument();"></div>
             <div><img src="img/gps.png" alt="gps" id="instrument"></div>
         </div>
         <div id="logpanel"></div>

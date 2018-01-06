@@ -2,7 +2,7 @@
 
 get_ttys()
 {
-    m=`cat /proc/devices | egrep 'ttyS|ttyUSB|ttySAC' | awk -F" " '{ printf "%s|", $1 }'`
+    m=`cat /proc/devices | egrep 'ttyUSB|ttySAC|ttyACM' | awk -F" " '{ printf "%s|", $1 }'`
     ls -l /dev/tty*S*[[:digit:]] | egrep "${m}none" | awk '{print $NF}'
 }
 

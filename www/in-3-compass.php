@@ -162,7 +162,7 @@ function do_poll()
     </head>
     <body onload="init()">
         <div id="main">
-            <div id="LEDpanel" onclick="nextinstrument();"></div>
+            <div id="LEDpanel" title="Click to shift instrument" onclick="nextinstrument();"></div>
             <div id="instrument"><img src="img/crose.png" alt="" id="needle" onclick="nextinstrument();"></div>
         </div>
         <div id="logpanel"></div>

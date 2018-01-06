@@ -32,8 +32,8 @@ enum modes {
 
 #define ADBZ    24
 #define IOMAX   6
-#define MAXTRY  10
-#define IOWAIT  600000
+#define MAXTRY  4
+#define IOWAIT  350000
 #define MAXAGE  20
 
 #define CHAisNOTUSED    0
@@ -65,25 +65,29 @@ static int getPrompt(void)
 
     if (!serialDev.fd) return 1;
 
-    (void)tcflush(serialDev.fd, TCIFLUSH);
-
-    (void)sprintf(buffer, UK1104P);
-    cnt = write(serialDev.fd, buffer, strlen(buffer)); // Write the UK1104 init wake up string
-    if (cnt != strlen(buffer)) {
-        printlog("UK1104: Error in sending get prompt string");
-        return rval;
-    }
-
-    memset(buffer, 0 , ADBZ);
-    for (int try = 0; try < MAXTRY; try++)
+    for (int i = 0; i < 3; i++) 
     {
-        usleep(IOWAIT);
-        cnt = read(serialDev.fd, buffer, ADBZ); // Get the response
-        if (cnt == -1 && errno == EAGAIN) continue;
-        if (cnt > 1 && !strcmp(buffer, PUK1104)) {
-            rval = 0;
-            break;
+        (void)tcflush(serialDev.fd, TCIFLUSH);
+
+        (void)sprintf(buffer, UK1104P);
+        cnt = write(serialDev.fd, buffer, strlen(buffer)); // Write the UK1104 init wake up string
+        if (cnt != strlen(buffer)) {
+            printlog("UK1104: Error in sending get prompt string");
+            return rval;
         }
+
+        (void)memset(buffer, 0 , ADBZ);
+        for (int try = 0; try < MAXTRY; try++)
+        {
+            (void)usleep(IOWAIT);
+            cnt = read(serialDev.fd, buffer, ADBZ); // Get the response
+            if (cnt == -1 && errno == EAGAIN) continue; 
+            if (cnt > 1 && !strncmp(buffer, PUK1104, 2)) {  // printf("b=%s,try=%d,i=%d\n", buffer,try ,i);
+                rval = 0;
+                break;
+            }
+        }
+        if (rval == 0) break;
     }
 
     (void)tcflush(serialDev.fd, TCIFLUSH);
@@ -121,24 +125,23 @@ void *t_devMgm()
                     break;
                 }              
             }
-#if 0
+#if 1
             if (getPrompt()) {
                 printlog("UK1104: Error in getting the ready prompt");
                 continue;
             }
 #endif
-
             cnt = write(serialDev.fd, cmdFmt, strlen(cmdFmt));  // Write the command string
             if (cnt != strlen(cmdFmt)) {
                 printlog("UK1104: Error in sending command %s", cmdFmt);
                 continue;
             } else {
-                memset(adChannel[chn].adBuffer, 0 , ADBZ);
-                memset(rbuf, 0 , ADBZ);
-                cnt = 0;
+                (void)memset(adChannel[chn].adBuffer, 0 , ADBZ);
+                (void)memset(rbuf, 0 , ADBZ);
+
                 for (int try = 0; try < MAXTRY; try++)
                 {
-                    usleep(IOWAIT); //printf("RETRY %s %d\n", rbuf, cnt);
+                    (void)usleep(IOWAIT); //printf("RETRY %s %d\n", rbuf, cnt);
                     cnt = read(serialDev.fd, rbuf, ADBZ); // Get the value
                     if (cnt == -1 && errno == EAGAIN) continue;
                     if (adChannel[chn].status == CHAisCLAIMED && cnt > 1) {
@@ -147,13 +150,13 @@ void *t_devMgm()
                     }
                     if (cnt >0) {
                         adChannel[chn].age = time(NULL);
-                        strcat(adChannel[chn].adBuffer, rbuf);
-                        //printf("catting=%s <- %s\n", adChannel[chn].adBuffer, rbuf);
+                        (void)strcat(adChannel[chn].adBuffer, rbuf);
+                        //printf("catting=%s <- %s, try=%d\n", adChannel[chn].adBuffer, rbuf, try);
                     }
                 }
-                //printf("got %s\n", adChannel[chn].adBuffer);
-                (void)tcflush(serialDev.fd, TCIFLUSH);
             }
+            (void)tcflush(serialDev.fd, TCIFLUSH);
+            //if (strlen(adChannel[chn].adBuffer)) printf("got %s\n", adChannel[chn].adBuffer);
         }
     }
     /* NOT REACHED */
@@ -169,11 +172,11 @@ static int portConfigure(int fd)
 
     if (serialDev.fd) return 0;
 
-    tcgetattr(fd, &SerialPortSettings);     // Get the current attributes of the Serial port
+    (void)tcgetattr(fd, &SerialPortSettings);     // Get the current attributes of the Serial port
 
     /* Setting the Baud rate */
-    cfsetispeed(&SerialPortSettings,B9600); // Set Read  Speed as 9600
-    cfsetospeed(&SerialPortSettings,B9600); // Set Write Speed as 9600
+    (void)cfsetispeed(&SerialPortSettings,B115200); // Set Read  Speed as 15200
+    (void)cfsetospeed(&SerialPortSettings,B115200); // Set Write Speed as 15200
 
     /* 8N1 Mode */
     SerialPortSettings.c_cflag &= ~PARENB;  // Disables the Parity Enable bit(PARENB),So No Parity
@@ -191,7 +194,7 @@ static int portConfigure(int fd)
     SerialPortSettings.c_oflag &= ~OPOST;   // No Output Processing
 
     // Setting Time outs
-    SerialPortSettings.c_cc[VMIN] = 2;     // Read at least 2 characters 
+    //SerialPortSettings.c_cc[VMIN] = 2;     // Read at least 2 characters 
     //SerialPortSettings.c_cc[VTIME] = 10;  // Wait 1 sec
 
 
@@ -199,15 +202,15 @@ static int portConfigure(int fd)
         printlog("UK1104: Error in setting serial attributes");
         return 1;
     } else
-        printlog("UK1104: BaudRate = 9600, StopBits = 1,  Parity = none");
+        printlog("UK1104: BaudRate = 15200, StopBits = 1,  Parity = none");
 
-    tcflush(fd, TCIFLUSH);  // Discards old data in the rx buffer
+    (void)tcflush(fd, TCIFLUSH);  // Discards old data in the rx buffer
 
     (void)memset(adChannel, 0, sizeof(adChannel));
     pthread_attr_init(&attr);
     detachstate = PTHREAD_CREATE_DETACHED;
-    pthread_attr_setdetachstate(&attr, detachstate);
-    pthread_create(&t1, &attr, t_devMgm, NULL); // Start the reader thread
+    (void)pthread_attr_setdetachstate(&attr, detachstate);
+    (void)pthread_create(&t1, &attr, t_devMgm, NULL); // Start the reader thread
 
     return 0;
 }
@@ -234,13 +237,13 @@ int adcInit(char *device, int a2dChannel)
     }
 
     if (portConfigure(fd)) {
-        close(fd);
+        (void)close(fd);
         serialDev.fd = 0;
         return 1;
     }
     serialDev.fd = fd;
 
-    fcntl(serialDev.fd, F_SETFL, FNDELAY);  // Non-blockning   
+    (void)fcntl(serialDev.fd, F_SETFL, FNDELAY);  // Non-blockning   
 
     adChannel[a2dChannel].mode = a2dChannel == TPMCH? TempIn : AnaogIn;
     adChannel[a2dChannel].status = CHAisCLAIMED;

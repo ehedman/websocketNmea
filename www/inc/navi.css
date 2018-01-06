@@ -78,6 +78,29 @@ div
     margin-top:10px;
     //border: 1px solid white;
 }
+#adc_left_fr
+{
+    position: absolute;
+    height: 100%;
+    left: 0%;
+    top: 0;
+}
+#adc_center_fr
+{
+  position: absolute;
+  height: 100%;
+  top: 0;
+  left: 50%;
+  margin-left: -190px;
+}
+#adc_right_fr
+{
+    position: absolute;
+    height: 100%;
+    left:70%;
+    margin-left: -110px;
+    top: 0;
+}
 
 #left_div
 {
@@ -96,16 +119,6 @@ div
     left: 0;
     width: 100%;
     height: 100%;
-}
-
-#center_div
-{
-    width: 300px;
-    height:300px;
-    //background-color:#FFA500 ;
-    margin-left:auto;
-    margin-right:auto;
-    text-align: center;
 }
 
 #center_fr
@@ -128,17 +141,16 @@ div
 
 #center_div
 {
-    width: 360px;
-    height:360px;
+    display: block;
+    width: 800px; height:600px;
     margin-left:auto;
     margin-right:auto;
-    text-align: center;
 }
 
 #center_fr
 {
     position: relative;
-    top: 105%;
+    top: 80%;
     width: 100%;
     height: 100%;
 }

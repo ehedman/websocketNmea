@@ -2,7 +2,7 @@
     /*
      * npanel.php
      *
-     *  Copyright (C) 2013-2017 by Erland Hedman <erland@hedmanshome.se>
+     *  Copyright (C) 2013-2018 by Erland Hedman <erland@hedmanshome.se>
      *
      * This program is free software; you can redistribute it and/or
      * modify it under the terms of the GNU General Public License
@@ -375,6 +375,11 @@ function nifstypeset(dev, stat)
     }
 }
 
+function dorelay(obj)
+{
+
+}
+
 </script>
 
     </head>
@@ -412,7 +417,7 @@ function nifstypeset(dev, stat)
             <iframe src="tbd" id="right_fr"></iframe>
         </div>     
          <div id="center_div">       
-            <iframe src="tbd" id="center_fr""></iframe>
+            <iframe src="tbd" id="center_fr"></iframe>
         </div>
     </div>
         
@@ -555,6 +560,17 @@ function nifstypeset(dev, stat)
                     </label>
                     <input style="position:relative;left:30%;" type="submit" title="Play this file" value="Play" onclick="submit_file();">
                     
+                </td>
+            </tr>
+            <tr>
+                <td class="contentBox" style="padding-right:16px; padding-left:16px">
+                    <h1>Data Acquisition Module</h1>
+                    <h2>UK1104 I/O Board</h2>
+                    <input type="text" name="a2dserial" title="UK1104 Serial Device" id="a2dserial" maxlength="20" value="<?php echo $a2dserial ?>"><br>
+                Relay-1<input type="checkbox" onclick="dorelay(1)" title="Relay 1 ON/OFF" checked=checked>Water Maker<br>
+                Relay-2<input type="checkbox" onclick="dorelay(2)" title="Relay 2 ON/OFF" checked=checked>Alde Heater<br>
+                Relay-3<input type="checkbox" onclick="dorelay(3)" title="Relay 3 ON/OFF" checked=checked>Eberspächer<br>
+                Relay-4<input type="checkbox" onclick="dorelay(4)" title="Relay 4 ON/OFF" checked=checked>Water Heater<br>
                 </td>
             </tr>
             <tr><td style="height:100%"></td></tr>

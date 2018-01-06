@@ -59,6 +59,9 @@
         $sql="UPDATE `file` SET `fname`='nofile', `rate`='1', `use`='off' WHERE `Id`=1";
         $DBH->exec($sql);
 
+        $sql="UPDATE `devadc` SET `device`='".$_POST['a2d-device']."' WHERE `Id`=1";
+        $DBH->exec($sql);
+
         $sql="UPDATE `ais` SET `aisname`='".strtoupper($_POST['aisname'])."', `aisid`='".$_POST['aisid']."', `aisuse`='".$_POST['aisuse']."' WHERE `Id`=1";
         $DBH->exec($sql);
 
@@ -136,12 +139,17 @@
         $smlog_disp=$row['display'];
         $smlog_calb=$row['cal'];
 
-        $stmt = $DBH->prepare("SELECT aisname, aisid, aisuse FROM ais LIMIT 1"); 
+        $stmt = $DBH->prepare("SELECT aisname, aisid, aisuse FROM ais LIMIT 1");
         $stmt->execute(); 
         $row = $stmt->fetch();
         $aisname=$row['aisname'];
         $aisid=$row['aisid'];
         $aisuse=$row['aisuse'];
+
+        $stmt = $DBH->prepare("SELECT device FROM devadc LIMIT 1");
+        $stmt->execute(); 
+        $row = $stmt->fetch();
+        $a2dserial=$row['device'];
 
         $stmt = $DBH->prepare('SELECT name, baud, dir, use FROM ttys ORDER BY Id');
         $stmt->execute(); 
