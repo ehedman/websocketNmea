@@ -1,4 +1,14 @@
-
+/*
+ * adc-sensors.c
+ *
+ *  Copyright (C) 2013-2018 by Erland Hedman <erland@hedmanshome.se>
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version
+ * 2 of the License, or (at your option) any later version.
+ *
+ */
 #include <stdio.h>
 #include <sys/types.h>
 #include <string.h>
@@ -29,9 +39,15 @@ enum modes {
 #define CHxGETANALOG    "CH%d.GETANALOG\r\n"
 #define CHxGETTEMP      "CH%d.GETTEMP\r\n"
 #define RELxON          "REL%d.ON\r\n"
+#define RELxOFF         "REL%d.OFF\r\n"
+#define RELxGET         "REL%d.GET\r\n"
+#define RELSGET         "RELS.GET\r\n"
+#define ON              1
+#define OFF             0
 
 #define ADBZ    24
-#define IOMAX   6
+#define IOMAX   10      // 6+4
+#define RELCHA  5
 #define MAXTRY  4
 #define IOWAIT  350000
 #define MAXAGE  20
@@ -48,7 +64,6 @@ struct adData
 {
     char adBuffer[ADBZ];
     float curVal;
-    size_t count;
     int mode;
     int status;
     time_t age;
@@ -110,20 +125,28 @@ void *t_devMgm()
             if (adChannel[chn].status == CHAisNOTUSED)
                 continue;
 
-            if (adChannel[chn].status == CHAisCLAIMED) {
-                sprintf(cmdFmt, CHxSETMOD, chn, adChannel[chn].mode);
-            } else {               
-                switch (adChannel[chn].mode)
-                {
-                    case AnaogIn:
-                        sprintf(cmdFmt, CHxGETANALOG, chn);
-                    break;
-                    case TempIn:
-                        sprintf(cmdFmt, CHxGETTEMP, chn);
-                    break;
-                    default:
-                    break;
-                }              
+            if (chn > RELCHA) // realys
+            {
+                if (adChannel[chn].mode == ON)
+                    sprintf(cmdFmt, RELxON, chn-RELCHA);
+                else
+                    sprintf(cmdFmt, RELxOFF, chn-RELCHA);
+            } else {
+                if (adChannel[chn].status == CHAisCLAIMED) {
+                    sprintf(cmdFmt, CHxSETMOD, chn, adChannel[chn].mode);
+                } else {               
+                    switch (adChannel[chn].mode)
+                    {
+                        case AnaogIn:
+                            sprintf(cmdFmt, CHxGETANALOG, chn);
+                        break;
+                        case TempIn:
+                            sprintf(cmdFmt, CHxGETTEMP, chn);
+                        break;
+                        default:
+                        break;
+                    }              
+                }
             }
 #if 1
             if (getPrompt()) {
@@ -162,7 +185,7 @@ void *t_devMgm()
     /* NOT REACHED */
 }
 
-static int portConfigure(int fd)
+static int portConfigure(int fd, char *device)
 {
 
     struct termios SerialPortSettings;
@@ -202,7 +225,7 @@ static int portConfigure(int fd)
         printlog("UK1104: Error in setting serial attributes");
         return 1;
     } else
-        printlog("UK1104: BaudRate = 15200, StopBits = 1,  Parity = none");
+        printlog("UK1104: %s: BaudRate = 15200, StopBits = 1,  Parity = none", device);
 
     (void)tcflush(fd, TCIFLUSH);  // Discards old data in the rx buffer
 
@@ -215,6 +238,7 @@ static int portConfigure(int fd)
     return 0;
 }
 
+/* API */
 int adcInit(char *device, int a2dChannel)
 {
     int fd;
@@ -236,7 +260,7 @@ int adcInit(char *device, int a2dChannel)
         }
     }
 
-    if (portConfigure(fd)) {
+    if (portConfigure(fd, device)) {
         (void)close(fd);
         serialDev.fd = 0;
         return 1;
@@ -251,6 +275,7 @@ int adcInit(char *device, int a2dChannel)
     return 0;
 }
 
+/* API */
 float adcRead(int a2dChannel)
 {
 
@@ -270,7 +295,56 @@ float adcRead(int a2dChannel)
     return adChannel[a2dChannel].curVal;
 }
 
-#else   // MCP3208 http://robsraspberrypi.blogspot.se/2016/01/raspberry-pi-adding-analogue-inputs.html
+/* API */
+void relayInit(int nchannels)
+{
+    if (nchannels > 4) {
+        printlog("Only 4 relays can be handled, not %d", nchannels);
+        nchannels = 4;
+    }
+
+    for (int i=1; i < nchannels+1; i++)
+    {
+        adChannel[i+RELCHA].status = CHAisCLAIMED;
+        adChannel[i+RELCHA].mode = OFF;
+    }
+}
+
+/* API */
+void relaySet(int channels) // A bitmask
+{
+    int i, iter;
+
+    for (i=1, iter=1; i<15; i<<=1, iter++)
+    {
+        if (channels & i) {
+            //printf("Flag: %d set\n", iter);
+            adChannel[iter+RELCHA].mode = ON;
+        } else {
+            //printf("Flag: %d is not set\n", iter);
+            adChannel[iter+RELCHA].mode = OFF;
+        }
+    }
+}
+
+/* API */
+int relayStatus(void)
+{
+    int i, iter;
+    int result = 0;
+
+    for (i=1, iter=1; i<15; i<<=1, iter++)
+    {
+        if (adChannel[iter+RELCHA].mode == ON)
+            result |= i;
+    }
+    return result;
+}
+
+#endif
+
+#ifdef MCP3208  // http://robsraspberrypi.blogspot.se/2016/01/raspberry-pi-adding-analogue-inputs.html
+#ifndef MCP3208
 /*
  * ADC code for MCP3208 SPI Chip 12 bit ADC
  * This code has been tested on an RPI 3
@@ -401,6 +475,7 @@ float adcRead(int a2dChannel)
 
     return (float)(a2dVal);
 }
+#endif
 #endif
 
 

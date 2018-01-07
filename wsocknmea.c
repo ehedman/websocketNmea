@@ -1,7 +1,7 @@
 /*
  * wsocknmea.c
  *
- *  Copyright (C) 2013-2017 by Erland Hedman <erland@hedmanshome.se>
+ *  Copyright (C) 2013-2018 by Erland Hedman <erland@hedmanshome.se>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -88,6 +88,9 @@ extern int adcInit(char *device, int a2dChannel); // device exaple "/dev/ttyUSB3
 extern float adcRead(int a2dChannel);
 #define COLDTEMP    25      // Max minus temp in C on instrument scale
 #ifdef UK1104
+extern void relayInit(int nchannels);
+extern void relaySet(int channels);
+extern int relayStatus(void);
 #define     ADCTICKSVOLT    0.02    // Must be adjusted to hw voltage divider resistance network etc.
 #define     VOLTLOWLEVEL    400     // No of adc ticks repesenting the threshold shown as the lowest level on the instrument.
 #define     CURRLOWLEVEL    400
@@ -121,6 +124,8 @@ enum requests {
     SensorVolt          = 200,
     SensorCurr          = 201,
     SensorTemp          = 202,
+    SensorRelay         = 203,
+    SensorRelayStatus   = 204,
     WaterMakerData      = 210,
     ServerPing          = 900,
     TimeOfDAy           = 901,
@@ -656,7 +661,7 @@ int  configure(int kpf)
                     sqlite3_prepare_v2(conn, "CREATE TABLE abuddies (Id INTEGER PRIMARY KEY, userid BIGINT)", -1, &res, &tail);
                     sqlite3_step(res);
 
-                    sqlite3_prepare_v2(conn, "CREATE TABLE devadc(Id INTEGER PRIMARY KEY,  device TEXT)", -1, &res, &tail);
+                    sqlite3_prepare_v2(conn, "CREATE TABLE devadc(Id INTEGER PRIMARY KEY, device TEXT, relay1txt TEXT, relay2txt TEXT, relay3txt TEXT, relay4txt TEXT)", -1, &res, &tail);
                     sqlite3_step(res);
                     
                     sprintf(buf, "INSERT INTO devadc (device) VALUES ('%s')", "/dev/null");
@@ -1033,6 +1038,7 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                 }
                 
                 /*       --- NON NMEA SECTION  ---     */
+#ifdef DOADC
                 case SensorVolt: {
                     if (ct - cnmea.volt_ts > INVALID*10)
                         sprintf(value, "Exp-%d", req);
@@ -1056,6 +1062,21 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                         sprintf(value, "{'temp':'%.1f'}-%d", cnmea.temp + COLDTEMP, req);
                     break;
                 }
+#ifdef UK1104
+                case SensorRelay: {
+                    if (args != NULL && strlen(args)) {
+                        relaySet(atoi(args));
+                        sprintf(value, "{'relaySet':'%d'}-%d", relayStatus(), req);
+                    }
+                    break;
+                }
+
+                case SensorRelayStatus: {
+                    sprintf(value, "{'relaySts':'%d'}-%d", relayStatus(), req);
+                    break;
+                }
+#endif
+#endif
 #ifdef MT1800
                 case WaterMakerData: {
                     if (ct - cnmea.cond_ts > INVALID*10)
@@ -1437,6 +1458,7 @@ int main(int argc ,char **argv)
         (void)adcInit(iconf.adc_dev, currChannel);
 #ifdef UK1104
         (void)adcInit(iconf.adc_dev, tempChannel);
+        (void)relayInit(4);      
 #endif
     }
 #endif

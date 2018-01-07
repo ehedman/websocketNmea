@@ -59,7 +59,7 @@
         $sql="UPDATE `file` SET `fname`='nofile', `rate`='1', `use`='off' WHERE `Id`=1";
         $DBH->exec($sql);
 
-        $sql="UPDATE `devadc` SET `device`='".$_POST['a2d-device']."' WHERE `Id`=1";
+        $sql="UPDATE `devadc` SET `device`='".$_POST['a2dserial']."',`relay1txt`='".$_POST['relay1txt']."',`relay2txt`='".$_POST['relay2txt']."',`relay3txt`='".$_POST['relay3txt']."',`relay4txt`='".$_POST['relay4txt']."' WHERE `Id`=1";
         $DBH->exec($sql);
 
         $sql="UPDATE `ais` SET `aisname`='".strtoupper($_POST['aisname'])."', `aisid`='".$_POST['aisid']."', `aisuse`='".$_POST['aisuse']."' WHERE `Id`=1";
@@ -146,10 +146,14 @@
         $aisid=$row['aisid'];
         $aisuse=$row['aisuse'];
 
-        $stmt = $DBH->prepare("SELECT device FROM devadc LIMIT 1");
+        $stmt = $DBH->prepare("SELECT device,relay1txt,relay2txt,relay3txt,relay4txt FROM devadc LIMIT 1");
         $stmt->execute(); 
         $row = $stmt->fetch();
         $a2dserial=$row['device'];
+        $a2dreltxt1=$row['relay1txt'];
+        $a2dreltxt2=$row['relay2txt'];
+        $a2dreltxt3=$row['relay3txt'];
+        $a2dreltxt4=$row['relay4txt'];
 
         $stmt = $DBH->prepare('SELECT name, baud, dir, use FROM ttys ORDER BY Id');
         $stmt->execute(); 

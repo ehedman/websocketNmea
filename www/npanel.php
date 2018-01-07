@@ -56,19 +56,29 @@ var update = 2000;
 var ticks = 1000;
 var debug = false;
 var connection = true;
+var toggle = true;
+var underConfig = false;
 
 var stled = document.createElement("img");
 stled.setAttribute("height", "46");
 stled.setAttribute("width", "46");
 
 function do_update()
-{        
+{
+    toggle = (toggle? 0 : 1);
+
     if (connection) {
         stled.src = 'img/indicator-green.png'
         stled.setAttribute("title", "Server OK");
-        document.getElementById("status").appendChild(stled);
+        document.getElementById("status").appendChild(stled); a2dserial
 
-        send(Cmd.ServerPing);
+        if (underConfig == true || document.getElementById("a2dserial").value == "")
+            toggle = true;
+
+        if (toggle == true)
+            send(Cmd.ServerPing);
+        else
+            send(Cmd.SensorRelayStatus);
         
         if (pt == 0)           
             pt = setInterval(function () {do_poll();}, ticks);
@@ -81,8 +91,24 @@ function do_update()
     }
 }
 
+function setRelayStatus(mask)
+{
+    document.getElementById("relay1").checked = (1 & mask); 
+    document.getElementById("relay2").checked = (2 & mask);
+    document.getElementById("relay3").checked = (4 & mask);
+    document.getElementById("relay4").checked = (8 & mask); 
+}
+
 function do_poll()
-{     
+{
+
+    var val = JSON.parse(target);
+
+    if (valid == Cmd.SensorRelayStatus) {
+        setRelayStatus(val.relaySts);
+        return;
+    }
+
     if (connection == false || !(valid == Cmd.ServerPing)) {
         stled.src = 'img/indicator-red.png'
         stled.setAttribute("title", "Server Fail");
@@ -90,13 +116,31 @@ function do_poll()
         return;
     }
 
-    var val = JSON.parse(target);
     if (val.status == 0) {
         stled.src = 'img/indicator-yellow.png'
         stled.setAttribute("title", "No data (kplex)");
         document.getElementById("status").appendChild(stled);
     }
     
+}
+
+function dorelay()
+{
+    var rlbits = 0;
+    if (document.getElementById("relay1").checked == true) {
+        rlbits |= (1 << 0);
+    }
+    if (document.getElementById("relay2").checked == true) {
+        rlbits |= (1 << 1);
+    }
+    if (document.getElementById("relay3").checked == true) {
+        rlbits |= (1 << 2);
+    }
+    if (document.getElementById("relay4").checked == true) {
+        rlbits |= (1 << 3);
+    }
+    send(Cmd.SensorRelay + "-" + rlbits);
+
 }
 
 function new_panel()
@@ -254,6 +298,7 @@ function isIPValid(ip)
 
 function do_config()
 {
+    underConfig = true;
     document.getElementById("config").style.display = "block";
 }
 
@@ -286,6 +331,8 @@ function done_config(val)
 {
     var f = document.getElementById("form");
     
+    underConfig = false;
+
     if (val == 0) {
         document.getElementById("config").style.display = "none";
         f.POST_ACTION.value = "OK";
@@ -373,11 +420,6 @@ function nifstypeset(dev, stat)
         obj.value = obj.defaultValue;
         obj.readOnly = true;
     }
-}
-
-function dorelay(obj)
-{
-
 }
 
 </script>
@@ -567,10 +609,15 @@ function dorelay(obj)
                     <h1>Data Acquisition Module</h1>
                     <h2>UK1104 I/O Board</h2>
                     <input type="text" name="a2dserial" title="UK1104 Serial Device" id="a2dserial" maxlength="20" value="<?php echo $a2dserial ?>"><br>
-                Relay-1<input type="checkbox" onclick="dorelay(1)" title="Relay 1 ON/OFF" checked=checked>Water Maker<br>
-                Relay-2<input type="checkbox" onclick="dorelay(2)" title="Relay 2 ON/OFF" checked=checked>Alde Heater<br>
-                Relay-3<input type="checkbox" onclick="dorelay(3)" title="Relay 3 ON/OFF" checked=checked>Eberspächer<br>
-                Relay-4<input type="checkbox" onclick="dorelay(4)" title="Relay 4 ON/OFF" checked=checked>Water Heater<br>
+                    Relay-1<input type="checkbox" id="relay1" title="Relay 1 ON/OFF">
+                    <input type="text" title="Description" name ="relay1txt" id="relay1txt" size="14" value="<?php echo $a2dreltxt1 ?>"><br>
+                    Relay-2<input type="checkbox" id="relay2" title="Relay 2 ON/OFF">
+                    <input type="text" title="Description" name ="relay2txt" id="relay2txt" size="14" value="<?php echo $a2dreltxt2 ?>"><br>
+                    Relay-3<input type="checkbox" id="relay3" title="Relay 3 ON/OFF">
+                    <input type="text" title="Description" name ="relay3txt" id="relay3txt" size="14" value="<?php echo $a2dreltxt3 ?>"><br>
+                    Relay-4<input type="checkbox" id="relay4" title="Relay 4 ON/OFF">
+                    <input type="text" title="Description" name ="relay4txt" id="relay4txt" size="14" value="<?php echo $a2dreltxt4 ?>"><br>
+                    <input type="button" id="relayAction" value="Send settings" title="Send settings now" onclick="dorelay()">
                 </td>
             </tr>
             <tr><td style="height:100%"></td></tr>

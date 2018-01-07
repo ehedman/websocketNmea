@@ -59,7 +59,7 @@
         <div id="adc_right_div">       
             <iframe scrolling=no src="in-10-temp.php" id="adc_right_fr"></iframe>
         </div> 
-        <input style="z-index:100;position:fixed;top:0;" type="button" value="Next" title="Click to shift instrument" onclick="nextinstrument();"
+        <input style="z-index:100;position:fixed;top:0;" type="button" value="Next" title="Click to shift instrument" onclick="nextinstrument();">
     </div>
     </body>
 </html>
