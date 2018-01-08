@@ -49,15 +49,15 @@
     <body onload="init()">
     <div>
         <div id="adc_left_div">   
-            <iframe scrolling=no src="in-8-volt.php" id="adc_left_fr">
+            <iframe width="256" height="256" frameborder="0" border="0" cellspacing="0" scrolling=no src="in-8-volt.php" id="adc_left_fr">
                 <p>Your browser does not support iframes.</p>
             </iframe>
         </div>
          <div id="adc_center_div">       
-            <iframe scrolling=no src="in-9-curr.php" id="adc_center_fr"></iframe>
+            <iframe  width="256" height="256" frameborder="0" border="0" cellspacing="0" scrolling=no src="in-9-curr.php" id="adc_center_fr"></iframe>
         </div>
         <div id="adc_right_div">       
-            <iframe scrolling=no src="in-10-temp.php" id="adc_right_fr"></iframe>
+            <iframe  width="256" height="256" frameborder="0" border="0" cellspacing="0" scrolling=no src="in-10-temp.php" id="adc_right_fr"></iframe>
         </div> 
         <input style="z-index:100;position:fixed;top:0;" type="button" value="Next" title="Click to shift instrument" onclick="nextinstrument();">
     </div>

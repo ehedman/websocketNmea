@@ -1,5 +1,5 @@
 # websocketNmea
-README Jan-2017
+README Jan-2018
 
 The wsocknmea application package is a marine glass cockpit solution that features electronic marine instrument displays, typically used on private sailing yachts.
 The look and feel of the visualized instruments tries to mimic the look of real physical instrumnts and will by design avoid a digital look.
@@ -20,15 +20,18 @@ Checkout a somewhat outdated presentation here: http://www.hedmanshome.se/conten
 
 Currently there are nine virtual instrument working:
 
-    Log         : SOW, SOG
-    Wind        : Real, Relative and speed
-    Depth       : With low water warning and water temp
-    Compass     : With heading
-    Goggle Map  : With current satellite view and AIS radar view
-    Volt meter  : From ADC
-    Clock       : The vessels time
-    GPS         : Lo, Lat and Heading
-    WaterMaker: : Conductivity, temp, volume (separate project)
+    Log           : SOW, SOG
+    Wind          : Real, Relative and speed
+    Depth         : With low water warning and water temp
+    Compass       : With heading
+    Goggle Map    : With current satellite view and AIS radar view
+    Volt meter    : From ADC
+    Current meter : From ADC
+    Temp meter    : From ADC (Directly in C/F from UK1104)
+    Relay ON/OFF  : From ADC (UK1104 only)
+    Clock         : The vessels time
+    GPS           : Lo, Lat and Heading
+    WaterMaker:   : Conductivity, temp, volume (separate project)
 
 Tested runtime environment:
 - Odroid XU3 (Ubuntu 15.04)
@@ -38,6 +41,7 @@ Tested runtime environment:
 - Browsers: Firefox, IE, Chrome
 
 For the ADC to work properly I recommend the Pi with the MCP3208 SPI Chip 12 bit ADC 8 channels.
+For a more comprehensive I/O Solution use the UK1104 driver instead. See https://www.canakit.com
 I have a Raymarine E97 Network Multifunction Display that feeds kplex with NMEA-183 through a serial line with wind, speed, water temp, gps etc.
 
 Also included in my set-up is the OpenCPN chart plotter that connects to the kplex traffic on the local WiFi on the yacht.

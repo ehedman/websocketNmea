@@ -69,6 +69,8 @@ struct adData
     time_t age;
 };
 
+static int runThread = ON;
+
 static struct adData adChannel[IOMAX];
 
 static int getPrompt(void)
@@ -77,6 +79,8 @@ static int getPrompt(void)
     size_t cnt;
     int rval = 1;
     extern int errno;
+
+    //(void)usleep(IOWAIT*2); return 0;
 
     if (!serialDev.fd) return 1;
 
@@ -110,17 +114,58 @@ static int getPrompt(void)
     return rval;
 }
 
+static void executeCommand(char *cmdFmt, int chn)
+{
+    char rbuf[ADBZ];
+    size_t cnt;
+
+    if (getPrompt()) {
+        printlog("UK1104: Error in getting the ready prompt");
+        return;
+    }
+
+    cnt = write(serialDev.fd, cmdFmt, strlen(cmdFmt));  // Write the command string
+    if (cnt != strlen(cmdFmt)) {
+        printlog("UK1104: Error in sending command %s", cmdFmt);
+        return;
+    } else {
+        (void)memset(adChannel[chn].adBuffer, 0 , ADBZ);
+        (void)memset(rbuf, 0 , ADBZ);
+
+        for (int try = 0; try < MAXTRY; try++)
+        {
+            (void)usleep(IOWAIT); //printf("RETRY %s %d\n", rbuf, cnt);
+            cnt = read(serialDev.fd, rbuf, ADBZ); // Get the value
+            if (cnt == -1 && errno == EAGAIN) continue;
+            if (adChannel[chn].status == CHAisCLAIMED && cnt > 1) {
+                adChannel[chn].status = CHAisREADY;
+                break;
+            }
+            if (cnt >0) {
+                adChannel[chn].age = time(NULL);
+                (void)strcat(adChannel[chn].adBuffer, rbuf);
+                //printf("catting=%s <- %s, try=%d\n", adChannel[chn].adBuffer, rbuf, try);
+            }
+        }
+    }
+    (void)tcflush(serialDev.fd, TCIFLUSH);
+    //if (strlen(adChannel[chn].adBuffer)) printf("got %s\n", adChannel[chn].adBuffer);
+}
+
 // Reader thread
 void *t_devMgm()
 {
-    char cmdFmt[ADBZ];
-    char rbuf[ADBZ];
-    size_t cnt;
-    extern int errno;
+    static char cmdFmt[ADBZ];
+    int chn;
 
-    while(1)
+    while(ON)
     {
-        for (int chn = 0; chn < IOMAX; chn++)
+        if (runThread == OFF) {
+            sleep(1);
+            continue;
+        }
+
+        for (chn = 0; chn < IOMAX; chn++)
         {
             if (adChannel[chn].status == CHAisNOTUSED)
                 continue;
@@ -148,38 +193,7 @@ void *t_devMgm()
                     }              
                 }
             }
-#if 1
-            if (getPrompt()) {
-                printlog("UK1104: Error in getting the ready prompt");
-                continue;
-            }
-#endif
-            cnt = write(serialDev.fd, cmdFmt, strlen(cmdFmt));  // Write the command string
-            if (cnt != strlen(cmdFmt)) {
-                printlog("UK1104: Error in sending command %s", cmdFmt);
-                continue;
-            } else {
-                (void)memset(adChannel[chn].adBuffer, 0 , ADBZ);
-                (void)memset(rbuf, 0 , ADBZ);
-
-                for (int try = 0; try < MAXTRY; try++)
-                {
-                    (void)usleep(IOWAIT); //printf("RETRY %s %d\n", rbuf, cnt);
-                    cnt = read(serialDev.fd, rbuf, ADBZ); // Get the value
-                    if (cnt == -1 && errno == EAGAIN) continue;
-                    if (adChannel[chn].status == CHAisCLAIMED && cnt > 1) {
-                        adChannel[chn].status = CHAisREADY;
-                        break;
-                    }
-                    if (cnt >0) {
-                        adChannel[chn].age = time(NULL);
-                        (void)strcat(adChannel[chn].adBuffer, rbuf);
-                        //printf("catting=%s <- %s, try=%d\n", adChannel[chn].adBuffer, rbuf, try);
-                    }
-                }
-            }
-            (void)tcflush(serialDev.fd, TCIFLUSH);
-            //if (strlen(adChannel[chn].adBuffer)) printf("got %s\n", adChannel[chn].adBuffer);
+            executeCommand(cmdFmt, chn);
         }
     }
     /* NOT REACHED */
@@ -267,7 +281,7 @@ int adcInit(char *device, int a2dChannel)
     }
     serialDev.fd = fd;
 
-    (void)fcntl(serialDev.fd, F_SETFL, FNDELAY);  // Non-blockning   
+   (void)fcntl(serialDev.fd, F_SETFL, FNDELAY);  // Non-blockning   
 
     adChannel[a2dChannel].mode = a2dChannel == TPMCH? TempIn : AnaogIn;
     adChannel[a2dChannel].status = CHAisCLAIMED;
@@ -296,21 +310,6 @@ float adcRead(int a2dChannel)
 }
 
 /* API */
-void relayInit(int nchannels)
-{
-    if (nchannels > 4) {
-        printlog("Only 4 relays can be handled, not %d", nchannels);
-        nchannels = 4;
-    }
-
-    for (int i=1; i < nchannels+1; i++)
-    {
-        adChannel[i+RELCHA].status = CHAisCLAIMED;
-        adChannel[i+RELCHA].mode = OFF;
-    }
-}
-
-/* API */
 void relaySet(int channels) // A bitmask
 {
     int i, iter;
@@ -328,6 +327,33 @@ void relaySet(int channels) // A bitmask
 }
 
 /* API */
+void relayInit(int nchannels)
+{
+    int cha = 0;
+
+    if (!serialDev.fd) {
+        printlog("UK1104: relayInit: Device not initialized with adcInit()");
+        return;
+    }
+
+    if (nchannels > 4) {
+        printlog("UK1104: relayInit: Relays set to 4, not %d", nchannels);
+        nchannels = 4;
+    }
+
+    // Get the real status in case of a warm restart
+    runThread = OFF;
+    sleep(2);
+
+    executeCommand(RELSGET, RELCHA+1);
+
+    cha = atoi(adChannel[RELCHA+1].adBuffer); //printf("RELSGET=%s, %d\n",adChannel[RELCHA+1].adBuffer,cha);
+    relaySet(cha);
+
+    runThread = ON;
+}
+
+/* API */
 int relayStatus(void)
 {
     int i, iter;
@@ -338,8 +364,15 @@ int relayStatus(void)
         if (adChannel[iter+RELCHA].mode == ON)
             result |= i;
     }
-    return result;
+    return result;  // A bitmask
 }
+
+
+#ifdef TBD
+void ioPinInit(int channel, int direction) {}
+void ioPinset(int channel, bool level) {}
+int ioPinGet(int channel) {}
+#endif
 
 #endif
 
