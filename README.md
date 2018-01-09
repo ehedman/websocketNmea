@@ -18,27 +18,28 @@ Sucessfully activated the wsocknmea daemon will serve the individual instruments
 
 Checkout a somewhat outdated presentation here: http://www.hedmanshome.se/content/view/17/1/
 
-Currently there are nine virtual instrument working:
+Currently there are eleven virtual instrument working:
 
     Log           : SOW, SOG
     Wind          : Real, Relative and speed
     Depth         : With low water warning and water temp
     Compass       : With heading
     Goggle Map    : With current satellite view and AIS radar view
-    Volt meter    : From ADC
-    Current meter : From ADC
-    Temp meter    : From ADC (Directly in C/F from UK1104)
-    Relay ON/OFF  : From ADC (UK1104 only)
     Clock         : The vessels time
     GPS           : Lo, Lat and Heading
     WaterMaker:   : Conductivity, temp, volume (separate project)
+    Volt meter    : From ADC
+    Current meter : From ADC
+    Temp meter    : From ADC (Directly in C/F from UK1104)
+  I/O Control:
+    Relay ON/OFF  : From ADC (UK1104 only)
 
 Tested runtime environment:
-- Odroid XU3 (Ubuntu 15.04)
+- Odroid XU3/4 (Ubuntu 15.04/16.04)
 - X86 (Ubuntu 16)
 - Raspberry Pi Model 3 (Debian wheezy)
 - Linux Mint 17/18
-- Browsers: Firefox, IE, Chrome
+- Browsers: Firefox, IE, Chrome (Chrome & Firefox also on Android)
 
 For the ADC to work properly I recommend the Pi with the MCP3208 SPI Chip 12 bit ADC 8 channels.
 For a more comprehensive I/O Solution use the UK1104 driver instead. See https://www.canakit.com
@@ -46,5 +47,5 @@ I have a Raymarine E97 Network Multifunction Display that feeds kplex with NMEA-
 
 Also included in my set-up is the OpenCPN chart plotter that connects to the kplex traffic on the local WiFi on the yacht.
 Obviously the yacht has to be connected to the internet for the Google Map view.
-
-
+To access your vessel as an IOT (to remotely acess all instruemnts and remote relay control) I recommend to manipulate the ip-table rules with "shorewall" (http://shorewall.org/) in order to establish your device as an firewall with virtual host rules to open ports 80 and 443 to the internet.
+Check my firewall GUI interface at https://github.com/ehedman/headwall.
