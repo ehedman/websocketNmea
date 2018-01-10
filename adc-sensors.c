@@ -46,11 +46,11 @@ enum modes {
 #define OFF             0
 
 #define ADBZ    24
-#define IOMAX   10      // 6+4
-#define RELCHA  5
-#define MAXTRY  4
-#define IOWAIT  350000
-#define MAXAGE  20
+#define IOMAX   10      // 6+4 Channels
+#define RELCHA  6       // Offset for realy status
+#define IOWAIT  350000  // Wait for non blocket data .. usec and ..
+#define MAXTRY  4       // ..before giving up omn ser. data.
+#define MAXAGE  20      // Invalidate after .. s
 
 #define CHAisNOTUSED    0
 #define CHAisCLAIMED    1
@@ -170,12 +170,12 @@ void *t_devMgm()
             if (adChannel[chn].status == CHAisNOTUSED)
                 continue;
 
-            if (chn > RELCHA) // realys
+            if (chn >= RELCHA) // realys
             {
                 if (adChannel[chn].mode == ON)
-                    sprintf(cmdFmt, RELxON, chn-RELCHA);
+                    sprintf(cmdFmt, RELxON, (chn-RELCHA)-1);
                 else
-                    sprintf(cmdFmt, RELxOFF, chn-RELCHA);
+                    sprintf(cmdFmt, RELxOFF, (chn-RELCHA)-1);
             } else {
                 if (adChannel[chn].status == CHAisCLAIMED) {
                     sprintf(cmdFmt, CHxSETMOD, chn, adChannel[chn].mode);
@@ -257,7 +257,7 @@ int adcInit(char *device, int a2dChannel)
 {
     int fd;
 
-    if (a2dChannel > IOMAX-1) {
+    if (a2dChannel > RELCHA) {
         printlog("UK1104: Error channel must be less than %d not  %d", IOMAX, a2dChannel+1);
         return 1;
     }
@@ -314,7 +314,7 @@ void relaySet(int channels) // A bitmask
 {
     int i, iter;
 
-    for (i=1, iter=1; i<15; i<<=1, iter++)
+    for (i=1, iter=0; i<15; i<<=1, iter++)
     {
         if (channels & i) {
             //printf("Flag: %d set\n", iter);
@@ -345,9 +345,9 @@ void relayInit(int nchannels)
     runThread = OFF;
     sleep(2);
 
-    executeCommand(RELSGET, RELCHA+1);
+    executeCommand(RELSGET, RELCHA);
 
-    cha = atoi(adChannel[RELCHA+1].adBuffer); //printf("RELSGET=%s, %d\n",adChannel[RELCHA+1].adBuffer,cha);
+    cha = atoi(adChannel[RELCHA].adBuffer); //printf("RELSGET=%s, %d\n",adChannel[RELCHA].adBuffer,cha);
     relaySet(cha);
 
     runThread = ON;
@@ -359,7 +359,7 @@ int relayStatus(void)
     int i, iter;
     int result = 0;
 
-    for (i=1, iter=1; i<15; i<<=1, iter++)
+    for (i=1, iter=0; i<15; i<<=1, iter++)
     {
         if (adChannel[iter+RELCHA].mode == ON)
             result |= i;
