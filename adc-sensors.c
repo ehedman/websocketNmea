@@ -40,7 +40,6 @@ enum modes {
 #define CHxGETTEMP      "CH%d.GETTEMP\r\n"
 #define RELxON          "REL%d.ON\r\n"
 #define RELxOFF         "REL%d.OFF\r\n"
-#define RELxGET         "REL%d.GET\r\n"
 #define RELSGET         "RELS.GET\r\n"
 #define ON              1
 #define OFF             0
@@ -173,20 +172,20 @@ void *t_devMgm()
             if (chn >= RELCHA) // realys
             {
                 if (adChannel[chn].mode == ON)
-                    sprintf(cmdFmt, RELxON, (chn-RELCHA)-1);
+                    sprintf(cmdFmt, RELxON, (chn-RELCHA)+1);
                 else
-                    sprintf(cmdFmt, RELxOFF, (chn-RELCHA)-1);
+                    sprintf(cmdFmt, RELxOFF, (chn-RELCHA)+1);
             } else {
                 if (adChannel[chn].status == CHAisCLAIMED) {
-                    sprintf(cmdFmt, CHxSETMOD, chn, adChannel[chn].mode);
+                    sprintf(cmdFmt, CHxSETMOD, chn+1, adChannel[chn].mode);
                 } else {               
                     switch (adChannel[chn].mode)
                     {
                         case AnaogIn:
-                            sprintf(cmdFmt, CHxGETANALOG, chn);
+                            sprintf(cmdFmt, CHxGETANALOG, chn+1);
                         break;
                         case TempIn:
-                            sprintf(cmdFmt, CHxGETTEMP, chn);
+                            sprintf(cmdFmt, CHxGETTEMP, chn+1);
                         break;
                         default:
                         break;
@@ -314,6 +313,9 @@ void relaySet(int channels) // A bitmask
 {
     int i, iter;
 
+    if (!strlen(adChannel[RELCHA].adBuffer))
+        return;
+
     for (i=1, iter=0; i<15; i<<=1, iter++)
     {
         if (channels & i) {
@@ -347,6 +349,10 @@ void relayInit(int nchannels)
 
     executeCommand(RELSGET, RELCHA);
 
+    for(int i=0; i <nchannels; i++)
+        adChannel[i+RELCHA].status = CHAisCLAIMED;
+
+    // Get the bitmap and set accordingly
     cha = atoi(adChannel[RELCHA].adBuffer); //printf("RELSGET=%s, %d\n",adChannel[RELCHA].adBuffer,cha);
     relaySet(cha);
 
@@ -358,6 +364,9 @@ int relayStatus(void)
 {
     int i, iter;
     int result = 0;
+
+    if (!strlen(adChannel[RELCHA].adBuffer))
+        return 0;
 
     for (i=1, iter=0; i<15; i<<=1, iter++)
     {
@@ -377,7 +386,7 @@ int ioPinGet(int channel) {}
 #endif
 
 #ifdef MCP3208  // http://robsraspberrypi.blogspot.se/2016/01/raspberry-pi-adding-analogue-inputs.html
-#ifndef MCP3208
+#ifndef UK1104
 /*
  * ADC code for MCP3208 SPI Chip 12 bit ADC
  * This code has been tested on an RPI 3

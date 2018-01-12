@@ -143,7 +143,6 @@ static useconds_t lineRate = 1;
 static char recFile[250];
 static int fileFeed = 0;
 static struct sockaddr_in peer_sa;
-static struct sockaddr_in wmpeer_sa;
 static struct lws_context *ws_context = NULL;
 static int socketType = 0;
 static char interFace[40];
@@ -152,11 +151,11 @@ static char *programName = "wsocknmea";
 static int unusedInt __attribute__((unused));   // To make -Wall shut up
 static FILE * unusedFd __attribute__((unused));
 
-
 #ifdef MT1800
 #define WMMULTIADDR "224.0.0.1" // Join control unit
 #define WMPORT 49152
 static int wmsockFd;
+static struct sockaddr_in wmpeer_sa;
 #endif
 
 typedef struct {

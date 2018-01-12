@@ -5,7 +5,7 @@
 #define NAVIDBPATH  "/etc/default/navi.db"      // Configuration database writable for webserver
 #endif
 
-#define MT1800              // Instrument support for ENWA Watermaker 
+//#define MT1800              // Instrument support for ENWA Watermaker 
 //#define MCP3208             // Analog input volt .... etc.
 #define UK1104              // CanaKit 4-Channel USB Relay Board with 6-Channel A/D Interface
 #define TPMCH   5           // To be identifyed as temp chanel with float type return (UK1104)

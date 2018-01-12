@@ -13,10 +13,10 @@ PKGS += automake
 PKGS += libtool
 PKGS += libpcre3 libpcre3-dev
 PKGS += libbz2-dev
-ifeq "$(shell apt-cache search php5| grep cgi)" ""
-PKGS += php-cgi php-sqlite3
+ifeq "$(shell apt-cache search php7| grep cgi)" ""
+PKGS += php5-cgi php5-sqlite3
 else
-PKGS += php5-cgi php5-sqlite 
+PKGS += php7-cgi php7-sqlite 
 endif
 PKGS += libsqlite3-dev sqlite3
 PKGS += libssl-dev
@@ -64,8 +64,7 @@ ARCH=$(shell $(CC) -dumpmachine |  cut -d- -f1 | tr '[:lower:]' '[:upper:]')
 GETC=".git/HEAD"
 
 ifeq ($(shell test -e $(GETC) && echo -n yes),yes)
-#CFLAGS=-DREV=\"$(shell git rev-parse HEAD)\"
-CFLAGS=-DREV=\"$(shell git log --pretty=format:'%h' -n 1)\"
+CFLAGS=-DREV=\"$(shell git log --pretty=format:'%h' -n 1 2>/dev/null)\"
 endif
 
 CFLAGS+= -Wall -g -std=gnu99 -pedantic
