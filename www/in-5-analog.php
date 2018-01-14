@@ -37,11 +37,22 @@
         html>body
         {
             background:transparent;
-            margin:0;
             padding:0;
-            margin: 0 0 0 0;
+            margin: 165px 0 0 0;
             width: 100%;
             overflow: hidden;
+        }
+
+        #next-butt
+        {
+            z-index:100;
+            position:fixed;
+            top:165px;
+            left:0px;
+            height:40px;
+            width:40px;
+            border-radius:50%;
+            -moz-border-radius:50%;
         }
         </style>
 
@@ -59,7 +70,7 @@
         <div id="adc_right_div">       
             <iframe  width="256" height="256" frameborder="0" border="0" cellspacing="0" scrolling=no src="in-10-temp.php" id="adc_right_fr"></iframe>
         </div> 
-        <input style="z-index:100;position:fixed;top:0;" type="button" value="Next" title="Click to shift instrument" onclick="nextinstrument();">
+        <input id="next-butt" type="button" value="N" title="Click to shift instrument" onclick="nextinstrument();">
     </div>
     </body>
 </html>
