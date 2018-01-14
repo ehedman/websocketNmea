@@ -26,23 +26,21 @@
 
 #ifdef UK1104   // https://www.canakit.com/
 
-enum modes {
-    DigIn = 1,
-    DigOut,
-    AnaogIn,
-    TempIn
-};
-
 #define UK1104P         "\r\n"
 #define PUK1104         "::"
 #define CHxSETMOD       "CH%d.SETMOD%d\r\n"
 #define CHxGETANALOG    "CH%d.GETANALOG\r\n"
 #define CHxGETTEMP      "CH%d.GETTEMP\r\n"
+#define CHxON           "CH%d.ON\r\n"
+#define CHxOFF          "CH%d.OFF\r\n"
+#define CHxGET          "CH%d.GET\r\n"
 #define RELxON          "REL%d.ON\r\n"
 #define RELxOFF         "REL%d.OFF\r\n"
 #define RELSGET         "RELS.GET\r\n"
 #define ON              1
 #define OFF             0
+#define IN              0
+#define OUT             1
 
 #define ADBZ    24
 #define IOMAX   10      // 6+4 Channels
@@ -59,11 +57,20 @@ static struct serial {
     int fd;
 } serialDev;
 
+enum types {
+    DigIn = 1,
+    DigOut,
+    AnaogIn,
+    TempIn,
+    Relay
+};
+
 struct adData
 {
     char adBuffer[ADBZ];
     float curVal;
     int mode;
+    int type;
     int status;
     time_t age;
 };
@@ -85,12 +92,12 @@ static int getPrompt(void)
 
     for (int i = 0; i < 3; i++) 
     {
-        (void)tcflush(serialDev.fd, TCIFLUSH);
+        (void)tcflush(serialDev.fd, TCIOFLUSH);
 
         (void)sprintf(buffer, UK1104P);
         cnt = write(serialDev.fd, buffer, strlen(buffer)); // Write the UK1104 init wake up string
         if (cnt != strlen(buffer)) {
-            printlog("UK1104: Error in sending get prompt string");
+            printf("UK1104: Error in sending get prompt string");
             return rval;
         }
 
@@ -99,16 +106,14 @@ static int getPrompt(void)
         {
             (void)usleep(IOWAIT);
             cnt = read(serialDev.fd, buffer, ADBZ); // Get the response
-            if (cnt == -1 && errno == EAGAIN) continue; 
-            if (cnt > 1 && !strncmp(buffer, PUK1104, 2)) {  // printf("b=%s,try=%d,i=%d\n", buffer,try ,i);
+            if (cnt == -1 && errno == EAGAIN) continue;   //printf("b=%s,try=%d,i=%d\n", buffer,try ,i);
+            if (cnt > 1 && !strncmp(buffer, PUK1104, 2)) {
                 rval = 0;
                 break;
             }
         }
         if (rval == 0) break;
     }
-
-    (void)tcflush(serialDev.fd, TCIFLUSH);
 
     return rval;
 }
@@ -123,12 +128,15 @@ static void executeCommand(char *cmdFmt, int chn)
         return;
     }
 
+    (void)memset(adChannel[chn].adBuffer, 0 , ADBZ);
+
     cnt = write(serialDev.fd, cmdFmt, strlen(cmdFmt));  // Write the command string
     if (cnt != strlen(cmdFmt)) {
         printlog("UK1104: Error in sending command %s", cmdFmt);
         return;
-    } else {
-        (void)memset(adChannel[chn].adBuffer, 0 , ADBZ);
+
+    } else if (adChannel[chn].type != DigOut) {
+
         (void)memset(rbuf, 0 , ADBZ);
 
         for (int try = 0; try < MAXTRY; try++)
@@ -140,14 +148,18 @@ static void executeCommand(char *cmdFmt, int chn)
                 adChannel[chn].status = CHAisREADY;
                 break;
             }
+
             if (cnt >0) {
                 adChannel[chn].age = time(NULL);
-                (void)strcat(adChannel[chn].adBuffer, rbuf);
-                //printf("catting=%s <- %s, try=%d\n", adChannel[chn].adBuffer, rbuf, try);
+                int n = 0;
+                for (int i=0; i<cnt; i++) { // Discard any premature prompt
+                    if (rbuf[i] == ':') continue;
+                    adChannel[chn].adBuffer[n++] = rbuf[i];
+                }
             }
-        }
+        } //printf("buff=%s\n", adChannel[chn].adBuffer);
     }
-    (void)tcflush(serialDev.fd, TCIFLUSH);
+
     //if (strlen(adChannel[chn].adBuffer)) printf("got %s\n", adChannel[chn].adBuffer);
 }
 
@@ -177,15 +189,21 @@ void *t_devMgm()
                     sprintf(cmdFmt, RELxOFF, (chn-RELCHA)+1);
             } else {
                 if (adChannel[chn].status == CHAisCLAIMED) {
-                    sprintf(cmdFmt, CHxSETMOD, chn+1, adChannel[chn].mode);
+                    sprintf(cmdFmt, CHxSETMOD, chn+1, adChannel[chn].type);
                 } else {               
-                    switch (adChannel[chn].mode)
+                    switch (adChannel[chn].type)
                     {
                         case AnaogIn:
                             sprintf(cmdFmt, CHxGETANALOG, chn+1);
                         break;
                         case TempIn:
                             sprintf(cmdFmt, CHxGETTEMP, chn+1);
+                        break;
+                        case DigIn:
+                            sprintf(cmdFmt, CHxGET, chn+1);
+                        break;
+                        case DigOut:
+                            sprintf(cmdFmt, adChannel[chn].mode == ON? CHxON : CHxOFF, chn+1);
                         break;
                         default:
                         break;
@@ -225,13 +243,13 @@ static int portConfigure(int fd, char *device)
 
 
     SerialPortSettings.c_iflag &= ~(IXON | IXOFF | IXANY);  // Disable XON/XOFF flow control both i/p and o/p
-    SerialPortSettings.c_iflag &= ~(ICANON | ECHO | ECHOE | ISIG);  // Non Cannonical mode
+    SerialPortSettings.c_lflag &= ~(ICANON | ISIG | ECHO | ECHOE);  // Non Cannonical mode
     
-    SerialPortSettings.c_oflag &= ~OPOST;   // No Output Processing
+    SerialPortSettings.c_oflag &= ~OPOST;   // No Output Processing 
 
     // Setting Time outs
-    //SerialPortSettings.c_cc[VMIN] = 2;     // Read at least 2 characters 
-    //SerialPortSettings.c_cc[VTIME] = 10;  // Wait 1 sec
+    SerialPortSettings.c_cc[VMIN] = 2;  // Read at least 2 characters 
+    SerialPortSettings.c_cc[VTIME] = 0; // Wait 0 sec
 
 
     if((tcsetattr(fd,TCSANOW,&SerialPortSettings)) != 0) {  // Set the attributes to the termios structure
@@ -240,7 +258,7 @@ static int portConfigure(int fd, char *device)
     } else
         printlog("UK1104: %s: BaudRate = 15200, StopBits = 1,  Parity = none", device);
 
-    (void)tcflush(fd, TCIFLUSH);  // Discards old data in the rx buffer
+    (void)tcflush(fd, TCIOFLUSH);  // Discards old data in the rx buffer
 
     (void)memset(adChannel, 0, sizeof(adChannel));
     pthread_attr_init(&attr);
@@ -280,9 +298,10 @@ int adcInit(char *device, int a2dChannel)
     }
     serialDev.fd = fd;
 
-   (void)fcntl(serialDev.fd, F_SETFL, FNDELAY);  // Non-blockning   
+   (void)fcntl(serialDev.fd, F_SETFL, FNDELAY);  // Non-blockning
 
-    adChannel[a2dChannel].mode = a2dChannel == TPMCH? TempIn : AnaogIn;
+    adChannel[a2dChannel].type = a2dChannel >= TPMCH? TempIn : AnaogIn;
+ 
     adChannel[a2dChannel].status = CHAisCLAIMED;
 
     return 0;
@@ -313,11 +332,11 @@ void relaySet(int channels) // A bitmask
 {
     int i, iter;
 
-    if (!strlen(adChannel[RELCHA].adBuffer))
-        return;
-
     for (i=1, iter=0; i<15; i<<=1, iter++)
     {
+        if (adChannel[iter+RELCHA].status == CHAisNOTUSED)
+            continue;
+
         if (channels & i) {
             //printf("Flag: %d set\n", iter);
             adChannel[iter+RELCHA].mode = ON;
@@ -349,8 +368,10 @@ void relayInit(int nchannels)
 
     executeCommand(RELSGET, RELCHA);
 
-    for(int i=0; i <nchannels; i++)
+    for(int i=0; i <nchannels; i++) {
         adChannel[i+RELCHA].status = CHAisCLAIMED;
+        adChannel[i+RELCHA].type = Relay;
+    }
 
     // Get the bitmap and set accordingly
     cha = atoi(adChannel[RELCHA].adBuffer); //printf("RELSGET=%s, %d\n",adChannel[RELCHA].adBuffer,cha);
@@ -365,23 +386,58 @@ int relayStatus(void)
     int i, iter;
     int result = 0;
 
-    if (!strlen(adChannel[RELCHA].adBuffer))
-        return 0;
-
     for (i=1, iter=0; i<15; i<<=1, iter++)
     {
-        if (adChannel[iter+RELCHA].mode == ON)
+        if (adChannel[iter+RELCHA].status == CHAisREADY && adChannel[iter+RELCHA].mode == ON)
             result |= i;
     }
+ 
     return result;  // A bitmask
 }
 
 
-#ifdef TBD
-void ioPinInit(int channel, int direction) {}
-void ioPinset(int channel, bool level) {}
-int ioPinGet(int channel) {}
-#endif
+int ioPinInit(int channel, int type) // Digin, Digout
+{
+
+    if (!serialDev.fd) {
+        printlog("UK1104: IO Init: Device not initialized with adcInit()");
+        return 1;
+    }
+
+    if (adChannel[channel].status == CHAisNOTUSED) {
+        adChannel[channel].type = type;
+        adChannel[channel].status = CHAisCLAIMED;
+    } else {
+        printlog("UK1104: IO Channel %d already claimed", channel);
+        return 1;
+    }
+
+    return 0;
+        
+}
+
+void ioPinset(int channel, int mode) // ON / OFF
+{
+     if (adChannel[channel].status != CHAisREADY)
+        return;
+
+    if (adChannel[channel].type != DigOut)
+        return;
+
+    adChannel[channel].mode = mode;
+}
+
+int ioPinGet(int channel)
+{
+     if (adChannel[channel].status != CHAisREADY)
+        return OFF;
+
+    if (adChannel[channel].type != DigIn)
+        return OFF;
+
+    return atoi(adChannel[channel].adBuffer); // 1=ON / 0=OFF
+}
+
 
 #endif
 
