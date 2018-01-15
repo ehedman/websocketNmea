@@ -135,7 +135,6 @@ function do_update()
    
     if (valid == Cmd.GoogleMapFeed) {
 
-
         var val = JSON.parse(target);
         update = parseInt(val.updt)*1000;
         var lap = val.N == "S"? "-":"";
@@ -178,11 +177,9 @@ function do_update()
 
     } else if (valid == Cmd.GoogleAisFeed) {
 
-
         var val = JSON.parse(target);
 
         var emarkers = [];
-        
 
         for (var c in val) { // build list of existing markers to update  
             for(var m=0; m<amarkers.length; m++) {      
