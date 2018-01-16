@@ -45,17 +45,17 @@ function init()
         };
 
         socket.onmessage = function (msg) {
-            var a=msg.data.split("-");
-            target = a[0];
-            valid  = a[1];
+            var n  = msg.data.lastIndexOf("-");
+            valid  = msg.data.substr(n+1, 3);
+            target = msg.data.substr(0, n);
             printlog("Received: "+msg.data);
             retry = 0;
         };
     }
-	catch(ex) { 
-		printlog(ex);
+    catch(ex) { 
+        printlog(ex);
         connection = false; 
-	}
+    }
 
     ut = setInterval(function () {do_update();}, update);  
 }

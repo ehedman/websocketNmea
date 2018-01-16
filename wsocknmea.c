@@ -68,7 +68,7 @@
 #define SWREV __DATE__
 #endif
 
-#define MAX_LWSZ    4000    // Max payload size for websockets data (~ 50 AIS ships)    
+#define MAX_LWSZ    7168    // Max payload size for websockets data   
 #define MAX_TTYS    50      // No of serial devices to manage in the db
 #define MAX_NICS    6       // No of nics to manage in the db
 
@@ -905,7 +905,7 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
     char *args = NULL;
     time_t ct = time(NULL);
 
-    memset(value, 0, sizeof(value));
+    memset(value, 0, MAX_LWSZ);
 
     switch (reason) {
         case LWS_CALLBACK_ESTABLISHED:
@@ -997,8 +997,7 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
 
                case GoogleAisFeed: {
 
-                    int tot = 0;
-                    char gbuf[40];
+                    char gbuf[80];
                     struct aisShip_struct *ptr, *dptr;
                     struct aisShip_struct *head;
                     head = getShips(MAX_LWSZ-100);
@@ -1011,7 +1010,7 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                         ptr = head;
 
                         while(ptr->next != NULL) { // Assemble the vessels into a JSON array
-                            if (strlen(value)+glen+strlen(ptr->js)+10 < sizeof(value)) {
+                            if (strlen(value)+glen+strlen(ptr->js)+10 < MAX_LWSZ) {
                                 strcat(value, ptr->js);
                                 strcat(value, gbuf);
                             }
@@ -1021,8 +1020,9 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                             free(dptr);
                         }
 
-                        tot = strlen(value);
-                        sprintf(&value[tot-2], "]-%d", req);
+                        sprintf(gbuf, "]-%d", req);
+                        value[strlen(value)-2] = '\0';
+                        strcat(value, gbuf);
 
                     } else sprintf(value, "Exp-%d", req);
 
@@ -1116,7 +1116,7 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
            for (i=0; i<rval; i++) // Format valid JSON
                 if (value[i] == '\'') value[i] = '"';
         
-           cnt = sprintf((char*)&buf[LWS_SEND_BUFFER_PRE_PADDING],"%s", value);         
+           cnt = sprintf((char*)&buf[LWS_SEND_BUFFER_PRE_PADDING],"%s", value);       
           
            // Log what we recieved and what we're going to send as a response.
            if (debug) {
