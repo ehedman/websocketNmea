@@ -5,6 +5,7 @@
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
         <meta name="viewport" content="initial-scale=6.0, user-scalable=no">
         <script type="text/javascript" src="inc/jquery-2.1.1.min.js"></script>
+        <script type="text/javascript" src="inc/pako.js"></script>
         <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&language=us"></script>
 <?php
         define('DOCROOT', dirname(__FILE__));
@@ -268,7 +269,7 @@ function do_update()
             });
             amarkers.push(amarker);
         }
-    }
+    } 
     
     ut = setInterval(function () {do_update();}, update);
 }

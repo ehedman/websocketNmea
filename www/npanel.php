@@ -32,6 +32,7 @@
         <link rel="icon" href="img/icon.ico">
         <link rel="stylesheet" type="text/css" href="inc/navi.css">
         <script type="text/javascript" src="inc/jquery-2.1.1.min.js"></script>
+        <script type="text/javascript" src="inc/pako.js"></script>
         
 <?php if($NIGHT==1) { ?>
 

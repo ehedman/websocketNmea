@@ -13,6 +13,7 @@ PKGS += automake
 PKGS += libtool
 PKGS += libpcre3 libpcre3-dev
 PKGS += libbz2-dev
+PKGS += libz-dev
 ifeq "$(shell apt-cache search php7| grep cgi)" ""
 PKGS += php5-cgi php5-sqlite3
 else
@@ -71,7 +72,7 @@ CFLAGS+= -Wall -g -std=gnu99 -pedantic
 CFLAGS+= -DARCH=$(ARCH) -DUID=$(UID) -DGID=$(GID) -I$(INCDIR)
 CFLAGS+= -DNAVIDBPATH=\"$(NAVIDBPATH)\" -DKPCONFPATH=\"$(KPCONFPATH)\"
 
-LDFLAGS=-L$(LIBDIR) -lwebsockets -lsqlite3 -lais -lpthread -lrt -Wl,-rpath=$(LIBDIR)
+LDFLAGS=-L$(LIBDIR) -lwebsockets -lsqlite3 -lais -lpthread -lrt -lz -Wl,-rpath=$(LIBDIR)
 
 all: $(BIN)
 

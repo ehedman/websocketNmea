@@ -5,6 +5,7 @@
         <title>Clock</title>
         <script type="text/javascript" src="inc/jquery-2.1.1.min.js"></script>
         <script type="text/javascript" src="inc/jQueryRotate.js"></script>
+        <script type="text/javascript" src="inc/pako.js"></script>
     <style>
 
 html>body

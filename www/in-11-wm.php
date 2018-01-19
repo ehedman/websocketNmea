@@ -4,6 +4,7 @@
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
         <title>WaterMaker</title>
         <script type="text/javascript" src="inc/jquery-2.1.1.min.js"></script>
+        <script type="text/javascript" src="inc/pako.js"></script>
         
     <style>
 

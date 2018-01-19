@@ -5,6 +5,7 @@
         <title>Current</title>
         <script type="text/javascript" src="inc/jquery-2.1.1.min.js"></script>
         <script type="text/javascript" src="inc/jQueryRotate.js"></script>
+        <script type="text/javascript" src="inc/pako.js"></script>
     <style>
 
 html>body
@@ -67,7 +68,7 @@ var ticks = 2000;
 var update = 2000;
 
 var maxangle = 240;
-var offset = 4;
+var offset = 40;
 var maxcurr = 60;
 var scaleoffset = 8;
 

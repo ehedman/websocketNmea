@@ -31,6 +31,7 @@
         <meta http-equiv="Expires" content="-1">
         <link rel="icon" href="img/icon.ico">
         <link rel="stylesheet" type="text/css" href="inc/navi.css">
+        <script type="text/javascript" src="inc/pako.js"></script>
         <script type="text/javascript" src="inc/common.js.php"></script>
 
         <style>

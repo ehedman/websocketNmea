@@ -33,6 +33,7 @@ function init()
         window.WebSocket = window.WebSocket || window.MozWebSocket;
 
         socket = new WebSocket(host,'nmea-parser-protocol');
+        socket.binaryType = 'arraybuffer';
         printlog('WebSocket - status '+socket.readyState);
 
         socket.onopen = function () {
@@ -45,10 +46,12 @@ function init()
         };
 
         socket.onmessage = function (msg) {
-            var n  = msg.data.lastIndexOf("-");
-            valid  = msg.data.substr(n+1, 3);
-            target = msg.data.substr(0, n);
-            printlog("Received: "+msg.data);
+            var data = pako.inflate(msg.data);
+            var strData = String.fromCharCode.apply(null, new Uint16Array(data));
+            var n  = strData.lastIndexOf("-");
+            valid  = strData.substr(n+1, 3);
+            target = strData.substr(0, n);
+            printlog("Received: "+strData);
             retry = 0;
         };
     }
@@ -130,7 +133,3 @@ function nextinstrument()
 {
     window.location.replace('http://<?php echo $_SERVER['HTTP_HOST']; ?>'+ipath+instruments[next]);
 }
-
-
-
-

@@ -30,6 +30,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <string.h>
+#include <zlib.h>
 #include <ctype.h>
 #include <pthread.h>
 #include <sqlite3.h>
@@ -68,7 +69,8 @@
 #define SWREV __DATE__
 #endif
 
-#define MAX_LWSZ    7168    // Max payload size for websockets data   
+#define MAX_LWSZ    32768   // Max payload size for uncompressed websockets data 
+#define WS_FRAMEZ   8192    // Websocket frame size  
 #define MAX_TTYS    50      // No of serial devices to manage in the db
 #define MAX_NICS    6       // No of nics to manage in the db
 
@@ -888,6 +890,20 @@ float dms2dd(float coordinates, const char *val)
    return c;
 }
 
+#define windowBits 15
+#define GZIP_ENCODING 16
+
+static int strm_init(z_stream * strm)
+{
+    strm->zalloc = Z_NULL;
+    strm->zfree  = Z_NULL;
+    strm->opaque = Z_NULL;
+    return deflateInit2 (strm, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
+                             windowBits | GZIP_ENCODING, 8,
+                             Z_DEFAULT_STRATEGY);
+}
+
+
 int callback_http(struct lws *wsi, enum lws_callback_reasons reason, void *user,
                   void *in, size_t len)
 {
@@ -904,6 +920,9 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
     unsigned char buf[LWS_SEND_BUFFER_PRE_PADDING + MAX_LWSZ + LWS_SEND_BUFFER_POST_PADDING];
     char *args = NULL;
     time_t ct = time(NULL);
+
+    unsigned char gzout[MAX_LWSZ];
+    z_stream strm;
 
     memset(value, 0, MAX_LWSZ);
 
@@ -1115,16 +1134,42 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
            
            for (i=0; i<rval; i++) // Format valid JSON
                 if (value[i] == '\'') value[i] = '"';
-        
-           cnt = sprintf((char*)&buf[LWS_SEND_BUFFER_PRE_PADDING],"%s", value);       
-          
+
            // Log what we recieved and what we're going to send as a response.
            if (debug) {
-                printlog("received command: %s, replying: %.*s", (char *) in, (int) cnt, buf + LWS_SEND_BUFFER_PRE_PADDING);
+                printlog("received command: %s, replying: %s, count=%d", (char *)in, value, rval);
            }
-          
+
+           // Now compress this data
+           if (strm_init(& strm) < 0) {
+                printlog("strm_init: failed");
+                return  -1;
+           }
+
+           strm.next_in = (unsigned char *)value;
+           strm.avail_in = rval;
+           i=LWS_SEND_BUFFER_PRE_PADDING;
+           cnt = 0;
+
+           do {
+                int have, j;
+                strm.avail_out = MAX_LWSZ;
+                strm.next_out = gzout;
+                if (deflate (& strm, Z_FINISH) < 0) {
+                    printlog("deflate: failed");
+                    deflateEnd (& strm);
+                    return  -1;
+                }
+                have = MAX_LWSZ - strm.avail_out;
+                for(j=0; j < have; j++)
+                    buf[i++] = gzout[j];
+                 cnt+=have;
+           }
+           while (strm.avail_out == 0);
+           deflateEnd (& strm);          
+
            // Send response.
-           cnt = lws_write(wsi, &buf[LWS_SEND_BUFFER_PRE_PADDING], cnt, LWS_WRITE_TEXT);
+           cnt = lws_write(wsi, &buf[LWS_SEND_BUFFER_PRE_PADDING], cnt, LWS_WRITE_BINARY);
 
            if (cnt < 0)
                return -1;
@@ -1134,7 +1179,7 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
        default:
            break;
     }
-    
+
     return 0;
 }
 
@@ -1149,7 +1194,7 @@ static struct lws_protocols protocols[] = {
         "nmea-parser-protocol", // protocol name - very important!
         callback_nmea_parser,   // callback
         0,                      // we don't use any per session data
-        MAX_LWSZ*2              // Max frame size
+        WS_FRAMEZ               // Max frame size
     },
     {
         NULL, NULL, 0   /* End of list */
