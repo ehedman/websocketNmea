@@ -76,7 +76,6 @@
 
 #define POLLRATE    5       // Rate to collect data in ms.
 
-
 #define INVALID     4       // Invalidate current sentences after # seconds without a refresh from talker.
 
 #define NMPARSE(str, nsent) !strncmp(nsent, &str[3], strlen(nsent))
@@ -915,13 +914,12 @@ int callback_http(struct lws *wsi, enum lws_callback_reasons reason, void *user,
 static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reason, void *user,
                   void *in, size_t len)
 {
-    int  i, cnt, req, rval = 0;
+    int  i, cnt, req, rval, maxz = 0;
     char value [MAX_LWSZ];
+    unsigned char gzout[MAX_LWSZ];
     unsigned char buf[LWS_SEND_BUFFER_PRE_PADDING + MAX_LWSZ + LWS_SEND_BUFFER_POST_PADDING];
     char *args = NULL;
     time_t ct = time(NULL);
-
-    unsigned char gzout[MAX_LWSZ];
     z_stream strm;
 
     memset(value, 0, MAX_LWSZ);
@@ -1149,18 +1147,19 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
            strm.next_in = (unsigned char *)value;
            strm.avail_in = rval;
            i=LWS_SEND_BUFFER_PRE_PADDING;
+           maxz = WS_FRAMEZ - (LWS_SEND_BUFFER_PRE_PADDING+LWS_SEND_BUFFER_POST_PADDING);
            cnt = 0;
 
            do {
                 int have, j;
-                strm.avail_out = MAX_LWSZ;
+                strm.avail_out = maxz;
                 strm.next_out = gzout;
                 if (deflate (& strm, Z_FINISH) < 0) {
                     printlog("deflate: failed");
                     deflateEnd (& strm);
                     return  -1;
                 }
-                have = MAX_LWSZ - strm.avail_out;
+                have = maxz - strm.avail_out;
                 for(j=0; j < have; j++)
                     buf[i++] = gzout[j];
                  cnt+=have;
