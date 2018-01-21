@@ -55,5 +55,5 @@ Running in Firefox on a Galaxy Note 10.1:
 <img src="http://hedmanshome.se/wso-00.png" width=100%></br>
 <img src="http://hedmanshome.se/wso-29.png" width=100%></br>
 <img src="http://hedmanshome.se/wso-52.png" width=100%></br>
-<img src="http://hedmanshome.se/wso-55.png" width=100%></br>
+<img src="http://hedmanshome.se/wso-56.png" width=100%></br>
 <img src="http://hedmanshome.se/wso-31.png" width=100%>
