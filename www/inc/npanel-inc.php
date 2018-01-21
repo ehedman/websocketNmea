@@ -26,7 +26,7 @@
             exit;
         }
     } else {
-        echo "<pre>The configuration database ".NAVIDBPATH." does not exist. Use wsocknmea to create one.</pre>";
+        echo "<pre>The configuration database ".NAVIDBPATH." does not exist. Use wsocknmea to create one (sudo ./wsocknmea).</pre>";
         exit;
     }
 

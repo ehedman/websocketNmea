@@ -32,20 +32,23 @@ Currently there are eleven virtual instrument working:
   I/O Control:
     Relay ON/OFF  : From ADC (UK1104 only)
 
-Tested runtime environment:
+### Tested runtime environment
+
 - Odroid XU3/4 (Ubuntu 15.04/16.04)
 - X86 (Ubuntu 16)
-- Raspberry Pi Model 3 (Debian wheezy)
+- Raspberry Pi Model 2/3 (Debian wheezy, ubuntu-mate-16.04)
 - Linux Mint 17/18
 - Browsers: Firefox, IE, Chrome (Chrome & Firefox also on Android)
 
 For the ADC to work properly I recommend the Pi with the MCP3208 SPI Chip 12 bit ADC 8 channels.
 For a more comprehensive I/O Solution use the UK1104 driver instead. See https://www.canakit.com
-I have a Raymarine E97 Network Multifunction Display that feeds kplex with NMEA-183 through a serial line with wind, speed, water temp, gps etc.
 
+### My configuration
+
+I have a Raymarine E97 Network Multifunction Display that feeds kplex with NMEA-183 through a serial line with wind, speed, water temp, gps etc.
 Also included in my set-up is the OpenCPN chart plotter that connects to the kplex traffic on the local WiFi on the yacht.
 Obviously the yacht has to be connected to the internet for the Google Map view.
-To access your vessel as an IOT (to remotely acess all instruemnts and remote relay control) I recommend to manipulate the ip-table rules with "shorewall" (http://shorewall.org/) in order to establish your device as an firewall with virtual host rules to open ports 80 and 443 to the internet.
+To access your vessel as an IOT (to remotely acess all instruemnts and remote relay control) I recommend to define ip-table rules with "shorewall" (http://shorewall.org/) in order to establish your device as an firewall with virtual host rules to open ports 80 and 443 to the internet.
 Check my firewall GUI interface at https://github.com/ehedman/headwall.
 
 ### Screenshots

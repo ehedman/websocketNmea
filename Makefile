@@ -17,7 +17,7 @@ PKGS += libz-dev
 ifeq "$(shell apt-cache search php7| grep cgi)" ""
 PKGS += php5-cgi php5-sqlite3
 else
-PKGS += php7-cgi php7-sqlite 
+PKGS += php7.0-cgi php7.0-sqlite 
 endif
 PKGS += libsqlite3-dev sqlite3
 PKGS += libssl-dev

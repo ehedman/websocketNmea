@@ -29,7 +29,8 @@ sudo apt-get install automake
 sudo apt-get install libtool
 sudo apt-get install libpcre3 libpcre3-dev
 sudo apt-get install libbz2-dev
-sudo apt-get install php5-cgi php5-sqlite (or php-cgi php-sqlite3 for more recent debians)
+sudo apt-get install libz-dev
+sudo apt-get install php5-cgi php5-sqlite (or php7.0-cgi php7.0-sqlite for more recent debians)
 sudo apt-get install libsqlite3-dev sqlite3
 sudo apt-get install libssl-dev
 touch .updated
@@ -59,6 +60,8 @@ You should see the framset with five instruments but no activity.
 (Click Ctrl- if you don't see all of them)
 Then click on the setting tab:
 In the "Network properties" field, select the device  you want to bind the network traffic to, typically eth0 or wlan0. Then click on "Use" and then "Save". Don't bother about the initial 127.0.0.1 address - the system will figure it out after the save.
+
+NOTE: Recent Linux kernel (2017 and later) are using a new naming policy for network devices, something like "enxb827eb84c3f6" instead of "eth0". If you don't like this you may add this statement to your kernel command line: "net.ifnames=0". Check/Google on this subject with regards to u-boot/grub etc.
 
 When the newtwork settings are saved do the following:
 In "Replay from file", select the demo file, choose rate 13 and then hit "Play".
