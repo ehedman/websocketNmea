@@ -16,8 +16,6 @@ The wsocknmea daemon uses kplex for that purpose and it will configure and contr
 
 Sucessfully activated the wsocknmea daemon will serve the individual instruments through the network with data assembled into JSON strings to be parsed by each instruemnt.
 
-Checkout a somewhat outdated presentation here: http://www.hedmanshome.se/content/view/17/1/
-
 Currently there are eleven virtual instrument working:
 
     Log           : SOW, SOG
@@ -49,3 +47,13 @@ Also included in my set-up is the OpenCPN chart plotter that connects to the kpl
 Obviously the yacht has to be connected to the internet for the Google Map view.
 To access your vessel as an IOT (to remotely acess all instruemnts and remote relay control) I recommend to manipulate the ip-table rules with "shorewall" (http://shorewall.org/) in order to establish your device as an firewall with virtual host rules to open ports 80 and 443 to the internet.
 Check my firewall GUI interface at https://github.com/ehedman/headwall.
+
+### Screenshots
+
+Running in Firefox on a Galaxy Note 10.1:
+
+<img src="http://hedmanshome.se/screenshots/2018-01-21-04-07-00.png" width=400></br>
+<img src="http://hedmanshome.se/screenshots/2018-01-21-04-07-29.png" width=400></br>
+<img src="http://hedmanshome.se/screenshots/2018-01-21-04-07-52.png" width=400></br>
+<img src="http://hedmanshome.se/screenshots/2018-01-21-04-07-31.png" width=400>
+
