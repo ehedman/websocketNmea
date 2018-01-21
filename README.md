@@ -52,8 +52,8 @@ Check my firewall GUI interface at https://github.com/ehedman/headwall.
 
 Running in Firefox on a Galaxy Note 10.1:
 
-<img src="http://hedmanshome.se/2018-01-21-04-07-00.png" width=900></br>
-<img src="http://hedmanshome.se/2018-01-21-04-07-29.png" width=900></br>
-<img src="http://hedmanshome.se/2018-01-21-04-07-52.png" width=900></br>
-<img src="http://hedmanshome.se/2018-01-21-04-07-31.png" width=900>
+<img src="http://hedmanshome.se/wso-00.png" width=100%></br>
+<img src="http://hedmanshome.se/wso-29.png" width=100%></br>
+<img src="http://hedmanshome.se/wso-52.png" width=100%></br>
+<img src="http://hedmanshome.se/wso-31.png" width=100%>
 
