@@ -71,10 +71,14 @@ function do_update()
     if (connection) {
         stled.src = 'img/indicator-green.png'
         stled.setAttribute("title", "Server OK");
-        document.getElementById("status").appendChild(stled); a2dserial
+        document.getElementById("status").appendChild(stled);
 
-        if (underConfig == true || document.getElementById("a2dserial").value == "")
+        if (underConfig == true)
             toggle = true;
+
+        if (document.getElementById("a2dserial").value == "/dev/null" || document.getElementById("a2dserial").value == "")
+            document.getElementById("relayContent").style.visibility="hidden";
+        else document.getElementById("relayContent").style.visibility="visible";
 
         if (toggle == true)
             send(Cmd.ServerPing);
@@ -610,15 +614,17 @@ function nifstypeset(dev, stat)
                     <h1>Data Acquisition Module</h1>
                     <h2>UK1104 I/O Board</h2>
                     <input type="text" name="a2dserial" title="UK1104 Serial Device" id="a2dserial" maxlength="20" value="<?php echo $a2dserial ?>"><br>
-                    Relay-1<input type="checkbox" id="relay1" title="Relay 1 ON/OFF">
-                    <input type="text" title="Description" name ="relay1txt" id="relay1txt" size="14" value="<?php echo $a2dreltxt1 ?>"><br>
-                    Relay-2<input type="checkbox" id="relay2" title="Relay 2 ON/OFF">
-                    <input type="text" title="Description" name ="relay2txt" id="relay2txt" size="14" value="<?php echo $a2dreltxt2 ?>"><br>
-                    Relay-3<input type="checkbox" id="relay3" title="Relay 3 ON/OFF">
-                    <input type="text" title="Description" name ="relay3txt" id="relay3txt" size="14" value="<?php echo $a2dreltxt3 ?>"><br>
-                    Relay-4<input type="checkbox" id="relay4" title="Relay 4 ON/OFF">
-                    <input type="text" title="Description" name ="relay4txt" id="relay4txt" size="14" value="<?php echo $a2dreltxt4 ?>"><br>
-                    <input type="button" id="relayAction" value="Send settings" title="Send settings now" onclick="dorelay()">
+                    <div id="relayContent">
+                        Relay-1<input type="checkbox" id="relay1" title="Relay 1 ON/OFF">
+                        <input type="text" title="Description" name ="relay1txt" id="relay1txt" size="14" value="<?php echo $a2dreltxt1 ?>"><br>
+                        Relay-2<input type="checkbox" id="relay2" title="Relay 2 ON/OFF">
+                        <input type="text" title="Description" name ="relay2txt" id="relay2txt" size="14" value="<?php echo $a2dreltxt2 ?>"><br>
+                        Relay-3<input type="checkbox" id="relay3" title="Relay 3 ON/OFF">
+                        <input type="text" title="Description" name ="relay3txt" id="relay3txt" size="14" value="<?php echo $a2dreltxt3 ?>"><br>
+                        Relay-4<input type="checkbox" id="relay4" title="Relay 4 ON/OFF">
+                        <input type="text" title="Description" name ="relay4txt" id="relay4txt" size="14" value="<?php echo $a2dreltxt4 ?>"><br>
+                        <input type="button" id="relayAction" value="Send settings" title="Send settings now" onclick="dorelay()">
+                    </div>
                 </td>
             </tr>
             <tr><td style="height:100%"></td></tr>
@@ -638,8 +644,13 @@ function nifstypeset(dev, stat)
         </td>
        
     </tr>
-    <tr><td colspan="3" style="text-align: left;"><div id="msg"></div></td></tr>
-    <tr><td colspan="3" style="text-align: right;"><input type="submit" title="Save settings" value="Save"></td></tr>
+    <tr>
+        <td colspan="3" style="text-align: left;"><div id="msg"></div></td>
+    </tr>
+    <tr>
+        <td style="text-align: left;"><a title="Go to github" href="http://github.com/ehedman/websocketNmea" target="_blank">About Navigation Panel</a></td>
+        <td colspan="2" style="text-align: right;"><input type="submit" title="Save settings" value="Save"></td>
+    </tr>
     </table> 
     </form>
     </div>
