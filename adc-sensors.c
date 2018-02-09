@@ -45,7 +45,7 @@
 #define ADBZ    24
 #define IOMAX   10      // 6+4 Channels
 #define RELCHA  6       // Offset for realy status
-#define IOWAIT  350000  // Wait for non blocket data .. usec and ..
+#define IOWAIT  350000  // Wait for non blocked data .. usec and ..
 #define MAXTRY  4       // ..before giving up omn ser. data.
 #define MAXAGE  20      // Invalidate after .. s
 
@@ -75,9 +75,61 @@ struct adData
     time_t age;
 };
 
+static struct adData adChannel[IOMAX];
+
 static int runThread = ON;
 
-static struct adData adChannel[IOMAX];
+
+// Array 8-16v 200 mv step
+// Linear compesation for optocoupler XX connected to A/D pin
+static int osensor [][2] =
+{
+    {1036,	524},
+    {1024,	536},
+    {1012,	548},
+    {1000,	560},
+    {988,	572},
+    {976,	584},
+    {964,	596},
+    {952,	608},
+    {940,	620},
+    {928,	632},
+    {916,	644},
+    {904,	656},
+    {892,	668},
+    {880,	680},
+    {868,	692},
+    {856,	704},
+    {844,	716},
+    {832,	728},
+    {820,	740},
+    {808,	752},
+    {796,	764},
+    {784,	776},
+    {772,	788},
+    {760,	800},
+    {748,	812},
+    {736,	824},
+    {724,	836},
+    {712,	848},
+    {700,	860},
+    {688,	872},
+    {676,	884},
+    {664,	896},
+    {652,	908},
+    {640,	920},
+    {628,	932},
+    {616,	944},
+    {604,	956},
+    {592,	968},
+    {580,	980},
+    {568,	992},
+    {556,	1004},
+    {544,	1016},
+    {532,	1028},
+    {520,	1040},
+    {508,	1052}
+};
 
 static int getPrompt(void)
 {
@@ -395,7 +447,7 @@ int relayStatus(void)
     return result;  // A bitmask
 }
 
-
+/* API */
 int ioPinInit(int channel, int type) // Digin, Digout
 {
 
@@ -416,6 +468,7 @@ int ioPinInit(int channel, int type) // Digin, Digout
         
 }
 
+/* API */
 void ioPinset(int channel, int mode) // ON / OFF
 {
      if (adChannel[channel].status != CHAisREADY)
@@ -436,6 +489,25 @@ int ioPinGet(int channel)
         return OFF;
 
     return atoi(adChannel[channel].adBuffer); // 1=ON / 0=OFF
+}
+
+/* API */
+float tick2volt(int tick)
+{
+    float volt = 0.0;
+
+    size_t len = (sizeof(osensor)/sizeof(int))/2;
+
+    // Invert and compensate för nonlinearity in the sensor
+    for (size_t i = 1; i < len-1; i++) {
+        if (osensor[i][0] <= tick) {
+            volt = (osensor[i][1] + osensor[i-1][1] + osensor[i+1][1])/3;
+            volt -=  osensor[i][0] - tick;
+            volt /= 65;
+            break;
+        }
+    }
+    return volt;
 }
 
 

@@ -20,5 +20,6 @@ struct aisShip_struct
 
 extern int addShip(int msgid, long userid, double lat_dd, double long_ddd, int trueh, double sog, char *name, long buddie);
 extern struct aisShip_struct *getShips(int size);
+extern float tick2volt(int tick);
 
 #endif /* WSOCKNMEA_H */

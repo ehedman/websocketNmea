@@ -263,19 +263,26 @@ static void do_sensors(time_t ts, collected_nmea *cn)
 
 #ifdef DOADC
     float a2dVal;
-    static int vcnt;
+
     static int ccnt;
-    static float avvolt;
+
     static float avcurr;
-    static float sampvolt[10];  // No of samples to collect in ticks
     static float sampcurr[10];
 #ifdef UK1104
     static int tcnt;
     static float avtemp;
     static float samptemp[10];  // No of samples to collect in float
+#else
+    static int vcnt;
+    static float sampvolt[10];  // No of samples to collect in ticks
+    static float avvolt;
 #endif
 
     a2dVal = adcRead(voltChannel);
+#ifdef UK1104
+    cn->volt = tick2volt(a2dVal);
+    cn->volt_ts = ts;
+#else
     // Calculate an average in case of ADC drifts.
     if (a2dVal >= VOLTLOWLEVEL) {  // example: 1230 ticks == 8 volt
         sampvolt[vcnt] = a2dVal;
@@ -289,6 +296,7 @@ static void do_sensors(time_t ts, collected_nmea *cn)
         cn->volt = avvolt * ADCTICKSVOLT;
         cn->volt_ts = ts;
     }
+#endif
 
     a2dVal = adcRead(currChannel);
     // Calculate an average in case of ADC drifts.
