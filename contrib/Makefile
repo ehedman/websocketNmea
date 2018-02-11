@@ -1,4 +1,4 @@
-all: kplex lighttpd1.4-lighttpd-1.4.33 libwebsockets aisparser
+all: kplex lighttpd1.4-lighttpd-1.4.33 libwebsockets aisparser sendemail
 
 kplex:
 	git clone https://github.com/stripydog/kplex.git
@@ -7,6 +7,9 @@ kplex:
 aisparser:
 	git clone https://github.com/bcl/aisparser.git
 	cd aisparser/c/so && make linux
+
+sendemail:
+	git clone  https://github.com/mogaal/sendemail.git
 
 libwebsockets:
 	git clone -b v2.1-stable https://github.com/warmcat/libwebsockets.git
@@ -33,6 +36,7 @@ install: lighttpd1.4-lighttpd-1.4.33 kplex libwebsockets aisparser
 	fi
 	cd kplex && sudo make BINDIR=/usr/local/bin install
 	cd lighttpd1.4-lighttpd-1.4.33 && sudo make install
+	sudo install sendemail/sendEmail -m 755 -o root -g root /usr/local/bin
 	sudo install libwebsockets/lib/libwebsockets.h -m 0664 -o root -g root /usr/local/include
 	sudo install libwebsockets/build/lws_config.h -m 0664 -o root -g root /usr/local/include
 	sudo install libwebsockets/build/lib/libwebsockets.a -m 0644 -g root -o root -D /usr/local/lib
@@ -50,6 +54,6 @@ install: lighttpd1.4-lighttpd-1.4.33 kplex libwebsockets aisparser
 install-configs:
 	cd configs &&  make TOP=$(TOP) WO=$(WO) WG=$(WG) install-configs
 clean:
-	rm -rf kplex lighttpd1.4-lighttpd-1.4.33 mod_websocket libwebsockets aisparser
+	rm -rf kplex lighttpd1.4-lighttpd-1.4.33 mod_websocket libwebsockets aisparser sendemail
 	rm -f lighttpd-1.4.33.tar.gz
 

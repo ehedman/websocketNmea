@@ -10,6 +10,17 @@
 #define UK1104              // CanaKit 4-Channel USB Relay Board with 6-Channel A/D Interface
 #define TPMCH   5           // To be identifyed as temp chanel with float type return (UK1104)
 
+enum adcChannels {
+    voltChannel = 0,
+    currChannel,
+    tempChannel = TPMCH,    // Reserved to return real temp as float value
+};
+
+
+#define MSGPRG   "/usr/local/bin/a2dnotice"
+#define MSGVLOW  "%s \"Main battery bank at critical %.2f Volt\""
+#define MSGVHIGH "%s \"Main battery bank back at %.2f Volt\""
+
 extern void printlog(char *format, ...);
 
 struct aisShip_struct

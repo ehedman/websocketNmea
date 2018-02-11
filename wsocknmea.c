@@ -87,6 +87,7 @@
 #ifdef DOADC
 extern int adcInit(char *device, int a2dChannel); // device exaple "/dev/ttyUSB3" or "/dev/spidev0.0"
 extern float adcRead(int a2dChannel);
+extern void a2dNotice(int channel, float val, float low, float high);
 #define COLDTEMP    25      // Max minus temp in C on instrument scale
 #ifdef UK1104
 extern void relayInit(int nchannels);
@@ -103,12 +104,6 @@ extern int relayStatus(void);
 #define     CURRLOWLEVEL    1024
 #define     ADCTICKSCURR    0.005
 #endif
-
-enum adcChannels {
-    voltChannel = 0,
-    currChannel,
-    tempChannel = TPMCH,    // Reserved to return real temp as float value
-};
 #endif
 
 // Request codes from virtual instruments
@@ -279,6 +274,7 @@ static void do_sensors(time_t ts, collected_nmea *cn)
 #endif
 
     a2dVal = adcRead(voltChannel);
+
 #ifdef UK1104
     cn->volt = tick2volt(a2dVal);
     cn->volt_ts = ts;
@@ -297,6 +293,8 @@ static void do_sensors(time_t ts, collected_nmea *cn)
         cn->volt_ts = ts;
     }
 #endif
+
+    a2dNotice(voltChannel, cn->volt, 11.5, 12.5);
 
     a2dVal = adcRead(currChannel);
     // Calculate an average in case of ADC drifts.

@@ -513,6 +513,37 @@ float tick2volt(int tick)
 
 #endif
 
+/* API */
+void a2dNotice(int channel, float val, float low, float high)
+{
+    static float voltLow;
+    static float VoltHigh;
+    static char msg[100];
+    struct stat sb;
+
+    if (stat(MSGPRG, &sb) || !(sb.st_mode & S_IXUSR))
+        return;
+
+    if (channel == voltChannel) {
+        if (val == 0.0 || val > 16.0) return;
+
+        if (val <= low && voltLow == 0.0) {
+            sprintf(msg, MSGVLOW, MSGPRG, val);
+            system(msg);
+            voltLow = val;
+            VoltHigh = 0.0;
+            return;
+        }
+        if (val >= high && VoltHigh == 0.0) {
+            sprintf(msg, MSGVHIGH, MSGPRG, val);
+            system(msg);
+            voltLow = 0.0;
+            VoltHigh = val;
+            return;
+        }
+    }
+}
+
 #ifdef MCP3208  // http://robsraspberrypi.blogspot.se/2016/01/raspberry-pi-adding-analogue-inputs.html
 #ifndef UK1104
 /*
