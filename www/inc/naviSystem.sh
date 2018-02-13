@@ -2,8 +2,8 @@
 
 get_ttys()
 {
-    m=`cat /proc/devices | egrep 'ttyUSB|ttySAC|ttyACM' | awk -F" " '{ printf "%s|", $1 }'`
-    ls -l /dev/tty*S*[[:digit:]] | egrep "${m}none" | awk '{print $NF}'
+    m=$(ls /dev/tty* | egrep 'ttyUSB|ttySAC|ttyACM' | awk -F" " '{ printf "%s|", $1 }')
+    ls /dev/tty*S* | egrep "${m}none" | awk '{print $NF}'
 }
 
 get_netifs()

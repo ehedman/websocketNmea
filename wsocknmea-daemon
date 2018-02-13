@@ -24,6 +24,8 @@ export PATH="${PATH:+$PATH:}/usr/local/bin"
 
 [ -e /etc/default/$NAME ] && . /etc/default/$NAME
 
+[ -x /etc/default/enum-usb ] && /etc/default/enum-usb
+
 . /lib/lsb/init-functions
 
 start_daemon () {

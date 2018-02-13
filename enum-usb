@@ -1,0 +1,59 @@
+#!/bin/bash
+# /etc/default/enum-usb
+# Helper script to find marine USB devices
+#
+
+nd=$(ls /dev/ttyUSB[[:digit:]] 2>/dev/null | wc -w)
+if [ $nd -eq 0 ]; then exit 0; fi
+
+let nd=$nd-1
+
+for ((d=0; d<=$nd; d++))
+do
+    lsof /dev/ttyUSB${d} > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        devs[${d}]=1
+    else
+        devs[${d}]=0
+    fi
+done
+
+for ((d=0; d<=$nd; d++))
+do
+    if [ ${devs[${d}]} -eq 1 ]; then continue; fi
+
+    stty -F /dev/ttyUSB${d} speed 38400  > /dev/null 2>&1 
+    timeout 4 grep -q -m 1 "AIVDM" /dev/ttyUSB${d}
+    if [ $? -eq 0 ]; then
+        rm -f /dev/ttyUSB-AIS
+        ln -s /dev/ttyUSB${d} /dev/ttyUSB-AIS
+        devs[${d}]=1
+        break
+    fi
+done
+
+for ((d=0; d<=$nd; d++))
+do
+    if [ ${devs[${d}]} -eq 1 ]; then continue; fi
+
+    stty -F /dev/ttyUSB${d} speed 4800  > /dev/null 2>&1 
+    timeout 4 grep -q -m 1 "GPRMC" /dev/ttyUSB${d}
+    if [ $? -eq 0 ]; then
+        rm -f /dev/ttyUSB-GPS
+        ln -s /dev/ttyUSB${d} /dev/ttyUSB-GPS
+        devs[${d}]=1
+        break
+    fi
+done
+
+for ((d=0; d<=$nd; d++))
+do
+    # Default
+    if [ ${devs[${d}]} -eq 0 ]; then
+        if [ -c  /dev/ttyUSB${d} ]; then
+            rm -f /dev/ttyUSB-RAY
+            ln -s /dev/ttyUSB${d} /dev/ttyUSB-RAY
+            break;
+        fi
+    fi
+done

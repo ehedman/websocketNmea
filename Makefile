@@ -95,6 +95,7 @@ install: $(BIN)
 	sudo install -m 0644 -g root -o root a2dnotice -D $(DEST)/$(BIN)
 	@if [ ! -f /etc/init.d/wsocknmea-daemon ]; then \
 		echo "Installing wsocknmea-daemon in /etc/init.d"; \
+		sudo install -m 0644 -g root -o root enum-usb -D /etc/default/enum-usb; \
 		sudo install -m 0755 -g root -o root wsocknmea-daemon -D /etc/init.d/wsocknmea-daemon; \
 		sudo update-rc.d wsocknmea-daemon defaults; \
 	fi
