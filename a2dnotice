@@ -8,7 +8,7 @@ PORT="25"
 DEST="send.smtp.com"
 SMTP="${DEST}:${PORT}"
 
-nmap  -p ${PORT} ${DEST} -Pn --dns-servers 8.8.8.8  2>/dev/nul | grep -q "host up"
+nmap  -p ${PORT} ${DEST} -Pn --dns-servers 8.8.8.8  2>/dev/null | grep -q "host up"
 if [ $? -ne 0 ]; then exit 1; fi
 
 PRE="<!DOCTYPE html><html><body>Message from ${YACHT} due to the following event:<p>"
@@ -18,4 +18,4 @@ txt=$(php -r "echo htmlentities(\"${1}\");")
 
 msg="${PRE}${txt}${POST}"
 
-sendEmail -o tls=no -f "${YACHT} <${EMAIL}>" -t "${CAPTAIN} <${EMAIL}>" -u "${SUBJECT}" -s ${SMTP} -xu ${EMAIL} -xp ${PW} -m "${msg}" >/dev/null 2>&1
+sendEmail -l /var/log/sendemail.log -o tls=no -f "${YACHT} <${EMAIL}>" -t "${CAPTAIN} <${EMAIL}>" -u "${SUBJECT}" -s ${SMTP} -xu ${EMAIL} -xp ${PW} -m "${msg}" >/dev/null 2>&1

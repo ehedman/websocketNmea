@@ -541,6 +541,7 @@ void a2dNotice(int channel, float val, float low, float high)
             VoltHigh = val;
             return;
         }
+        return;
     }
 }
 
