@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/bash
 ### BEGIN INIT INFO
 # Provides:          wsocknmea-daemon
 # Required-Start:    $local_fs $remote_fs $syslog $network
@@ -24,11 +24,13 @@ export PATH="${PATH:+$PATH:}/usr/local/bin"
 
 [ -e /etc/default/$NAME ] && . /etc/default/$NAME
 
-[ -x /etc/default/enum-usb ] && /etc/default/enum-usb
 
 . /lib/lsb/init-functions
 
 start_daemon () {
+
+    [ -x /etc/default/enum-usb ] && /etc/default/enum-usb
+
     if [ $ENABLE_DAEMON != 1 ]; then
         log_progress_msg "(disabled)"
 		log_end_msg 255 || true

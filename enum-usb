@@ -3,6 +3,9 @@
 # Helper script to find marine USB devices
 #
 
+mtty=$(ls /dev/ttyUSB-GPS /dev/ttyUSB-AIS /dev/ttyUSB-RAY 2>/dev/null | wc -w)
+if [ $mtty -gt 2 ]; then exit 0; fi
+
 nd=$(ls /dev/ttyUSB[[:digit:]] 2>/dev/null | wc -w)
 if [ $nd -eq 0 ]; then exit 0; fi
 
@@ -57,3 +60,5 @@ do
         fi
     fi
 done
+
+exit 0
