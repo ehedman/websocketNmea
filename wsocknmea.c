@@ -93,8 +93,6 @@ extern void a2dNotice(int channel, float val, float low, float high);
 extern void relayInit(int nchannels);
 extern void relaySet(int channels);
 extern int relayStatus(void);
-#define     ADCTICKSVOLT    0.02    // Must be adjusted to hw voltage divider resistance network etc.
-#define     VOLTLOWLEVEL    400     // No of adc ticks repesenting the threshold shown as the lowest level on the instrument.
 #define     CURRLOWLEVEL    400
 #define     ADCTICKSCURR    0.02
 #define     TEMPLOWLEVEL    -25.0
@@ -294,6 +292,7 @@ static void do_sensors(time_t ts, collected_nmea *cn)
     }
 #endif
 
+    // Send notice about low voltage
     a2dNotice(voltChannel, cn->volt, 11.5, 12.5);
 
     a2dVal = adcRead(currChannel);
