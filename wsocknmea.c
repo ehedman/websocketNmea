@@ -249,9 +249,7 @@ static void do_sensors(time_t ts, collected_nmea *cn)
     static float avvolt;
 
     a2dVal = adcRead(voltChannel);
-#ifdef UK1104
     a2dVal = tick2volt(a2dVal); // Linearize this value and return voltage
-#endif
 
     // Calculate an average in case of ADC drifts.
     if (a2dVal >= VOLTLOWLEVEL) {
@@ -263,7 +261,7 @@ static void do_sensors(time_t ts, collected_nmea *cn)
             }
             avvolt /= sizeof(sampvolt)/sizeof(float);
         }
-        cn->volt = avvolt * ADCTICKSVOLT;
+        cn->volt = avvolt;
         cn->volt_ts = ts;
     }
 
@@ -271,6 +269,8 @@ static void do_sensors(time_t ts, collected_nmea *cn)
     a2dNotice(voltChannel, cn->volt, 11.5, 12.5);
 
     a2dVal = adcRead(currChannel);
+    a2dVal = tick2current(a2dVal); // Linearize this value and return current
+
     // Calculate an average in case of ADC drifts.
     if (a2dVal >= CURRLOWLEVEL) {
         sampcurr[ccnt] = a2dVal;
@@ -281,7 +281,7 @@ static void do_sensors(time_t ts, collected_nmea *cn)
             }
             avcurr /= sizeof(sampcurr)/sizeof(float);
         }
-        cn->curr = avcurr * ADCTICKSCURR;
+        cn->curr = avcurr;
         cn->curr_ts = ts;
     }
 

@@ -22,35 +22,9 @@
 #include <unistd.h>
 #include <errno.h>
 #include "wsocknmea.h"
+#include "stables.h"
 
 #ifdef UK1104   // https://www.canakit.com/
-
-#define UK1104P         "\r"
-#define PUK1104         "\r\n\r\n::"
-#define CHxSETMOD       "CH%d.SETMODE(%d)\r"
-#define CHxGETANALOG    "CH%d.GETANALOG\r"
-#define CHxGETTEMP      "CH%d.GETTEMP\r"
-#define CHxON           "CH%d.ON\r"
-#define CHxOFF          "CH%d.OFF\r"
-#define CHxGET          "CH%d.GET\r"
-#define RELxON          "REL%d.ON\r"
-#define RELxOFF         "REL%d.OFF\r"
-#define RELSGET         "RELS.GET\r"
-#define ON              1
-#define OFF             0
-#define IN              0
-#define OUT             1
-
-#define ADBZ    24
-#define IOMAX   10      // 6+4 Channels
-#define RELCHA  6       // Offset for realy status
-#define IOWAIT  350000  // Wait for non blocked data .. usec and ..
-#define MAXTRY  4       // ..before giving up omn ser. data.
-#define MAXAGE  20      // Invalidate after .. s
-
-#define CHAisNOTUSED    0
-#define CHAisCLAIMED    1
-#define CHAisREADY      2
 
 static struct serial {
     int fd;
@@ -69,115 +43,6 @@ struct adData
 static struct adData adChannel[IOMAX];
 
 static int runThread = ON;
-
-
-// Array 8-16v ~49 mv step
-// Linear compesation for optocoupler H11F3 DIP-6 connected to A/D pin.
-// R Diod = 5.6K
-// R FET Pull-up = 8.2K
-static int osensor [][2] =
-{
-   {328,    332},
-   {326,    330},
-   {324,    328},
-   {322,    326},
-   {320,    324},
-   {318,    322},
-   {316,    320},
-   {314,    317},
-   {312,    315},
-   {310,    313},
-   {308,    312},
-   {306,    310},
-   {304,    309},
-   {302,    307},
-   {300,    305},
-   {298,    304},
-   {296,    303},
-   {294,    302},
-   {292,    301},
-   {290,    300},
-   {288,    298},
-   {286,    296},
-   {284,    294},
-   {282,    292},
-   {280,    289},
-   {278,    288},
-   {276,    286},
-   {274,    284},
-   {272,    283},
-   {270,    281},
-   {268,    279},
-   {266,    278},
-   {264,    276},
-   {262,    275},
-   {260,    273},
-   {258,    271},
-   {256,    270},
-   {254,    268},
-   {252,    266},
-   {250,    265},
-   {248,    263},
-   {246,    262},
-   {244,    260},
-   {242,    258},
-   {240,    257},
-   {238,    255},
-   {236,    253},
-   {234,    252},
-   {232,    250},
-   {230,    249},
-   {228,    247},
-   {226,    245},
-   {224,    244},
-   {222,    242},
-   {220,    241},
-   {218,    239},
-   {216,    237},
-   {214,    236},
-   {212,    234},
-   {210,    232},
-   {208,    231},
-   {206,    229},
-   {204,    228},
-   {202,    226},
-   {200,    224},
-   {198,    223},
-   {196,    221},
-   {194,    219},
-   {192,    218},
-   {190,    216},
-   {188,    215},
-   {186,    213},
-   {184,    211},
-   {182,    210},
-   {180,    208},
-   {178,    206},
-   {176,    205},
-   {174,    203},
-   {172,    202},
-   {170,    200},
-   {168,    198},
-   {166,    197},
-   {164,    195},
-   {162,    194},
-   {160,    192},
-   {158,    190},
-   {156,    189},
-   {154,    187},
-   {152,    185},
-   {150,    184},
-   {148,    182},
-   {146,    181},
-   {144,    179},
-   {142,    177},
-   {140,    176},
-   {138,    174},
-   {136,    172},
-   {134,    171},
-   {132,    169},
-   {130,    168}
-};
 
 static int getPrompt(void)
 {
@@ -255,10 +120,15 @@ static void executeCommand(char *cmdFmt, int chn)
         }
 
         if (cnt > scnt+1) {  // Skip the echoed command
-            char *ptr;
             int n=0;
-            adChannel[chn].age = time(NULL);
-            ptr=&rbuf[scnt+1];
+            char *ptr=&rbuf[scnt+1];
+
+            if (!strncmp(ptr, "ERROR", 5)) {
+                printlog("ERROR: uk1104 rejected command %s", cmdFmt);
+                break;
+            }
+            adChannel[chn].age = time(NULL);    // Refresh time stamp
+            
             for (int i=0; i<strlen(ptr); i++) {
                 if (ptr[i] == '\n' || ptr[i] == '\r') break;
                 adChannel[chn].adBuffer[n++] = ptr[i];
@@ -466,7 +336,7 @@ void relaySet(int channels) // A bitmask
 void relayInit(int nchannels)
 {
     int i, iter;
-    int result = 0;
+    int bm = 0;
 
 
     if (!serialDev.fd) {
@@ -490,13 +360,14 @@ void relayInit(int nchannels)
         adChannel[i+RELCHA].type = Relay;
     }
 
-    // Get the bitmap and set accordingly
+    // Get the ASCII bitmap and set channel bits accordingly
+    // Fmt: "1 0 0 1"
     for (i=1, iter=0; i<15; i<<=1, iter++) {
         if (adChannel[RELCHA].adBuffer[iter*2] == '1')
-            result |= i;
+            bm |= i;
     }
 
-    relaySet(result);
+    relaySet(bm);
 
     runThread = ON;
 }
@@ -544,22 +415,24 @@ int ioPinGet(int channel)
     return atoi(adChannel[channel].adBuffer); // 1=ON / 0=OFF
 }
 
+#endif // UK1104
+
 /* API */
 float tick2volt(int tick)
 {
     float volt = 0.0;
-    size_t len = (sizeof(osensor)/sizeof(int))/2;
+    size_t len = (sizeof(voltSensor)/sizeof(int))/2;
 
-    tick = 1023-tick;   // Invert value
+    tick = ADCRESOLUTION-tick;   // Invert value
 
-    if (tick > osensor[1][0]) return volt;
+    if (tick > voltSensor[1][0]) return volt;
 
     // Compensate for nonlinearity in the sensor
     for (size_t i = 1; i < len-1; i++) {
-        if (tick >= osensor[i][0]) {
-            volt = (osensor[i][1] + osensor[i-1][1] + osensor[i+1][1])/3;
-            volt +=  tick - osensor[i][0];
-            volt *= 0.048;
+        if (tick >= voltSensor[i][0]) {
+            volt = (voltSensor[i][1] + voltSensor[i-1][1] + voltSensor[i+1][1])/3;
+            volt +=  tick - voltSensor[i][0];
+            volt *= ADCTICKSVOLT;
             break;
         }
     }
@@ -567,8 +440,28 @@ float tick2volt(int tick)
     return volt;
 }
 
+/* API */
+float tick2current(int tick)
+{
+    float curr = 0.0;
+    size_t len = (sizeof(currSensor)/sizeof(int))/2;
 
-#endif // UK1104
+    tick = ADCRESOLUTION-tick;   // Invert value
+
+    if (tick > currSensor[1][0]) return curr;
+
+    // Compensate for nonlinearity in the sensor
+    for (size_t i = 1; i < len-1; i++) {
+        if (tick >= currSensor[i][0]) {
+            curr = (currSensor[i][1] + currSensor[i-1][1] + currSensor[i+1][1])/3;
+            curr +=  tick - currSensor[i][0];
+            curr *= ADCTICKSCURR;
+            break;
+        }
+    }
+    
+    return curr;
+}
 
 /* API */
 void a2dNotice(int channel, float val, float low, float high)
@@ -578,12 +471,14 @@ void a2dNotice(int channel, float val, float low, float high)
     static char msg[100];
     struct stat sb;
 
+    // Check the external script existent and mode
     if (stat(MSGPRG, &sb) || !(sb.st_mode & S_IXUSR))
         return;
 
     if (channel == voltChannel) {
         if (val == 0.0 || val > 16.0) return;
 
+        // Low warning
         if (val <= low && voltLow == 0.0) {
             sprintf(msg, MSGVLOW, MSGPRG, val);
             system(msg);
@@ -591,6 +486,7 @@ void a2dNotice(int channel, float val, float low, float high)
             VoltHigh = 0.0;
             return;
         }
+        // Recover message
         if (val >= high && VoltHigh == 0.0) {
             sprintf(msg, MSGVHIGH, MSGPRG, val);
             system(msg);
@@ -736,6 +632,3 @@ float adcRead(int a2dChannel)
 }
 #endif
 #endif
-
-
-
