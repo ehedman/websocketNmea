@@ -56,14 +56,6 @@ static struct serial {
     int fd;
 } serialDev;
 
-enum types {
-    DigIn = 1,
-    DigOut,
-    AnaogIn,
-    TempIn,
-    Relay
-};
-
 struct adData
 {
     char adBuffer[ADBZ];
@@ -85,106 +77,106 @@ static int runThread = ON;
 // R FET Pull-up = 8.2K
 static int osensor [][2] =
 {
-    {328,	328},
-    {326,	327},
-    {324,	326}, // 16.0
-    {322,	325},
-    {320,	324},
-    {318,	322},
-    {316,	320},
-    {314,	318},
-    {312,	316}, // 15.5
-    {310,	315},
-    {308,	314},
-    {306,	312},
-    {304,	310},
-    {302,	308},
-    {300,	306},
-    {298,	304},
-    {296,	302},
-    {294,	300},
-    {292,	298},
-    {290,	296},
-    {288,	295},
-    {286,	294}, // 14.4
-    {284,	293},
-    {282,	291},
-    {280,	290},
-    {278,	289},
-    {276,	288},
-    {274,	286},
-    {272,	284},
-    {270,	282},
-    {268,	280},
-    {266,	278},
-    {264,	276},
-    {262,	274}, // 13.4
-    {260,	273},
-    {258,	271},
-    {256,	268},
-    {254,	266},
-    {252,	264},
-    {250,	263},
-    {248,	262},
-    {246,	260},
-    {244,	258},
-    {242,	255},
-    {240,	253},
-    {238,	252},
-    {236,	251},
-    {234,	252}, // 12.3
-    {232,	250},
-    {230,	248},
-    {228,	246},
-    {226,	244},
-    {224,	242},
-    {222,	240},
-    {220,	238},
-    {218,	236},
-    {216,	234},
-    {214,	233},
-    {212,	232}, // 11.4
-    {210,	230}, 
-    {208,	229},
-    {206,	228},
-    {204,	226},
-    {202,	224},
-    {200,	222},
-    {198,	220},
-    {196,	218},
-    {194,	216},
-    {192,	214},
-    {190,	213}, 
-    {188,	212}, // 10.4
-    {186,	211},
-    {184,	210},
-    {182,	208},
-    {180,	206},
-    {178,	204}, // 9.88
-    {176,	202},
-    {174,	200},
-    {172,	198},
-    {170,	196},
-    {168,	194},
-    {166,	192},
-    {164,	190},
-    {162,	188},
-    {160,	186},
-    {158,	184},
-    {156,	182},
-    {154,	180}, 
-    {152,	178}, // 8,75
-    {150,	176},
-    {148,	174},
-    {146,	173},
-    {144,	172},
-    {142,	170}, 
-    {140,	169}, // 8.30
-    {138,	168},
-    {136,	168},
-    {134,	166},
-    {132,	165},
-    {130,	164}
+   {328,    332},
+   {326,    330},
+   {324,    328},
+   {322,    326},
+   {320,    324},
+   {318,    322},
+   {316,    320},
+   {314,    317},
+   {312,    315},
+   {310,    313},
+   {308,    312},
+   {306,    310},
+   {304,    309},
+   {302,    307},
+   {300,    305},
+   {298,    304},
+   {296,    303},
+   {294,    302},
+   {292,    301},
+   {290,    300},
+   {288,    298},
+   {286,    296},
+   {284,    294},
+   {282,    292},
+   {280,    289},
+   {278,    288},
+   {276,    286},
+   {274,    284},
+   {272,    283},
+   {270,    281},
+   {268,    279},
+   {266,    278},
+   {264,    276},
+   {262,    275},
+   {260,    273},
+   {258,    271},
+   {256,    270},
+   {254,    268},
+   {252,    266},
+   {250,    265},
+   {248,    263},
+   {246,    262},
+   {244,    260},
+   {242,    258},
+   {240,    257},
+   {238,    255},
+   {236,    253},
+   {234,    252},
+   {232,    250},
+   {230,    249},
+   {228,    247},
+   {226,    245},
+   {224,    244},
+   {222,    242},
+   {220,    241},
+   {218,    239},
+   {216,    237},
+   {214,    236},
+   {212,    234},
+   {210,    232},
+   {208,    231},
+   {206,    229},
+   {204,    228},
+   {202,    226},
+   {200,    224},
+   {198,    223},
+   {196,    221},
+   {194,    219},
+   {192,    218},
+   {190,    216},
+   {188,    215},
+   {186,    213},
+   {184,    211},
+   {182,    210},
+   {180,    208},
+   {178,    206},
+   {176,    205},
+   {174,    203},
+   {172,    202},
+   {170,    200},
+   {168,    198},
+   {166,    197},
+   {164,    195},
+   {162,    194},
+   {160,    192},
+   {158,    190},
+   {156,    189},
+   {154,    187},
+   {152,    185},
+   {150,    184},
+   {148,    182},
+   {146,    181},
+   {144,    179},
+   {142,    177},
+   {140,    176},
+   {138,    174},
+   {136,    172},
+   {134,    171},
+   {132,    169},
+   {130,    168}
 };
 
 static int getPrompt(void)
@@ -240,30 +232,36 @@ static void executeCommand(char *cmdFmt, int chn)
     if (scnt != strlen(cmdFmt)) {
         printlog("UK1104: Error in sending command %s", cmdFmt);
         return;
+    }
 
-    } else if (adChannel[chn].type != DigOut) {
+    if (adChannel[chn].type == DigOut || adChannel[chn].type == DigIn) {
+        if (adChannel[chn].status == CHAisCLAIMED)
+            adChannel[chn].status = CHAisREADY;
+        if (adChannel[chn].type == DigOut)
+            return;
+    }
 
-        (void)memset(rbuf, 0 , ADBZ);
+    (void)memset(rbuf, 0 , ADBZ);
 
-        for (int try = 0; try < MAXTRY; try++)
-        {
-            (void)usleep(IOWAIT);
-            cnt = read(serialDev.fd, rbuf, ADBZ); // Get the value
-            if (cnt == -1 && errno == EAGAIN) continue;
-            if (adChannel[chn].status == CHAisCLAIMED && cnt > 1) {
-                adChannel[chn].status = CHAisREADY;
-                break;
-            }
+    // Now read the response from the device
+    for (int try = 0; try < MAXTRY; try++)
+    {
+        (void)usleep(IOWAIT);
+        cnt = read(serialDev.fd, rbuf, ADBZ); // Get the value
+        if (cnt == -1 && errno == EAGAIN) continue;
+        if (adChannel[chn].status == CHAisCLAIMED && cnt > 1) {
+            adChannel[chn].status = CHAisREADY;
+            break;
+        }
 
-            if (cnt > scnt+1) {  // Skip the echoed command
-                char *ptr;
-                int n=0;
-                adChannel[chn].age = time(NULL);
-                ptr=&rbuf[scnt+1];
-                for (int i=0; i<strlen(ptr); i++) {
-                    if (ptr[i] == '\n' || ptr[i] == '\r') break;
-                    adChannel[chn].adBuffer[n++] = ptr[i];
-                }
+        if (cnt > scnt+1) {  // Skip the echoed command
+            char *ptr;
+            int n=0;
+            adChannel[chn].age = time(NULL);
+            ptr=&rbuf[scnt+1];
+            for (int i=0; i<strlen(ptr); i++) {
+                if (ptr[i] == '\n' || ptr[i] == '\r') break;
+                adChannel[chn].adBuffer[n++] = ptr[i];
             }
         }
     }
@@ -417,14 +415,11 @@ int adcInit(char *device, int a2dChannel)
 float adcRead(int a2dChannel)
 {
 
-    if (adChannel[a2dChannel].status != CHAisREADY) {
+    if (adChannel[a2dChannel].status != CHAisREADY)
+        return 0.0;
 
-        return 0;
-    }
-
-    if (strlen(adChannel[a2dChannel].adBuffer)) {
+    if (strlen(adChannel[a2dChannel].adBuffer))
         adChannel[a2dChannel].curVal = atof(adChannel[a2dChannel].adBuffer);
-    }
 
     if (adChannel[a2dChannel].age < time(NULL) - MAXAGE)
         adChannel[a2dChannel].curVal = 0;   // Zero out aged values
@@ -522,14 +517,13 @@ int ioPinInit(int channel, int type) // Digin, Digout
         printlog("UK1104: IO Channel %d already claimed", channel);
         return 1;
     }
-
-    return 0;
-        
+    return 0;      
 }
 
 /* API */
 void ioPinset(int channel, int mode) // ON / OFF
 {
+
      if (adChannel[channel].status != CHAisREADY)
         return;
 
@@ -565,7 +559,7 @@ float tick2volt(int tick)
         if (tick >= osensor[i][0]) {
             volt = (osensor[i][1] + osensor[i-1][1] + osensor[i+1][1])/3;
             volt +=  tick - osensor[i][0];
-            volt *= 0.0495;
+            volt *= 0.048;
             break;
         }
     }

@@ -84,26 +84,6 @@
 #define DOADC
 #endif
 
-#ifdef DOADC
-extern int adcInit(char *device, int a2dChannel); // device exaple "/dev/ttyUSB3" or "/dev/spidev0.0"
-extern float adcRead(int a2dChannel);
-extern void a2dNotice(int channel, float val, float low, float high);
-#define COLDTEMP    25      // Max minus temp in C on instrument scale
-#ifdef UK1104
-extern void relayInit(int nchannels);
-extern void relaySet(int channels);
-extern int relayStatus(void);
-#define     CURRLOWLEVEL    400
-#define     ADCTICKSCURR    0.02
-#define     TEMPLOWLEVEL    -25.0
-#else   // MCP3208
-#define     ADCTICKSVOLT    0.0065  // Must be adjusted to hw voltage divider resistance network etc.
-#define     VOLTLOWLEVEL    1230    // No of adc ticks repesenting the threshold shown as the lowest level on the instrument.
-#define     CURRLOWLEVEL    1024
-#define     ADCTICKSCURR    0.005
-#endif
-#endif
-
 // Request codes from virtual instruments
 enum requests {
     SpeedOverGround     = 100,
@@ -256,29 +236,25 @@ static void do_sensors(time_t ts, collected_nmea *cn)
 
 #ifdef DOADC
     float a2dVal;
-
     static int ccnt;
-
     static float avcurr;
-    static float sampcurr[10];
+    static float sampcurr[20];
 #ifdef UK1104
     static int tcnt;
     static float avtemp;
-    static float samptemp[10];  // No of samples to collect in float
-#else
-    static int vcnt;
-    static float sampvolt[10];  // No of samples to collect in ticks
-    static float avvolt;
+    static float samptemp[20];  // No of samples to collect
 #endif
+    static int vcnt;
+    static float sampvolt[20];  // No of samples to collect
+    static float avvolt;
 
     a2dVal = adcRead(voltChannel);
-
 #ifdef UK1104
-    cn->volt = tick2volt(a2dVal);
-    cn->volt_ts = ts;
-#else
+    a2dVal = tick2volt(a2dVal); // Linearize this value and return voltage
+#endif
+
     // Calculate an average in case of ADC drifts.
-    if (a2dVal >= VOLTLOWLEVEL) {  // example: 1230 ticks == 8 volt
+    if (a2dVal >= VOLTLOWLEVEL) {
         sampvolt[vcnt] = a2dVal;
         if (++vcnt > sizeof(sampvolt)/sizeof(float)) {
             vcnt = avvolt = 0;
@@ -290,9 +266,8 @@ static void do_sensors(time_t ts, collected_nmea *cn)
         cn->volt = avvolt * ADCTICKSVOLT;
         cn->volt_ts = ts;
     }
-#endif
 
-    // Send notice about low voltage
+    // Alert about low voltage
     a2dNotice(voltChannel, cn->volt, 11.5, 12.5);
 
     a2dVal = adcRead(currChannel);
@@ -1080,7 +1055,7 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                     if (ct - cnmea.temp_ts > INVALID*10)
                         sprintf(value, "Exp-%d", req);
                     else
-                        sprintf(value, "{'temp':'%.1f'}-%d", cnmea.temp + COLDTEMP, req);
+                        sprintf(value, "{'temp':'%.1f'}-%d", cnmea.temp, req);
                     break;
                 }
 #ifdef UK1104
@@ -1506,6 +1481,7 @@ int main(int argc ,char **argv)
         (void)adcInit(iconf.adc_dev, currChannel);
 #ifdef UK1104
         (void)adcInit(iconf.adc_dev, tempChannel);
+    (void)ioPinInit(3, DigOut);
         (void)relayInit(4);      
 #endif
     }

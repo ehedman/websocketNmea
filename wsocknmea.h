@@ -13,9 +13,46 @@
 enum adcChannels {
     voltChannel = 0,
     currChannel,
+#ifdef UK1104
     tempChannel = TPMCH,    // Reserved to return real temp as float value
+#endif
 };
 
+extern int adcInit(char *device, int a2dChannel); // device exaple "//dev/ttyACM0" or "/dev/spidev0.0"
+extern float adcRead(int a2dChannel);
+extern void a2dNotice(int channel, float val, float low, float high);
+
+#ifdef UK1104
+enum types {
+    DigOut = 1,
+    DigIn,
+    AnaogIn,
+    TempIn,
+    Relay
+};
+
+extern void relayInit(int nchannels);
+extern void relaySet(int channels);
+extern int relayStatus(void);
+extern int ioPinInit(int channel, int type);
+extern void ioPinset(int channel, int mode);
+extern int ioPinGet(int channel);
+#endif
+
+#if defined (MCP3208) || defined (UK1104)
+#define     TEMPLOWLEVEL    -25.0   // Max minus temp in C on instrument scale
+#ifdef UK1104
+#define     VOLTLOWLEVEL    8.0     // Voltage repesenting the threshold shown as the lowest level on the instrument
+#define     ADCTICKSVOLT    1.0     // Not really used
+#define     CURRLOWLEVEL    400
+#define     ADCTICKSCURR    0.02
+#else   // MCP3208
+#define     ADCTICKSVOLT    0.0065  // Must be adjusted to hw voltage divider resistance network etc.
+#define     VOLTLOWLEVEL    1230    // No of adc ticks repesenting the threshold shown as the lowest level on the instrument.
+#define     CURRLOWLEVEL    1024
+#define     ADCTICKSCURR    0.005
+#endif
+#endif
 
 #define MSGPRG   "/usr/local/bin/a2dnotice"
 #define MSGVLOW  "%s \"Main battery bank at critical %.2f Volt\""
