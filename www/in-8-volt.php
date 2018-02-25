@@ -68,7 +68,7 @@ var ticks = 2000;
 var update = 2000;
 
 var maxangle = 102;
-var offset = 4;
+var offset = 6;
 var maxvolt = 16;
 var scaleoffset = 8;
 

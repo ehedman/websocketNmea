@@ -52,8 +52,8 @@ html>body
     min-height: 90px;
     border: 0px;
     position:relative;
-    top: 102px;
-    left: 22%;
+    top: 95px;
+    left: 21.5%;
 }
 
     </style>
@@ -67,10 +67,10 @@ var target = 0;
 var ticks = 2000;
 var update = 2000;
 
-var maxangle = 240;
-var offset = 40;
-var maxcurr = 60;
-var scaleoffset = 8;
+var maxangle = 120;
+var offset = 58;
+var maxcurr = 30;
+var scaleoffset = 0;
 
 var debug = false;
 var connection = true;
@@ -104,6 +104,7 @@ function do_poll()
 
     document.getElementById("LEDpanel").innerHTML=val.curr;
 
+    val.curr *=0.5;
 
     if (val.curr > maxcurr)
         { document.getElementById("needle").style.visibility="hidden"; angle = maxangle;  return; }

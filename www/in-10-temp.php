@@ -52,7 +52,7 @@ html>body
     min-height: 90px;
     border: 0px;
     position:relative;
-    top: 102px;
+    top: 94px;
     left: 22%;
 }
 
@@ -68,9 +68,9 @@ var ticks = 2000;
 var update = 2000;
 
 var maxangle = 136;
-var offset = 43;
+var offset = 33;
 var maxtemp = 50;
-var scaleoffset = 8;
+var scaleoffset = 5;
 
 var debug = false;
 var connection = true;
@@ -99,8 +99,6 @@ function do_poll()
     if (valid != Cmd.SensorTemp) return;
     
     var val = JSON.parse(target);
-
-    val.temp -= 25;
  
     document.getElementById("needle").style.opacity = "100";
 
