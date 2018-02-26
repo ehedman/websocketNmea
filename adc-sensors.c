@@ -120,7 +120,6 @@ static void executeCommand(char *cmdFmt, int chn)
             adChannel[chn].status = CHAisREADY;
             break;
         }
-
         if (cnt > scnt+1) {  // Skip the echoed command
             int n=0;
             char *ptr=&rbuf[scnt+1];
@@ -135,6 +134,7 @@ static void executeCommand(char *cmdFmt, int chn)
                 if (ptr[i] == '\n' || ptr[i] == '\r') break;
                 adChannel[chn].adBuffer[n++] = ptr[i];
             }
+            break;
         }
     }
 }
@@ -418,9 +418,7 @@ float tick2volt(int tick)
     size_t len = (sizeof(voltSensor)/sizeof(int))/2;
 
     tick = ADCRESOLUTION-tick;   // Invert value
-
     if (tick > voltSensor[1][0]) return volt;
-
     // Compensate for nonlinearity in the sensor
     for (size_t i = 1; i < len-1; i++) {
         if (tick >= voltSensor[i][0]) {
