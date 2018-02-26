@@ -238,14 +238,12 @@ static void do_sensors(time_t ts, collected_nmea *cn)
     float a2dVal;
     static int ccnt;
     static float avcurr;
-    static float sampcurr[20];
-#ifdef UK1104
+    static float sampcurr[20];  // No of samples to collect
     static int tcnt;
     static float avtemp;
-    static float samptemp[20];  // No of samples to collect
-#endif
+    static float samptemp[20];
     static int vcnt;
-    static float sampvolt[20];  // No of samples to collect
+    static float sampvolt[20];
     static float avvolt;
 
     a2dVal = adcRead(voltChannel);
@@ -285,8 +283,7 @@ static void do_sensors(time_t ts, collected_nmea *cn)
         cn->curr_ts = ts;
     }
 
-#ifdef UK1104
-    a2dVal = adcRead(tempChannel);  // UK1104 returns temp in C - not ticks
+    a2dVal = adcRead(tempChannel);
     // Calculate an average in case of ADC drifts.
     if (a2dVal >= TEMPLOWLEVEL) {
         samptemp[tcnt] = a2dVal;
@@ -300,7 +297,6 @@ static void do_sensors(time_t ts, collected_nmea *cn)
         cn->temp = avtemp;
         cn->temp_ts = ts;
     }
-#endif
 
 #else
     // Just for demo
@@ -366,9 +362,7 @@ void exit_clean(int sig)
 #endif
   
     if (ws_context != NULL) 
-        lws_context_destroy(ws_context);
-      
-   
+        lws_context_destroy(ws_context);  
 
     if (sig == SIGSTOP) {
         if ((fd = open(WSREBOOT, O_RDONLY)) >0) {
@@ -693,7 +687,7 @@ int  configure(int kpf)
     }
 
 #ifdef REV
-    // Check revision av database
+    // Check revision of database
     rval = sqlite3_prepare_v2(conn, "select rev from rev", -1, &res, &tail);        
     if (rval == SQLITE_OK && sqlite3_step(res) == SQLITE_ROW) {
             if(strcmp((ptr=(char*)sqlite3_column_text(res, 0)), REV)) {
@@ -1071,6 +1065,12 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                     sprintf(value, "{'relaySts':'%d'}-%d", relayStatus(), req);
                     break;
                 }
+#else
+                case SensorRelay:
+                case SensorRelayStatus: {
+                    sprintf(value, "{'relaySts':'%d'}-%d", 0, req);
+                    break;
+                }          
 #endif
 #endif
 #ifdef MT1800
@@ -1479,9 +1479,8 @@ int main(int argc ,char **argv)
     if (strcmp(iconf.adc_dev, "/dev/null")) {
         (void)adcInit(iconf.adc_dev, voltChannel);
         (void)adcInit(iconf.adc_dev, currChannel);
-#ifdef UK1104
         (void)adcInit(iconf.adc_dev, tempChannel);
-    (void)ioPinInit(3, DigOut);
+#ifdef UK1104
         (void)relayInit(4);      
 #endif
     }
@@ -1506,11 +1505,11 @@ int main(int argc ,char **argv)
         int ais_rval;
         long   userid;
         char *name;
-        int r_limit;
+        static int r_limit;
         char txtbuf_p1[200];
-        unsigned char ais_msgid_p1;
+        static unsigned char ais_msgid_p1;
         int trueh;
-        int cog;
+        static int cog;
 
         // AIS message structures
         aismsg_1  msg_1;

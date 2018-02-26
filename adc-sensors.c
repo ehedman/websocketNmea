@@ -47,9 +47,10 @@ static int runThread = ON;
 static int getPrompt(void)
 {
     char buffer[ADBZ];
-    size_t cnt;
     int rval = 1;
     extern int errno;
+    size_t cnt;
+    size_t pz = (size_t)sizeof(PUK1104)-1;
 
     if (!serialDev.fd) return 1;
 
@@ -60,17 +61,18 @@ static int getPrompt(void)
         (void)sprintf(buffer, UK1104P);
         cnt = write(serialDev.fd, buffer, strlen(buffer)); // Write the UK1104 init wake up string
         if (cnt != strlen(buffer)) {
-            printf("UK1104: Error in sending get prompt string");
+            printf("UK1104: Error in sending the get prompt string");
             return rval;
         }
 
         (void)memset(buffer, 0 , ADBZ);
+
         for (int try = 0; try < MAXTRY; try++)
         {
             (void)usleep(IOWAIT);
             cnt = read(serialDev.fd, buffer, ADBZ); // Get the response
             if (cnt == -1 && errno == EAGAIN) continue;
-            if (cnt > 1 && !strncmp(buffer, PUK1104, 6)) {
+            if (cnt >= pz && !strncmp(buffer, PUK1104, pz)) {
                 rval = 0;
                 break;
             }
@@ -129,7 +131,7 @@ static void executeCommand(char *cmdFmt, int chn)
             }
             adChannel[chn].age = time(NULL);    // Refresh time stamp
             
-            for (int i=0; i<strlen(ptr); i++) {
+            for (int i=0; i<strlen(ptr); i++) { // Save channel data
                 if (ptr[i] == '\n' || ptr[i] == '\r') break;
                 adChannel[chn].adBuffer[n++] = ptr[i];
             }
@@ -137,7 +139,7 @@ static void executeCommand(char *cmdFmt, int chn)
     }
 }
 
-// Reader thread
+// uk1104 Command handler thread
 void *t_devMgm()
 {
     static char cmdFmt[ADBZ];
@@ -198,8 +200,6 @@ static int portConfigure(int fd, char *device)
     static pthread_t t1;
     int detachstate;
 
-    if (serialDev.fd) return 0;
-
     (void)tcgetattr(fd, &SerialPortSettings);     // Get the current attributes of the Serial port
 
     /* Setting the Baud rate */
@@ -238,7 +238,7 @@ static int portConfigure(int fd, char *device)
     pthread_attr_init(&attr);
     detachstate = PTHREAD_CREATE_DETACHED;
     (void)pthread_attr_setdetachstate(&attr, detachstate);
-    (void)pthread_create(&t1, &attr, t_devMgm, NULL); // Start the reader thread
+    (void)pthread_create(&t1, &attr, t_devMgm, NULL); // Start the command handler thread
 
     return 0;
 }
@@ -246,7 +246,7 @@ static int portConfigure(int fd, char *device)
 /* API */
 int adcInit(char *device, int a2dChannel)
 {
-    int fd;
+    int fd = 0;
 
     if (a2dChannel > RELCHA) {
         printlog("UK1104: Error channel must be less than %d not  %d", IOMAX, a2dChannel+1);
@@ -263,16 +263,13 @@ int adcInit(char *device, int a2dChannel)
             printlog("UK1104: ADC Could not open device %s", device);
             return 1;
         }
+        if (portConfigure(fd, device)) {
+            (void)close(fd);
+            return 1;
+        }
+        serialDev.fd = fd;
+        (void)fcntl(serialDev.fd, F_SETFL, FNDELAY);  // Non-blockning
     }
-
-    if (portConfigure(fd, device)) {
-        (void)close(fd);
-        serialDev.fd = 0;
-        return 1;
-    }
-    serialDev.fd = fd;
-
-   (void)fcntl(serialDev.fd, F_SETFL, FNDELAY);  // Non-blockning
 
     adChannel[a2dChannel].type = a2dChannel >= TPMCH? TempIn : AnaogIn;
  
@@ -395,7 +392,7 @@ int ioPinInit(int channel, int type) // Digin, Digout
 void ioPinset(int channel, int mode) // ON / OFF
 {
 
-     if (adChannel[channel].status != CHAisREADY)
+    if (adChannel[channel].status != CHAisREADY)
         return;
 
     if (adChannel[channel].type != DigOut)
@@ -407,9 +404,6 @@ void ioPinset(int channel, int mode) // ON / OFF
 int ioPinGet(int channel)
 {
      if (adChannel[channel].status != CHAisREADY)
-        return OFF;
-
-    if (adChannel[channel].type != DigIn)
         return OFF;
 
     return atoi(adChannel[channel].adBuffer); // 1=ON / 0=OFF
@@ -481,7 +475,7 @@ void a2dNotice(int channel, float val, float low, float high)
         // Low warning
         if (val <= low && voltLow == 0.0) {
             sprintf(msg, MSGVLOW, MSGPRG, val);
-            system(msg);
+            ignored = system(msg);
             voltLow = val;
             VoltHigh = 0.0;
             return;
@@ -489,7 +483,7 @@ void a2dNotice(int channel, float val, float low, float high)
         // Recover message
         if (val >= high && VoltHigh == 0.0) {
             sprintf(msg, MSGVHIGH, MSGPRG, val);
-            system(msg);
+            ignored = system(msg);
             voltLow = 0.0;
             VoltHigh = val;
             return;
@@ -516,37 +510,37 @@ static struct spi {
 static int spiOpen(char * devspi)
 {
      if ((spiDev.spiFd = open(devspi, O_RDWR)) <0) {
-          printlog("ADC: Could not open SPI device %s", devspi);
+          printlog("MCP3208: Could not open SPI device %s", devspi);
           return 1;
      }
 
      if (ioctl (spiDev.spiFd, SPI_IOC_WR_MODE, &spiDev.mode) < 0) {
-          printlog("ADC: Could not set SPIMode (WR)...ioctl fail");
+          printlog("MCP3208: Could not set SPIMode (WR)...ioctl fail");
           return 1;
      }
 
      if (ioctl (spiDev.spiFd, SPI_IOC_RD_MODE, &spiDev.mode) <0) {
-          printlog("ADC: Could not set SPIMode (RD)...ioctl fail");
+          printlog("MCP3208: Could not set SPIMode (RD)...ioctl fail");
           return 1;
      }
 
      if (ioctl (spiDev.spiFd, SPI_IOC_WR_BITS_PER_WORD, &spiDev.bitsPerWord) <0) {
-          printlog("ADC: Could not set SPI bitsPerWord (WR)...ioctl fail");
+          printlog("MCP3208ADC: Could not set SPI bitsPerWord (WR)...ioctl fail");
           return 1;
      }
 
      if (ioctl (spiDev.spiFd, SPI_IOC_RD_BITS_PER_WORD, &spiDev.bitsPerWord) < 0) {
-          printlog("ADC: Could not set SPI bitsPerWord(RD)...ioctl fail");
+          printlog("MCP3208: Could not set SPI bitsPerWord(RD)...ioctl fail");
           return 1;
      }
 
      if (ioctl (spiDev.spiFd, SPI_IOC_WR_MAX_SPEED_HZ, &spiDev.speed) < 0) {
-          printlog("ADC: Could not set SPI speed (WR)...ioctl fail");
+          printlog("MCP3208: Could not set SPI speed (WR)...ioctl fail");
           return 1;
      }
 
      if (ioctl (spiDev.spiFd, SPI_IOC_RD_MAX_SPEED_HZ, &spiDev.speed) <0) {
-          printlog("ADC: Could not set SPI speed (RD)...ioctl fail");
+          printlog("MCP3208: Could not set SPI speed (RD)...ioctl fail");
           return 1;
      }
      return 0;
@@ -563,11 +557,12 @@ static int mcp3208SpiInit(char *devspi, unsigned char spiMode, unsigned int spiS
      return spiOpen(devspi);
 }
 
+/* API */
 int adcInit(char *device, int a2dChannel)
 {
     // check channel for adc
     if (a2dChannel > 7) {
-        printlog("ADC: Channel must be less than 8 not  %d", a2dChannel);
+        printlog("MCP3208: Channel must be less than 8 not  %d", a2dChannel);
         return 1;
     }
 
@@ -575,10 +570,12 @@ int adcInit(char *device, int a2dChannel)
         // Initialize ADC device
         if ( mcp3208SpiInit(device, SPI_MODE_0, 1000000, 8) ) {
             spiDev.status = 0;
+            printlog("MCP3208: ADC Could not open device %s", device);
             return 1;
         }
     }
     spiDev.status = 1;
+
     return 0;
 }
 
@@ -597,7 +594,7 @@ static int spiWriteRead( unsigned char *data, int length){
      for (i = 0 ; i < length ; i++) {
           memset(&spi[i], 0, sizeof (spi[i]));
           spi[i].tx_buf        = (unsigned long)(data + i); // transmit from "data"
-          spi[i].rx_buf        = (unsigned long)(data + i) ; // receive into "data"
+          spi[i].rx_buf        = (unsigned long)(data + i); // receive into "data"
           spi[i].len           = sizeof(*(data + i)) ;
           spi[i].delay_usecs   = 0 ;
           spi[i].speed_hz      = spiDev.speed ;
@@ -608,15 +605,16 @@ static int spiWriteRead( unsigned char *data, int length){
      return ioctl (spiDev.spiFd, SPI_IOC_MESSAGE(length), &spi);
 }
 
+/* API */
 float adcRead(int a2dChannel)
 {
-    int a2dVal;
+    int a2dVal = 0;
+    int t2val = 0;
+    float fvalue = 0.0;
     unsigned char data[3];
     
     if (!spiDev.status)
-        return 0;
-
-    a2dVal = 0;
+        return fvalue;
 
     // Do A/D conversion
     data[0] = 0x06 | ((a2dChannel & 0x07) >> 7);
@@ -628,7 +626,24 @@ float adcRead(int a2dChannel)
     data[1] = 0x0F & data[1];
     a2dVal = (data[1] << 8) | data[2]; 
 
-    return (float)(a2dVal);
+    switch (a2dChannel) {
+        case voltChannel:
+            t2val = ADCTICKSVOLT;
+            break;
+        case currChannel:
+            t2val = ADCTICKSCURR;
+            break;
+        case tempChannel:
+            t2val = ASCTICKSTEMP;
+            break;
+        default:
+            return fvalue;
+    }
+
+    // Ticks 2 float value
+    fvalue = a2dVal*t2val;
+
+    return fvalue;
 }
 #endif
 #endif

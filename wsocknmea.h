@@ -5,6 +5,8 @@
 #define NAVIDBPATH  "/etc/default/navi.db"      // Configuration database writable for webserver
 #endif
 
+int ignored __attribute__((unused));
+
 extern void printlog(char *format, ...);
 
 struct aisShip_struct
@@ -19,14 +21,12 @@ extern struct aisShip_struct *getShips(int size);
 //#define MT1800              // Instrument support for ENWA Watermaker 
 //#define MCP3208             // Analog input valtage, current .... etc.
 #define UK1104              // CanaKit 4-Channel USB Relay Board with 6-Channel A/D Interface
-#define TPMCH   5           // To be identifyed as temp chanel with float type return (UK1104)
+#define TPMCH   5           // To be identifyed as temp chanel
 
 enum adcChannels {
     voltChannel = 0,
     currChannel,
-#ifdef UK1104
     tempChannel = TPMCH,    // Reserved to return real temp as float value
-#endif
 };
 
 extern int adcInit(char *device, int a2dChannel); // device exaple "//dev/ttyACM0" or "/dev/spidev0.0"
@@ -82,19 +82,18 @@ extern int ioPinGet(int channel);
 #endif // UK1104
 
 #if defined (MCP3208) || defined (UK1104)
-#define     TEMPLOWLEVEL    -25.0   // Max minus temp in C on instrument scale
+#define     VOLTLOWLEVEL    8.0     // Voltage repesenting the threshold shown as the lowest level on the instrument
+#define     TEMPLOWLEVEL    -25.0   // Temperature repesenting the threshold shown as the lowest level on the instrument
+#define     CURRLOWLEVEL    -30.0   // Current repesenting the threshold shown as the lowest level on the instrument
 #ifdef UK1104
 #define     ADCRESOLUTION   1023    // ADC Resolution (10bit)
-#define     VOLTLOWLEVEL    8.0     // Voltage repesenting the threshold shown as the lowest level on the instrument
 #define     ADCTICKSVOLT    0.0486  // Must be adjusted to hw voltage divider resistance network etc.
-#define     CURRLOWLEVEL    -30     // Current repesenting the threshold shown as the lowest level on the instrument
-#define     ADCTICKSCURR    0.02    // TBD
+#define     ADCTICKSCURR    0.02    // Must be adjusted to hw voltage divider resistance network etc.
 #else   // MCP3208
 #define     ADCRESOLUTION   4095    // ADC Resolution (12bit)
 #define     ADCTICKSVOLT    0.0065  // Must be adjusted to hw voltage divider resistance network etc.
-#define     VOLTLOWLEVEL    1230    // No of adc ticks repesenting the threshold shown as the lowest level on the instrument.
-#define     CURRLOWLEVEL    -30.0   // Current repesenting the threshold shown as the lowest level on the instrument
-#define     ADCTICKSCURR    0.005   // TBD
+#define     ADCTICKSCURR    0.005   // Must be adjusted to hw voltage divider resistance network etc.
+#define     ASCTICKSTEMP    0.008   // Must be adjusted to hw voltage divider resistance network etc.
 #endif
 
 #define MSGPRG   "/usr/local/bin/a2dnotice"
