@@ -1,38 +1,23 @@
-<?php
-    /*
-     * in-5-analog.php
-     *
-     *  Copyright (C) 2013-2018 by Erland Hedman <erland@hedmanshome.se>
-     *
-     * This program is free software; you can redistribute it and/or
-     * modify it under the terms of the GNU General Public License
-     * as published by the Free Software Foundation; either version
-     * 2 of the License, or (at your option) any later version.
-     */
-     
-    define('DOCROOT', dirname(__FILE__)); 
-    define('KPCONFPATH', DOCROOT.'/inc/kplex.conf');
-    define('NAVIDBPATH', DOCROOT.'/inc/navi.db');
-    define('FIFOKPLEX', "/tmp/fifo_kplex");
-    define('MAXFILESIZE', "10000000");
-
-    require  DOCROOT.'/inc/npanel-inc.php';
-    
-?>
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        <title>Glass Cockpit at <?php echo gethostname(); ?></title>
+        <title>Analog Panel Board</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">     
         <meta name="description" content="hedmanshome.se Marine GlassCockpit">
         <meta name="author" content="Erland Hedman">
-        <meta name="license" content="GPL">
         <meta http-equiv="Pragma" content="no-cache">
         <meta http-equiv="Expires" content="-1">
         <link rel="icon" href="img/icon.ico">
         <link rel="stylesheet" type="text/css" href="inc/navi.css">
         <script type="text/javascript" src="inc/pako.js"></script>
         <script type="text/javascript" src="inc/common.js.php"></script>
+
+        <script>
+            function openInNewTab(url) {
+              var win = window.open(url, '_blank');
+              win.focus();
+            }
+        </script>
 
         <style>
         html>body
@@ -55,6 +40,17 @@
             border-radius:50%;
             -moz-border-radius:50%;
         }
+         #chart-butt
+        {
+            z-index:100;
+            position:fixed;
+            top:165px;
+            left:260px;
+            height:40px;
+            width:40px;
+            border-radius:50%;
+            -moz-border-radius:50%;
+        }
         </style>
 
     </head>
@@ -72,6 +68,7 @@
             <iframe  width="256" height="256" frameborder="0" border="0" cellspacing="0" scrolling=no src="in-10-temp.php" id="adc_right_fr"></iframe>
         </div> 
         <input id="next-butt" type="button" value="N" title="Click to shift instrument" onclick="nextinstrument();">
+        <input id="chart-butt" type="button" value="P" title="Click to show Power Chart" onclick="openInNewTab('power.php');">
     </div>
     </body>
 </html>

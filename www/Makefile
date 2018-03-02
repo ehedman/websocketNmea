@@ -1,5 +1,5 @@
 
-APPS=$(shell ls *.php *.html)
+APPS=$(shell ls licenseManifest.txt *.php *.html)
 
 ifeq ($(strip $(TOP)),)
 $(error TOP is not set. Invoke from top-makefile)
