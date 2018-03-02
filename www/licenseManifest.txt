@@ -1,0 +1,16 @@
+License Manifest Table:
+
+Software Name 	Version 	License Type 	Delivered As    URL
+websocketNmea   -           LGPL V 2.1      Source          https://github.com/ehedman/websocketNmea
+kplex           1.3.4       GPL V 3         Source          https://github.com/stripydog/kplex.git
+AIS Parser      v1.10       Private         Source          https://github.com/bcl/aisparser.git
+lighttpd        1.4         Private         Source          https://github.com/lighttpd/lighttpd1.4/archive
+mod_websocket   4.0         Private         Source          https://github.com/nori0428/mod_websocket.git
+libwebsockets   v2.1-stable LGPL V 2.1      Source          https://github.com/warmcat/libwebsockets.git
+sendemail       1.56        Free            Source          https://github.com/mogaal/sendemail.git
+jQueryRotate    2.3         MIT             Source          http://code.google.com/p/jqueryrotate
+jquery          2.1.1       MIT             Source          https://jquery.org/license
+jQuery Easing   v1.3        BSD             Source          http://gsgd.co.uk/sandbox/jquery/easing
+pako            1.0.6       MIT             Source          https://lib.haxe.org/p/pako
+GMaps           v0.4.14     MIT             Source          http://hpneo.github.com/gmaps/
+Chart           2.7.1       MIT             Source          https://github.com/chartjs/Chart.js
