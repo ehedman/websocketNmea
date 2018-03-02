@@ -83,18 +83,21 @@
             var debug = false;
             var connection = true;
             var turn = 0;
-            var duration = 1;   // Minutes before removing aged data
+            var duration = 3;   // Minutes before removing aged data
             var pause = false;
             var toggle = true;
             var volt = 0;
             var amp = 0;
-            
+
 
             function do_addData(val)
             {
                 var i = 0;
                 var r = 0;
                 turn += (update/1000);
+
+                if (turn < 4) return;
+
                 if (config.data.datasets.length > 0) {                
                     var date = new Date(null);
                     date.setSeconds(turn);
@@ -107,12 +110,12 @@
                         });
                         window.myLine.update();
                      }
-                   
+
                     config.data.labels.push(tms);
- 
+
                     var v = volt;
-                    var w = amp*volt;
-                    
+                    var w = parseFloat(amp*volt).toFixed(1);
+
                     config.data.datasets.forEach(function(dataset) {
                         if (i++ == 0) r= w; else r=v;
                         dataset.data.push(r);
@@ -124,11 +127,11 @@
             function do_update()
             {        
                 if (connection) {
-                    
+
                     send(toggle==true? Cmd.SensorVolt : Cmd.SensorCurr);
 
                     toggle^=true;
-                    
+
                     if (pt == 0)           
                         pt = setInterval(function () {do_poll();}, ticks);
                 } else {
@@ -136,13 +139,13 @@
                     reconnect();
                 }
             }
-    
+
             function do_poll()
             { 
                 if (target == "Exp" || connection == false || pause == true) {
                     return;
                 }
-  
+
                 if (!(valid == Cmd.SensorVolt || valid == Cmd.SensorCurr)) return;
 
                 var val = JSON.parse(target);
@@ -205,11 +208,9 @@
                     yAxes: [{
                         type: "linear", 
                         display: true,
-                        position: "left",
+                        position: "right",
                         id: "y-axis-1",
                         ticks: {
-                            min: -30,
-                            max: 30,
                             stepSize: 2
                         },
                     }, {
