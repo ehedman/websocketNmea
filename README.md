@@ -16,7 +16,7 @@ The wsocknmea daemon uses kplex for that purpose and it will configure and contr
 
 Sucessfully activated the wsocknmea daemon will serve the individual instruments through the network with data assembled into JSON strings to be parsed by each instruemnt.
 
-Currently there are eleven virtual instrument working:
+Currently there are twelve virtual instrument working:
 
     Log           : SOW, SOG
     Wind          : Real, Relative and speed
@@ -29,6 +29,7 @@ Currently there are eleven virtual instrument working:
     Volt meter    : From ADC
     Current meter : From ADC
     Temp meter    : From ADC (Directly in C/F from UK1104)
+    Power Chart   : From ADC Live electrical power charting
   I/O Control:
     Relay ON/OFF  : From ADC (UK1104 only)
 
@@ -38,7 +39,7 @@ Currently there are eleven virtual instrument working:
 - X86 (Ubuntu 16)
 - Raspberry Pi Model 2/3 (Debian wheezy, ubuntu-mate-16.04)
 - Linux Mint 17/18
-- Browsers: Firefox, IE, Chrome (Chrome & Firefox also on Android)
+- Browsers: Firefox, IE (with some limitations), Chrome (Chrome & Firefox also on Android)
 
 For the ADC to work properly I recommend the Pi with the MCP3208 SPI Chip 12 bit ADC 8 channels.
 For a more comprehensive I/O Solution use the UK1104 driver instead. See https://www.canakit.com

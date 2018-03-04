@@ -302,6 +302,10 @@ static void do_sensors(time_t ts, collected_nmea *cn)
     // Just for demo
     cn->volt = (float)13.0 + (float)(rand() % 18)/100;
     cn->volt_ts = ts;
+    cn->curr = (float)2.0 + (float)(rand() % 18)/100;
+    cn->curr_ts = ts;
+    cn->temp = (float)20.0 + (float)(rand() % 18)/100;
+    cn->temp_ts = ts;
 #endif
 
 #ifdef MT1800
@@ -1028,7 +1032,6 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                 }
                 
                 /*       --- NON NMEA SECTION  ---     */
-#ifdef DOADC
                 case SensorVolt: {
                     if (ct - cnmea.volt_ts > INVALID*10)
                         sprintf(value, "Exp-%d", req);
@@ -1071,7 +1074,6 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                     sprintf(value, "{'relaySts':'%d'}-%d", 0, req);
                     break;
                 }          
-#endif
 #endif
 #ifdef MT1800
                 case WaterMakerData: {

@@ -37,6 +37,7 @@
             left:0px;
             height:40px;
             width:40px;
+            font-weight: bold;
             border-radius:50%;
             -moz-border-radius:50%;
         }
@@ -45,11 +46,12 @@
             z-index:100;
             position:fixed;
             top:165px;
-            left:260px;
+            left:238px;
             height:40px;
             width:40px;
             border-radius:50%;
             -moz-border-radius:50%;
+            font-weight: bold;
         }
         </style>
 
