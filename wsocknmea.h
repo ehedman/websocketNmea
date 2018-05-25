@@ -87,7 +87,7 @@ extern int ioPinGet(int channel);
 #define     CURRLOWLEVEL    -30.0   // Current repesenting the threshold shown as the lowest level on the instrument
 #ifdef UK1104
 #define     ADCRESOLUTION   1023    // ADC Resolution (10bit)
-#define     ADCTICKSVOLT    0.0486  // Must be adjusted to hw voltage divider resistance network etc.
+#define     ADCTICKSVOLT    0.0507  // Must be adjusted to hw voltage divider resistance network etc.
 #define     ADCTICKSCURR    0.008   // Must be adjusted to hw voltage divider resistance network etc.
 #else   // MCP3208
 #define     ADCRESOLUTION   4095    // ADC Resolution (12bit)

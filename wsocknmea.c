@@ -137,7 +137,6 @@ typedef struct {
     int     map_zoom;       // Google Map Zoom factor;
     int     map_updt;       // Update Time
     int     depth_vwrn;     // Depth visual low warning
-    int     depth_swrn;     // Audiable low warning
     float   depth_transp;   // Depth of transponer
     char    adc_dev[40];    // ADC in /dev
 } in_configs;
@@ -211,6 +210,7 @@ void printlog(char *format, ...)
     vsprintf(buf, format, args); 
 
     if (!strncmp(buf, oldbuf, sizeof(buf))) {
+        va_end(args);
         return; // Do not repeate same msgs from thread loops
     } else {
         strncpy(oldbuf,buf, sizeof(buf));
@@ -341,7 +341,7 @@ void exit_clean(int sig)
       
     fileFeed = 0;
     sigExit = 1;
-    int fd, cnt;
+    int fd;
     pid_t pid;
     char argstr[100];
     
@@ -370,7 +370,7 @@ void exit_clean(int sig)
 
     if (sig == SIGSTOP) {
         if ((fd = open(WSREBOOT, O_RDONLY)) >0) {
-            if ((cnt=read(fd, argstr, sizeof(argstr)))>0) {
+            if (read(fd, argstr, sizeof(argstr))>0) {
                 (void)close(fd); (void)unlink(WSREBOOT);
 
                 pid = fork();

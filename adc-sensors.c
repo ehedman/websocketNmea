@@ -286,7 +286,7 @@ float adcRead(int a2dChannel)
         return 0.0;
 
     if (strlen(adChannel[a2dChannel].adBuffer))
-        adChannel[a2dChannel].curVal = atof(adChannel[a2dChannel].adBuffer);
+        adChannel[a2dChannel].curVal = strtof(adChannel[a2dChannel].adBuffer,NULL);
 
     if (adChannel[a2dChannel].age < time(NULL) - MAXAGE)
         adChannel[a2dChannel].curVal = 0;   // Zero out aged values
