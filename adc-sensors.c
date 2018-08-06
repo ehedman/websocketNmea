@@ -22,7 +22,9 @@
 #include <unistd.h>
 #include <errno.h>
 #include "wsocknmea.h"
+#ifdef DOADC
 #include "stables.h"
+
 
 #ifdef UK1104   // https://www.canakit.com/
 
@@ -643,5 +645,6 @@ float adcRead(int a2dChannel)
 
     return fvalue;
 }
-#endif
-#endif
+#endif // UK1104
+#endif // MCP3208
+#endif // DOADC

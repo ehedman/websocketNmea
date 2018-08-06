@@ -80,10 +80,6 @@
 
 #define NMPARSE(str, nsent) !strncmp(nsent, &str[3], strlen(nsent))
 
-#if defined (MCP3208) || defined (UK1104)
-#define DOADC
-#endif
-
 // Request codes from virtual instruments
 enum requests {
     SpeedOverGround     = 100,
