@@ -35,7 +35,7 @@ enum adcChannels {
 };
 
 extern int adcInit(char *device, int a2dChannel); // device exaple "//dev/ttyACM0" or "/dev/spidev0.0"
-extern float adcRead(int a2dChannel);
+extern int adcRead(int a2dChannel);
 extern void a2dNotice(int channel, float val, float low, float high);
 extern float tick2volt(int tick);
 extern float tick2current(int tick);
@@ -94,11 +94,12 @@ extern int ioPinGet(int channel);
 #define     ADCRESOLUTION   1023    // ADC Resolution (10bit)
 #define     ADCTICKSVOLT    0.0507  // Must be adjusted to hw voltage divider resistance network etc.
 #define     ADCTICKSCURR    0.008   // Must be adjusted to hw voltage divider resistance network etc.
+#define     ADCTICKSTEMP    1.0     // True value from this device
 #else   // MCP3208
 #define     ADCRESOLUTION   4095    // ADC Resolution (12bit)
 #define     ADCTICKSVOLT    0.0065  // Must be adjusted to hw voltage divider resistance network etc.
 #define     ADCTICKSCURR    0.005   // Must be adjusted to hw voltage divider resistance network etc.
-#define     ASCTICKSTEMP    0.008   // Must be adjusted to hw voltage divider resistance network etc.
+#define     ADCTICKSTEMP    0.008   // Must be adjusted to hw voltage divider resistance network etc.
 #endif
 
 #define MSGPRG   "/usr/local/bin/a2dnotice"

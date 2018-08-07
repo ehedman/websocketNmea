@@ -232,6 +232,7 @@ static void do_sensors(time_t ts, collected_nmea *cn)
 
 #ifdef DOADC
     float a2dVal;
+    int ad2Tick;
     static int ccnt;
     static float avcurr;
     static float sampcurr[20];  // No of samples to collect
@@ -242,8 +243,8 @@ static void do_sensors(time_t ts, collected_nmea *cn)
     static float sampvolt[20];
     static float avvolt;
 
-    a2dVal = adcRead(voltChannel);
-    a2dVal = tick2volt(a2dVal); // Linearize this value and return voltage
+    ad2Tick = adcRead(voltChannel);
+    a2dVal = tick2volt(ad2Tick); // Linearize this value and return voltage
 
     // Calculate an average in case of ADC drifts.
     if (a2dVal >= VOLTLOWLEVEL) {
@@ -262,8 +263,8 @@ static void do_sensors(time_t ts, collected_nmea *cn)
     // Alert about low voltage
     a2dNotice(voltChannel, cn->volt, 11.5, 12.5);
 
-    a2dVal = adcRead(currChannel);
-    a2dVal = tick2current(a2dVal); // Linearize this value and return current
+    ad2Tick = adcRead(currChannel);
+    a2dVal = tick2current(ad2Tick); // Linearize this value and return current
 
     // Calculate an average in case of ADC drifts.
     if (a2dVal >= CURRLOWLEVEL) {
@@ -280,6 +281,7 @@ static void do_sensors(time_t ts, collected_nmea *cn)
     }
 
     a2dVal = adcRead(tempChannel);
+    a2dVal *= ADCTICKSTEMP;
     // Calculate an average in case of ADC drifts.
     if (a2dVal >= TEMPLOWLEVEL) {
         samptemp[tcnt] = a2dVal;

@@ -35,7 +35,7 @@ static struct serial {
 struct adData
 {
     char adBuffer[ADBZ];
-    float curVal;
+    int curVal;
     int mode;
     int type;
     int status;
@@ -281,14 +281,15 @@ int adcInit(char *device, int a2dChannel)
 }
 
 /* API */
-float adcRead(int a2dChannel)
+int adcRead(int a2dChannel)
 {
 
     if (adChannel[a2dChannel].status != CHAisREADY)
-        return 0.0;
+        return 0;
 
-    if (strlen(adChannel[a2dChannel].adBuffer))
-        adChannel[a2dChannel].curVal = strtof(adChannel[a2dChannel].adBuffer,NULL);
+    if (strlen(adChannel[a2dChannel].adBuffer) >1)
+        adChannel[a2dChannel].curVal = atoi(adChannel[a2dChannel].adBuffer);
+
 
     if (adChannel[a2dChannel].age < time(NULL) - MAXAGE)
         adChannel[a2dChannel].curVal = 0;   // Zero out aged values
@@ -606,15 +607,13 @@ static int spiWriteRead( unsigned char *data, int length){
 }
 
 /* API */
-float adcRead(int a2dChannel)
+int adcRead(int a2dChannel)
 {
     int a2dVal = 0;
-    int t2val = 0;
-    float fvalue = 0.0;
     unsigned char data[3];
     
     if (!spiDev.status)
-        return fvalue;
+        return a2dVal;
 
     // Do A/D conversion
     data[0] = 0x06 | ((a2dChannel & 0x07) >> 7);
@@ -624,26 +623,9 @@ float adcRead(int a2dChannel)
     (void)spiWriteRead(data, sizeof(data));
 
     data[1] = 0x0F & data[1];
-    a2dVal = (data[1] << 8) | data[2]; 
+    a2dVal = (data[1] << 8) | data[2];
 
-    switch (a2dChannel) {
-        case voltChannel:
-            t2val = ADCTICKSVOLT;
-            break;
-        case currChannel:
-            t2val = ADCTICKSCURR;
-            break;
-        case tempChannel:
-            t2val = ASCTICKSTEMP;
-            break;
-        default:
-            return fvalue;
-    }
-
-    // Ticks 2 float value
-    fvalue = a2dVal*t2val;
-
-    return fvalue;
+    return a2dVal;
 }
 #endif // UK1104
 #endif // MCP3208
