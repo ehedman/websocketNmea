@@ -12,7 +12,7 @@ Users of the standard API:
     Free until exceeding 25,000 map loads per 24 hours.
 
 Read more and generate a key at:
-https://developers.google.com/maps/documentation/javascript/get-api-key
+https://developers.google.com/maps/documentation/embed/get-api-key
 
 You can enter your obtained key into your websocket NMEA application through the web GUI in the  setup settings section.
 
