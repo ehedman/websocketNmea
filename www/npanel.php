@@ -645,7 +645,7 @@ function dragElement(elmnt) {
                           <option value="48">48</option>
                         </select>
                     </label>
-                    <input style="position:relative;left:30%;" type="submit" title="Play this file" value="Play" onclick="submit_file();">
+                    <input style="position:relative;left:30%;" type="submit" title="Play this file<?php echo $NOSAVE==1? " (Restricted to LAN only)":""; ?>" value="Play"<?php echo $NOSAVE==1? " disabled":""; ?> onclick="submit_file();">
                     
                 </td>
             </tr>
@@ -689,7 +689,7 @@ function dragElement(elmnt) {
     </tr>
     <tr>
         <td style="text-align: left;"><a title="Go to github" href="http://github.com/ehedman/websocketNmea" target="_blank">About Navigation Panel</a></td>
-        <td colspan="2" style="text-align: right;"><input type="submit" title="Save settings" value="Save"></td>
+        <td colspan="2" style="text-align: right;"><input type="submit" title="Save settings<?php echo $NOSAVE==1? " (Restricted to LAN only)":""; ?>" value="Save"<?php echo $NOSAVE==1? " disabled":""; ?>></td>
     </tr>
     </table> 
     </form>
