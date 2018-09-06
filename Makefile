@@ -14,10 +14,11 @@ PKGS += libtool
 PKGS += libpcre3 libpcre3-dev
 PKGS += libbz2-dev
 PKGS += libz-dev
+PKGS += libev-dev
 ifeq "$(shell apt-cache search php7| grep cgi)" ""
-PKGS += php5-cgi php5-sqlite3
+PKGS += php5-cgi php5-sqlite*
 else
-PKGS += php7.0-cgi php7.0-sqlite 
+PKGS += php7.*-cgi php7.*-sqlite3
 endif
 PKGS += libsqlite3-dev sqlite3
 PKGS += libssl-dev
@@ -28,7 +29,7 @@ HDRS = wsocknmea.h
 BIN = wsocknmea
 
 # Where to install web pages
-WWWTOP?=/var/www/navi
+WWWTOP?=/var/www
 
 # The web-server's runtime user and group belongings
 WO = www-data

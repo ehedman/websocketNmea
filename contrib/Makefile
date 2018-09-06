@@ -20,7 +20,7 @@ lighttpd1.4-lighttpd-1.4.33: mod_websocket
 	wget https://github.com/lighttpd/lighttpd1.4/archive/lighttpd-1.4.33.tar.gz
 	tar xof lighttpd-1.4.33.tar.gz
 	cd mod_websocket;  ./configure --with-lighttpd=../lighttpd1.4-lighttpd-1.4.33; make install; cd ..
-	cd lighttpd1.4-lighttpd-1.4.33 && ./autogen.sh;  ./configure --with-websocket=all; make;
+	cd lighttpd1.4-lighttpd-1.4.33 && autoreconf -fis;  ./configure --with-websocket=all; make;
 	
 mod_websocket:
 	git clone https://github.com/nori0428/mod_websocket.git
