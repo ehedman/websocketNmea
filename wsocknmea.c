@@ -391,7 +391,7 @@ void exit_clean(int sig)
         closelog();
     }
 
-    exit(sig);
+    exit(EXIT_SUCCESS);
 }
 
 static char *getf(int pos, char *str)

@@ -1,0 +1,13 @@
+# Systemd resource file
+[Unit]
+Description=The NMEA websocket server
+
+[Service]
+Type=forking
+KillMode=process
+ExecStart=/usr/local/bin/wsocknmea -b
+User=root
+
+[Install]
+WantedBy=multi-user.target
+
