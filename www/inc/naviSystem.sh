@@ -31,6 +31,15 @@ get_broadcast_addr()
     fi
 }
 
+check_local_ipaddr()
+{
+    if [ -n "$(ip addr show | grep -w $1)" ] || [ -n "$(arp -n | grep -w $1)" ]; then
+        echo "0"
+    else
+        echo "1"
+    fi
+}
+
 get_nrecordings()
 {
  
