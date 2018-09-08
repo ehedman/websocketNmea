@@ -11,8 +11,8 @@
      */
     putenv('PATH='.getenv('PATH').':'.DOCROOT.'/inc:/usr/local/bin'); 
 
-    exec("naviSystem.sh check_local_ipaddr ".$_SERVER['REMOTE_ADDR'], $NOSAVE);
-    
+    system("naviSystem.sh check_local_ipaddr ".$_SERVER['REMOTE_ADDR'], $NOSAVE);
+
     if (count($_GET)) $NIGHT = $_GET['Night']=='y'? 1:0; else  $NIGHT = 0;
     
     $PMESSAGE="";

@@ -34,9 +34,9 @@ get_broadcast_addr()
 check_local_ipaddr()
 {
     if [ -n "$(ip addr show | grep -w $1)" ] || [ -n "$(arp -n | grep -w $1)" ]; then
-        echo "0"
+        exit 0
     else
-        echo "1"
+        exit 1
     fi
 }
 
