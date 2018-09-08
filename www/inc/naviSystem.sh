@@ -13,7 +13,7 @@ get_netifs()
 
 get_ipaddr()
 {
-    a=`/sbin/ifconfig $1 | grep 'inet addr:' | cut -d: -f2 | awk '{print $1}'`
+    a=$(ip address show $1 | grep "inet " | awk -F'[/]' '{ print $1 }' | awk  '{ print $2 }')
     if [ -z "$a" ]; then
         echo -n "127.0.0.1"
     else
@@ -23,7 +23,7 @@ get_ipaddr()
 
 get_broadcast_addr()
 {
-    a=`/sbin/ifconfig $1 | grep 'Bcast:' | cut -d: -f3 | awk '{print $1}'`
+    a=$(ip address show $1 | grep $2 | awk '{ print $4 }')
     if [ -z "$a"  ]; then
         get_ipaddr $1
     else
