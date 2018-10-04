@@ -24,6 +24,7 @@ lighttpd1.4-lighttpd-1.4.33: mod_websocket
 	
 mod_websocket:
 	git clone https://github.com/nori0428/mod_websocket.git
+	patch  -p0  < ./configs/mod_websocket.patch
 	cd mod_websocket && ./bootstrap; 
 
 install: lighttpd1.4-lighttpd-1.4.33 kplex libwebsockets aisparser

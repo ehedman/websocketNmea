@@ -11,6 +11,7 @@ PKGS += git
 PKGS += cmake
 PKGS += automake
 PKGS += libtool
+PKGS += pkg-config
 PKGS += libpcre3 libpcre3-dev
 PKGS += libbz2-dev
 PKGS += libz-dev
