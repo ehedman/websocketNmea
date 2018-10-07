@@ -1,4 +1,4 @@
-:# websocketNmea
+# websocketNmea
 README Jan-2018
 
 The wsocknmea application package is a marine glass cockpit solution that features electronic marine instrument displays, typically used on private sailing yachts.
