@@ -9,6 +9,7 @@ SUBDIRS = www
 PKGS += g++
 PKGS += git
 PKGS += cmake
+PKGS += unzip
 PKGS += automake
 PKGS += libtool
 PKGS += pkg-config

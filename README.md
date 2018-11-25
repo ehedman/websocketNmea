@@ -1,5 +1,5 @@
 # websocketNmea
-README Jan-2018
+README Nov-2018
 
 The wsocknmea application package is a marine glass cockpit solution that features electronic marine instrument displays, typically used on private sailing yachts.
 The look and feel of the visualized instruments tries to mimic the look of real physical instrumnts and will by design avoid a digital look.
@@ -53,6 +53,9 @@ Also included in my set-up is the OpenCPN chart plotter that connects to the kpl
 Obviously the yacht has to be connected to the internet for the Google Map view.
 To access your vessel as an IOT (to remotely acess all instruemnts and remote relay control) I recommend to define ip-table rules with "shorewall" (http://shorewall.org/) in order to establish your device as an firewall with virtual host rules to open ports 80 and 443 to the internet.
 Check my firewall GUI interface at https://github.com/ehedman/headwall.
+
+### Se also
+[Marine sdlSpeedometer](https://github.com/ehedman/sdlSpeedometer)
 
 ### Screenshots
 
