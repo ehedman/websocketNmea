@@ -130,6 +130,8 @@ var offset = 131;
 var debug = false;
 var connection = true;
 
+var rotate = 0;
+
 function do_update()
 {        
     if (connection) {
@@ -173,18 +175,14 @@ function do_poll()
         document.getElementById("TSPpanel").innerHTML="TRUE: "+val.tspeed;
     else
         document.getElementById("TSPpanel").innerHTML="&nbsp;";
-    
-    if (angle < 10)
-        $("#needle").rotate({animateTo:angle+offset,duration:1});
-    else
-        $("#needle").rotate({animateTo:angle+offset,duration:4000,easing: $.easing.easeInQutSine});
 
-    if (tangle) {
-        if (tangle < 10)
-            $("#needle1").rotate({animateTo:tangle+offset,duration:1});
-        else
-            $("#needle1").rotate({animateTo:tangle+offset,duration:4000,easing: $.easing.easeInQutSine});
-    }
+    var aR = rotate % 360;
+    if ( aR < 0 ) { aR += 360; }
+    if ( aR < 180 && (angle > (aR + 180)) ) { rotate -= 360; }
+    if ( aR >= 180 && (angle <= (aR - 180)) ) { rotate += 360; }
+    rotate += (angle - aR);
+    
+    $("#needle").rotate({animateTo:rotate+offset,duration:4000,easing: $.easing.easeInQutSine});
 
 }
     </script>

@@ -101,12 +101,13 @@ var pt = 0;
 var ut = 0;
 
 var target = 0;
-var c_angle = 0;
 var ticks = 800;
 var update = 800;
 
 var debug = false;
 var connection = true;
+
+var rotate = 0;
 
 function do_update()
 {
@@ -122,9 +123,7 @@ function do_update()
 
 function do_poll()
 {
-
-    
-    
+   
     if (target == "Exp" || connection == false) {
         document.getElementById("needle").style.opacity = "0.5";
         document.getElementById("LEDpanel").innerHTML=" -- -- ";
@@ -139,23 +138,14 @@ function do_poll()
 
     var angle = round_number(val.angle,0);
     
-    var rangle = 360 - angle;
-    
-    if (1) {
-    if ((c_angle >= 180 && angle <= 180) || (c_angle <= 180  && angle >= 180)) {
-        $("#needle").rotate({animateTo:rangle,duration:1});
-    } else {
-        $("#needle").rotate({animateTo:rangle,duration:4000,easing: $.easing.easeInQutSine});
-    }
-    } else {
-        rangle += 361;
-         $("#needle").rotate({animateTo:rangle,duration:4000,easing: $.easing.easeInQutSine});
-         document.getElementById("logpanel").innerHTML=rangle;
-    }
+    var aR = rotate % 360;
+    if ( aR < 0 ) { aR += 360; }
+    if ( aR < 180 && (angle > (aR + 180)) ) { rotate -= 360; }
+    if ( aR >= 180 && (angle <= (aR - 180)) ) { rotate += 360; }
+    rotate += (angle - aR);
+    $("#needle").rotate({animateTo:360-rotate,duration:4000,easing: $.easing.easeInQutSine});
      
     document.getElementById("LEDpanel").innerHTML=round_number(angle,0);
-    
-    c_angle = angle;
 
 }
     </script>
