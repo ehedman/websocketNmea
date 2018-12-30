@@ -1,11 +1,15 @@
 # Systemd resource file
 [Unit]
 Description=The NMEA websocket server
+After=remote-fs.target network.target
 
 [Service]
 Type=forking
 KillMode=process
 ExecStart=/usr/local/bin/wsocknmea -b
+RemainAfterExit=no
+Restart=on-failure
+RestartSec=3s
 User=root
 
 [Install]
