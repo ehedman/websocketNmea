@@ -14,6 +14,7 @@
     define('KPCONFPATH', DOCROOT.'/inc/kplex.conf');
     define('NAVIDBPATH', DOCROOT.'/inc/navi.db');
     define('FIFOKPLEX', "/tmp/fifo_kplex");
+    define('FIFOPNMEA', "/tmp/fifo_nmea_p");
     define('MAXFILESIZE', "10000000");
     
     require  DOCROOT.'/inc/npanel-inc.php';

@@ -31,7 +31,7 @@ HDRS = wsocknmea.h
 BIN = wsocknmea
 
 # Where to install web pages
-WWWTOP?=/var/www
+WWWTOP?=/var/www/navi
 
 # The web-server's runtime user and group belongings
 WO = www-data
@@ -96,12 +96,10 @@ distclean:
 install: $(BIN)
 	sudo install -m 0755 -g root -o root $(BIN) -D $(DEST)/$(BIN)
 	sudo install -m 0644 -g root -o root a2dnotice -D $(DEST)/a2dnotice
-	@if [ ! -f /etc/init.d/wsocknmea-daemon ]; then \
-		echo "Installing wsocknmea-daemon in /etc/init.d"; \
-		sudo install -m 0644 -g root -o root enum-usb -D /etc/default/enum-usb; \
-		sudo install -m 0755 -g root -o root wsocknmea-daemon -D /etc/init.d/wsocknmea-daemon; \
-		sudo update-rc.d wsocknmea-daemon defaults; \
-	fi
+	-sudo systemctl stop wsocknmea.service
+	-sudo systemctl disable wsocknmea.service
+	-sudo install -m 0644 -g root -o root wsocknmea.service -D /lib/systemd/system/
+	-sudo systemctl enable wsocknmea.service
 
 install-www:
 	$(MAKE) install

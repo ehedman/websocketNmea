@@ -245,6 +245,8 @@ function kplex_config($args)
       
     if (!($fd=fopen(KPCONFPATH, "w")))
         return;
+
+    fputs($fd,"[file]\nfilename=".FIFOPNMEA."\ndirection=in\neol=rn\npersist=yes\n\n");
         
     $a = preg_split("/[\s,]+/", $args);
     

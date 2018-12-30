@@ -52,7 +52,9 @@
 #ifndef KPCONFPATH
 #define KPCONFPATH  "/etc/default/kplex.conf"   // KPlex configuration file writable for webserver
 #endif
-#define FIFOKPLEX   "/tmp/fifo_kplex"           // KPlex fifo for file input
+
+#define FIFOKPLEX   "/tmp/fifo_kplex"       // KPlex fifo for file nmea input
+#define FIFOPNMEA   "/tmp/fifo_nmea_p"      // KPlex fifo for "$P". These extended messages are not standardized. 
 
 #define WSREBOOT    "/tmp/wss-reboot"           // Arguments to this server from WEB GUI
 
@@ -106,6 +108,8 @@ static int debug = 0;
 static int backGround = 0;
 static int muxFd = 0;
 static pthread_t threadKplex = 0;
+static pthread_t threadPnmea = 0;
+static int threadPnmea_status = 1;
 static pid_t pidKplex = 0;
 static int kplexStatus = 0;
 static int sigExit = 0;
@@ -343,8 +347,10 @@ void exit_clean(int sig)
     pid_t pid;
     char argstr[100];
     
+    threadPnmea_status = 0;
+
     sleep(1);
-    
+   
     if (threadKplex) {
         if (pthread_self() != threadKplex)
             pthread_cancel(threadKplex);
@@ -570,7 +576,8 @@ int  configure(int kpf)
     if (kpf) {
         if (stat(KPCONFPATH, &sb) <0) {
             if (errno == ENOENT) {
-                char * str = "[tcp]\nmode=server\naddress=127.0.0.1\nport=10110\n";
+                char str[200];
+                sprintf(str, "[file]\nfilename=%s\ndirection=in\neol=rn\npersist=yes\n\n[tcp]\nmode=server\naddress=127.0.0.1\nport=%d\n", FIFOPNMEA,  NMEAPORT);
                 printlog("KPlex configuration file is missing. Creating an empty config file as %s ", KPCONFPATH);
                 if ((fd=open(KPCONFPATH, O_CREAT | O_WRONLY, 0664)) < 0) {
                     printlog("Attempt to create %s failed: %s", KPCONFPATH, strerror(errno));
@@ -1180,15 +1187,62 @@ static struct lws_protocols protocols[] = {
     }
 };
 
+// 
+void *threadPnmea_run()
+{
+    static int rv;
+    int pnmeafd = 0;
+    time_t ts;
+
+    char fifobuf[60];
+    char outbuf[70];
+
+    signal(SIGCHLD, SIG_IGN);
+    signal(SIGHUP, SIG_IGN);
+
+     if ((pnmeafd = open(FIFOPNMEA, O_RDWR)) < 0) {
+        threadPnmea_status = 0;
+        printlog("Error open fifo for p-type data: %s", strerror(errno));
+    }
+
+    while (threadPnmea_status == 1)
+    {
+        // Custom NMEA(P) going out to kplex fifo
+
+        ts = time(NULL);        // Get a timestamp for this turn
+        if (!(ts - cnmea.volt_ts > INVALID*10)) {
+
+            int checksum = 0;
+            int i = 1;        
+
+            //Format: GPENV,volt,bank,current,bank,temp,where*cs
+            sprintf(fifobuf, "$GPENV,%.1f,1,%.1f,1,%.1f,1", cnmea.volt, cnmea.curr, cnmea.temp);
+
+            while(fifobuf[i] != '\0')
+                checksum = checksum ^ fifobuf[i++];
+
+            sprintf(outbuf,"%s*%x\r\n", fifobuf, checksum);
+            write(pnmeafd, outbuf, strlen(outbuf));
+        }
+         usleep(1000000);
+    }
+
+    close(pnmeafd);
+
+    pthread_exit(&rv);
+}
+
 // Make KPlex a persistent child of us
 void *threadKplex_run()
 {
     time_t stt = 0;
-    int retry = 3;
+    int retry = 5;
     static int rv;
 
     signal(SIGCHLD, SIG_IGN);
     signal(SIGHUP, SIG_IGN);
+
+    sleep(4);
  
     while (kplexStatus == 0)
     { // Kplex angel function
@@ -1461,7 +1515,21 @@ int main(int argc ,char **argv)
         fileFeed = 1;
         pthread_create(&t1, &attr, t_fileFeed, NULL);         
     }
-    
+
+    if (access( FIFOPNMEA, F_OK ) == -1) {
+        if (mkfifo(FIFOPNMEA, (mode_t)0664)) {
+            printlog("Error create kplex p-type fifo: %s", strerror(errno));
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    if (access( FIFOPNMEA, F_OK ) == 0) {      
+        pthread_create(&threadPnmea, &attr, threadPnmea_run, NULL);
+        if (!threadPnmea) {
+            printlog("Failed to start threadPnmea thread");
+        }   
+    }
+   
     // Thread for KPlex services
     if (kplex_fork) {
         pthread_create(&threadKplex, &attr, threadKplex_run, NULL);
@@ -1540,7 +1608,7 @@ int main(int argc ,char **argv)
         ts = time(NULL);        // Get a timestamp for this turn
        
         do_sensors(ts, &cnmea); // Do non NMEA things
-     
+  
         // Get the next sentence from the mux and update
         // the struct of valid data for the duration of 'INVALID'
 
@@ -1556,11 +1624,17 @@ int main(int argc ,char **argv)
         }
        
         if (cnt < 0) {
-            if (errno == EAGAIN) continue;
+            if (errno == EAGAIN) {
+                continue;
+            }
             printlog("Error rerading NMEA-socket: %s", strerror(errno));
             sleep(2);
             continue;
         } else if (cnt > 0) {
+
+            if (NMPARSE(txtbuf, "ENV")) { // We are talking to our self. Skip it
+                continue;
+            }
 
             cs = checksum = 0;     // Chekcsum portion at end of nmea string 
             for (i = 0; i < cnt; i++) {
@@ -1602,10 +1676,11 @@ int main(int argc ,char **argv)
             }
 
             // VTG - Track made good and ground speed
-            if (ts - cnmea.rmc_ts > INVALID/2) { // If not from RMC        
+            if (ts - cnmea.rmc_ts > INVALID/2) { // If not from RMC
                 if (NMPARSE(txtbuf, "VTG")) {
                     cnmea.rmc=atof(getf(5, txtbuf));
-                    cnmea.rmc_ts = ts;
+                    if ((cnmea.hdm=atof(getf(1, txtbuf))) != 0) // Track made good
+                        cnmea.hdm_ts = ts;
                     continue;
                 }
             }
@@ -1622,12 +1697,10 @@ int main(int argc ,char **argv)
                 }
             }
 
-            // VHW - Water speed and Heading
-            if (NMPARSE(txtbuf, "VHW")) {
-                cnmea.hdm=atof(getf(3, txtbuf));
-                cnmea.hdm_ts = ts;
-                cnmea.stw=atof(getf(5, txtbuf));
-                cnmea.stw_ts = ts;
+            // VHW - Water speed
+            if(NMPARSE(txtbuf, "VHW")) {
+                if ((cnmea.stw=atof(getf(5, txtbuf))) != 0)
+                    cnmea.stw_ts = ts;
                 continue;
             }
 
