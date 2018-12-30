@@ -3,7 +3,7 @@
 get_ttys()
 {
     m=$(ls /dev/tty* | egrep 'ttyUSB|ttySAC|ttyACM|ttyAMA|ttyS' | awk -F" " '{ printf "%s|", $1 }')
-    ls /dev/tty*S* | egrep "${m}none" | awk '{print $NF}'
+    ls /dev/tty*S* /dev/ttyA* | egrep "${m}none" | awk '{print $NF}'
 }
 
 get_netifs()
