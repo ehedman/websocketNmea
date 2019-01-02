@@ -108,10 +108,9 @@ static int debug = 0;
 static int backGround = 0;
 static int muxFd = 0;
 static pthread_t threadKplex = 0;
-static pthread_t threadPnmea = 0;
-static int threadPnmea_status = 1;
 static pid_t pidKplex = 0;
 static int kplexStatus = 0;
+static int pNmeaStatus = 1;
 static int sigExit = 0;
 static useconds_t lineRate = 1;
 static char recFile[250];
@@ -183,6 +182,10 @@ typedef struct {
     time_t  curr_ts;    // Current Timestamp
     float   temp;       // Sensor Temp
     time_t  temp_ts;    // Temp Timestamp
+    float   kWhp;       // Kilowatt hour - charged
+    float   kWhn;       // Kilowatt hour - consumed
+    time_t  upTime;     // Server's uptime
+    time_t  startTime;  // Server's starttime
 #ifdef MT1800
     float   cond;       // Condictivity from Watermaker
     time_t  cond_ts;    // Conductivity Timestamp
@@ -304,7 +307,7 @@ static void do_sensors(time_t ts, collected_nmea *cn)
     // Just for demo
     cn->volt = (float)13.0 + (float)(rand() % 18)/100;
     cn->volt_ts = ts;
-    cn->curr = (float)2.0 + (float)(rand() % 18)/100;
+    cn->curr = (float)-2.0 + (float)(rand() % 18)/100;
     cn->curr_ts = ts;
     cn->temp = (float)20.0 + (float)(rand() % 18)/100;
     cn->temp_ts = ts;
@@ -347,7 +350,7 @@ void exit_clean(int sig)
     pid_t pid;
     char argstr[100];
     
-    threadPnmea_status = 0;
+    pNmeaStatus = 0;
 
     sleep(1);
    
@@ -1187,36 +1190,72 @@ static struct lws_protocols protocols[] = {
     }
 };
 
-// 
+// "$P". These extended messages are not standardized. 
+// Custom NMEA(P) going out to kplex fifo
+#define SZT 60
 void *threadPnmea_run()
 {
     static int rv;
     int pnmeafd = 0;
     time_t ts;
+    float sumPwp = 0;
+    float sumPwn = 0;
+    float avbufp[SZT];
+    float avbufn[SZT];
+    int samples = 0;
 
     char fifobuf[60];
     char outbuf[70];
 
-    signal(SIGCHLD, SIG_IGN);
-    signal(SIGHUP, SIG_IGN);
+    memset(avbufp, 0, sizeof(avbufp));
+    memset(avbufn, 0, sizeof(avbufn));
 
      if ((pnmeafd = open(FIFOPNMEA, O_RDWR)) < 0) {
-        threadPnmea_status = 0;
+        pNmeaStatus = 0;
         printlog("Error open fifo for p-type data: %s", strerror(errno));
     }
 
-    while (threadPnmea_status == 1)
-    {
-        // Custom NMEA(P) going out to kplex fifo
+    cnmea.startTime = time(NULL);
+    cnmea.kWhp = cnmea.kWhn = 0;
 
+    while (pNmeaStatus == 1)
+    {
         ts = time(NULL);        // Get a timestamp for this turn
+        cnmea.upTime = ts - cnmea.startTime;
+
         if (!(ts - cnmea.volt_ts > INVALID*10)) {
 
             int checksum = 0;
-            int i = 1;        
+            int i = 1; 
 
-            //Format: GPENV,volt,bank,current,bank,temp,where*cs
-            sprintf(fifobuf, "$GPENV,%.1f,1,%.1f,1,%.1f,1", cnmea.volt, cnmea.curr, cnmea.temp);
+            if (samples < SZT) {
+                if (cnmea.curr >= 0)
+                    avbufp[samples++] = cnmea.volt * cnmea.curr;
+                else
+                    avbufn[samples++] = cnmea.volt * fabs(cnmea.curr);
+            } else {
+
+                sumPwp = sumPwn = 0;
+                for(samples=0; samples < SZT; samples++) {
+                    sumPwp += avbufp[samples];
+                    sumPwn += avbufn[samples];
+                }
+                sumPwp /= SZT;
+                sumPwn /= SZT;
+
+                memset(avbufp, 0, sizeof(avbufp));
+                memset(avbufn, 0, sizeof(avbufn));
+
+                if (sumPwp)
+                    cnmea.kWhp = ((sumPwp * cnmea.upTime) / 3600) / 1000;
+                if (sumPwn)
+                    cnmea.kWhn = ((sumPwn * cnmea.upTime) / 3600) / 1000;
+
+                samples = 0;
+            }
+
+            // Format: GPENV,volt,bank,current,bank,temp,where,kWhp,kWhn,startTimr*cs
+            sprintf(fifobuf, "$GPENV,%.1f,1,%.1f,1,%.1f,1,%.3f,%.3f,%lu", cnmea.volt, cnmea.curr, cnmea.temp, cnmea.kWhp, cnmea.kWhn, cnmea.startTime);
 
             while(fifobuf[i] != '\0')
                 checksum = checksum ^ fifobuf[i++];
@@ -1224,10 +1263,11 @@ void *threadPnmea_run()
             sprintf(outbuf,"%s*%x\r\n", fifobuf, checksum);
             write(pnmeafd, outbuf, strlen(outbuf));
         }
-         usleep(1000000);
+        sleep(1);
     }
 
-    close(pnmeafd);
+    if (pnmeafd > 0)
+        close(pnmeafd);
 
     pthread_exit(&rv);
 }
@@ -1367,6 +1407,7 @@ int main(int argc ,char **argv)
     struct lws_context_creation_info info;
     const char *cert_path = NULL;
     const char *key_path = NULL;
+    pthread_t threadPnmea = 0;
 
     // Defaults
     wsport = WSPORT;
@@ -1557,6 +1598,7 @@ int main(int argc ,char **argv)
     sleep(3);
     memset(&cnmea, 0, sizeof(cnmea));
     aisconf.my_buddy = 0;
+    cnmea.startTime = time(NULL);
 
     // Main loop, to end this server, send signal INT(^c) or TERM
     // GUI commands WSREBOOT can break this loop requesting a restart.
