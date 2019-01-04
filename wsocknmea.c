@@ -1190,68 +1190,73 @@ static struct lws_protocols protocols[] = {
     }
 };
 
+long long current_timestamp() {
+    struct timeval te; 
+    gettimeofday(&te, NULL); // get current time
+    long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
+    return milliseconds;
+}
+
 // "$P". These extended messages are not standardized. 
 // Custom NMEA(P) going out to kplex fifo
-#define SZT 60
 void *threadPnmea_run()
 {
     static int rv;
     int pnmeafd = 0;
-    time_t ts;
-    float sumPwp = 0;
-    float sumPwn = 0;
-    float avbufp[SZT];
-    float avbufn[SZT];
-    int samples = 0;
+    float pkWhp = 0;
+    float npkWp = 0;
+    float pkWhn = 0;
+    float npkWn = 0;
+    time_t samplesp = 1;
+    time_t samplesn = 1;
+    long long downP = 0;
+    long long downN = 0;
+    long long msStartTime = 0;
+    long long msUpTime = 0;
+    long long mSts = 0;
+    long long prevmsTs = 0;
 
     char fifobuf[60];
     char outbuf[70];
-
-    memset(avbufp, 0, sizeof(avbufp));
-    memset(avbufn, 0, sizeof(avbufn));
 
      if ((pnmeafd = open(FIFOPNMEA, O_RDWR)) < 0) {
         pNmeaStatus = 0;
         printlog("Error open fifo for p-type data: %s", strerror(errno));
     }
 
-    cnmea.startTime = time(NULL);
+    msStartTime = current_timestamp();
+    cnmea.startTime = msStartTime / 1000;
+
     cnmea.kWhp = cnmea.kWhn = 0;
 
     while (pNmeaStatus == 1)
     {
-        ts = time(NULL);        // Get a timestamp for this turn
-        cnmea.upTime = ts - cnmea.startTime;
+        mSts = current_timestamp();     // Get a timestamp for this turn
+        msUpTime = mSts - msStartTime; 
+        cnmea.upTime = msUpTime / 1000;
 
-        if (!(ts - cnmea.volt_ts > INVALID*10)) {
+        float volt = cnmea.volt;
+        float curr = cnmea.curr;
+
+        if (!(mSts/1000 - cnmea.volt_ts > INVALID*10)) {
 
             int checksum = 0;
             int i = 1; 
 
-            if (samples < SZT) {
-                if (cnmea.curr >= 0)
-                    avbufp[samples++] = cnmea.volt * cnmea.curr;
-                else
-                    avbufn[samples++] = cnmea.volt * fabs(cnmea.curr);
+            if (curr >= 0) {
+                if (volt*curr > 0.2) {
+                    npkWp = (pkWhp * (samplesp-1) + volt * curr) / samplesp;
+                    pkWhp = npkWp;
+                    cnmea.kWhp = ((npkWp * (msUpTime - downP)) / 3600000) / 1000;
+                    samplesp++;
+                } else downP += mSts - prevmsTs;
             } else {
-
-                sumPwp = sumPwn = 0;
-                for(samples=0; samples < SZT; samples++) {
-                    sumPwp += avbufp[samples];
-                    sumPwn += avbufn[samples];
-                }
-                sumPwp /= SZT;
-                sumPwn /= SZT;
-
-                memset(avbufp, 0, sizeof(avbufp));
-                memset(avbufn, 0, sizeof(avbufn));
-
-                if (sumPwp)
-                    cnmea.kWhp = ((sumPwp * cnmea.upTime) / 3600) / 1000;
-                if (sumPwn)
-                    cnmea.kWhn = ((sumPwn * cnmea.upTime) / 3600) / 1000;
-
-                samples = 0;
+                if (volt*fabs(curr) > 0.2) {
+                    npkWn = (pkWhn * (samplesn-1) + volt * fabs(curr)) / samplesn;
+                    pkWhn = npkWn;
+                    cnmea.kWhn = ((npkWn * (msUpTime - downN)) / 3600000) / 1000;
+                    samplesn++;
+                } else downN += mSts - prevmsTs;
             }
 
             // Format: GPENV,volt,bank,current,bank,temp,where,kWhp,kWhn,startTimr*cs
@@ -1263,6 +1268,7 @@ void *threadPnmea_run()
             sprintf(outbuf,"%s*%x\r\n", fifobuf, checksum);
             write(pnmeafd, outbuf, strlen(outbuf));
         }
+        prevmsTs = current_timestamp();
         sleep(1);
     }
 
