@@ -1646,6 +1646,7 @@ int main(int argc ,char **argv)
         userid = trueh = 0;
        
         // Reboot/re-configure request from PHP Gui code
+        // Only if not under control of systemd
         if (stat(WSREBOOT, &sb) == 0)
             break;
 

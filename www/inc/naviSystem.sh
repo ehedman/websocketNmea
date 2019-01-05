@@ -48,7 +48,12 @@ get_nrecordings()
 
 restart_wsserver()
 {
-    echo $* > /tmp/wss-reboot
+    systemctl status wsocknmea.service 2> /dev/null | grep -q "(running)"
+    if [ $? -eq 0 ]; then
+        systemctl restart wsocknmea.service
+    else
+        echo $* > /tmp/wss-reboot
+    fi
 }
 
 $*
