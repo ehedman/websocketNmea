@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <libgen.h>
 #include <signal.h>
 #include <time.h>
 #include <errno.h>
@@ -120,7 +121,7 @@ static struct lws_context *ws_context = NULL;
 static int socketType = 0;
 static char interFace[40];
 static int socketCast = 0;
-static char *programName = "wsocknmea";
+static char *programName;
 static int unusedInt __attribute__((unused));   // To make -Wall shut up
 static FILE * unusedFd __attribute__((unused));
 
@@ -339,7 +340,7 @@ static void parse(char *line, char **argv)
      *argv = '\0';                 // mark the end of argument list
 }
 
-void exit_clean(int sig)
+static void exit_clean(int sig)
 {
     
     printlog("Terminating NMEA and KPLEX Services - reason: %d", sig);  
@@ -517,7 +518,7 @@ static int nmea_sock_open(int kplex_fork)
 
 #ifdef MT1800
 // Open the watermaker socket
-void wm_sock_open()
+static void wm_sock_open()
 {
     struct ip_mreq mreq;
     u_int yes = 1;  
@@ -558,7 +559,7 @@ void wm_sock_open()
 #endif
 
 // The configuration database is maintained from the WEB GUI settings dialogue.
-int  configure(int kpf)
+static int  configure(int kpf)
 {
     sqlite3 *conn;
     sqlite3_stmt *res;
@@ -812,7 +813,7 @@ int  configure(int kpf)
     return 0; 
 }
 
-void handle_buddy(long userid)
+static void handle_ais_buddy(long userid)
 {
     sqlite3 *conn;
     sqlite3_stmt *res;
@@ -851,7 +852,7 @@ void handle_buddy(long userid)
 #define MAX_LONGITUDE 180
 #define MAX_LATITUDE   90
 
-float dms2dd(float coordinates, const char *val)
+static float dms2dd(float coordinates, const char *val)
 { // Degrees Minutes Seconds to Decimal Degrees
 
     // Check limits
@@ -1034,7 +1035,7 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
 
                 case GoogleAisBuddy: {
                         if (args != NULL && strlen(args)) {
-                            handle_buddy(atol(args));
+                            handle_ais_buddy(atol(args));
                         }
                         break;
                 }
@@ -1190,7 +1191,8 @@ static struct lws_protocols protocols[] = {
     }
 };
 
-long long current_timestamp() {
+// Timestamp in ms
+static long long ms_timestamp(void) {
     struct timeval te; 
     gettimeofday(&te, NULL); // get current time
     long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
@@ -1198,8 +1200,8 @@ long long current_timestamp() {
 }
 
 // "$P". These extended messages are not standardized. 
-// Custom NMEA(P) going out to kplex fifo
-void *threadPnmea_run()
+// Custom NMEA(P) going out to kplex input fifo
+static void *threadPnmea_run()
 {
     static int rv;
     int pnmeafd = 0;
@@ -1214,7 +1216,7 @@ void *threadPnmea_run()
     long long msStartTime = 0;
     long long msUpTime = 0;
     long long mSts = 0;
-    long long prevmsTs = 0;
+    long long prevmSts = 0;
 
     char fifobuf[60];
     char outbuf[70];
@@ -1224,14 +1226,14 @@ void *threadPnmea_run()
         printlog("Error open fifo for p-type data: %s", strerror(errno));
     }
 
-    msStartTime = current_timestamp();
+    msStartTime = ms_timestamp();
     cnmea.startTime = msStartTime / 1000;
 
     cnmea.kWhp = cnmea.kWhn = 0;
 
     while (pNmeaStatus == 1)
     {
-        mSts = current_timestamp();     // Get a timestamp for this turn
+        mSts = ms_timestamp();     // Get a timestamp for this turn
         msUpTime = mSts - msStartTime; 
         cnmea.upTime = msUpTime / 1000;
 
@@ -1249,14 +1251,14 @@ void *threadPnmea_run()
                     pkWhp = npkWp;
                     cnmea.kWhp = ((npkWp * (msUpTime - downP)) / 3600000) / 1000;
                     samplesp++;
-                } else downP += mSts - prevmsTs;
+                } else downP += mSts - prevmSts;
             } else {
                 if (volt*fabs(curr) > 0.2) {
                     npkWn = (pkWhn * (samplesn-1) + volt * fabs(curr)) / samplesn;
                     pkWhn = npkWn;
                     cnmea.kWhn = ((npkWn * (msUpTime - downN)) / 3600000) / 1000;
                     samplesn++;
-                } else downN += mSts - prevmsTs;
+                } else downN += mSts - prevmSts;
             }
 
             // Format: GPENV,volt,bank,current,bank,temp,where,kWhp,kWhn,startTimr*cs
@@ -1268,7 +1270,7 @@ void *threadPnmea_run()
             sprintf(outbuf,"%s*%x\r\n", fifobuf, checksum);
             write(pnmeafd, outbuf, strlen(outbuf));
         }
-        prevmsTs = current_timestamp();
+        prevmSts = ms_timestamp();
         sleep(1);
     }
 
@@ -1279,7 +1281,7 @@ void *threadPnmea_run()
 }
 
 // Make KPlex a persistent child of us
-void *threadKplex_run()
+static void *threadKplex_run()
 {
     time_t stt = 0;
     int retry = 5;
@@ -1348,7 +1350,7 @@ void *threadKplex_run()
 }
 
 // Feed the fifo listened to by KPlex
-void *t_fileFeed()
+static void *t_fileFeed()
 {
     static int rval;
     char buff[250];
@@ -1399,9 +1401,8 @@ void usage(char *prg)
 
 int main(int argc ,char **argv)
 {
-
     int wsport;
-    char txtbuf[300];
+    char nmeastr[300];
     int opts = 0;
     int c;
     int kplex_fork = 1;
@@ -1414,6 +1415,8 @@ int main(int argc ,char **argv)
     const char *cert_path = NULL;
     const char *key_path = NULL;
     pthread_t threadPnmea = 0;
+
+    programName = basename(argv[0]);
 
     // Defaults
     wsport = WSPORT;
@@ -1491,9 +1494,9 @@ int main(int argc ,char **argv)
     if (kplex_fork) {
         // Make sure to restart kplex in case of config change
         FILE * cmd = popen("pidof kplex", "r");
-        *txtbuf = '\0';
-        if (fgets(txtbuf, 20, cmd) != NULL) {
-            pid = strtoul(txtbuf, NULL, 10);
+        *nmeastr = '\0';
+        if (fgets(nmeastr, 20, cmd) != NULL) {
+            pid = strtoul(nmeastr, NULL, 10);
             while(!kill(pid, SIGINT)) {
                 fprintf(stderr, "Shutting down existing kplex (%d) with SIGINT\n", (int)pid);
                 usleep(700*1000);
@@ -1563,6 +1566,7 @@ int main(int argc ,char **argv)
         pthread_create(&t1, &attr, t_fileFeed, NULL);         
     }
 
+    // Fifo to deliver NMEA $P messages
     if (access( FIFOPNMEA, F_OK ) == -1) {
         if (mkfifo(FIFOPNMEA, (mode_t)0664)) {
             printlog("Error create kplex p-type fifo: %s", strerror(errno));
@@ -1570,13 +1574,6 @@ int main(int argc ,char **argv)
         }
     }
 
-    if (access( FIFOPNMEA, F_OK ) == 0) {      
-        pthread_create(&threadPnmea, &attr, threadPnmea_run, NULL);
-        if (!threadPnmea) {
-            printlog("Failed to start threadPnmea thread");
-        }   
-    }
-   
     // Thread for KPlex services
     if (kplex_fork) {
         pthread_create(&threadKplex, &attr, threadKplex_run, NULL);
@@ -1585,6 +1582,23 @@ int main(int argc ,char **argv)
             exit(EXIT_FAILURE);
         }
     }
+
+    // Thread to deliver NMEA $P messages
+    if (access( FIFOPNMEA, F_OK ) == 0) {
+        // We want atomic reads of ENV params  
+        struct sched_param parm;   
+	    pthread_attr_getschedparam(&attr, &parm);
+	    parm.sched_priority = sched_get_priority_max(SCHED_FIFO);;
+	    pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
+	    pthread_attr_setschedparam(&attr, &parm);  
+  
+        pthread_create(&threadPnmea, &attr, threadPnmea_run, NULL);
+        if (!threadPnmea) {
+            printlog("Failed to start threadPnmea thread");
+        } else
+            pthread_setschedparam(threadPnmea, SCHED_FIFO, &parm);
+    }
+   
 
 #ifdef MT1800
     wm_sock_open();
@@ -1622,7 +1636,7 @@ int main(int argc ,char **argv)
         long   userid;
         char *name;
         static int r_limit;
-        char txtbuf_p1[200];
+        char nmeastr_p1[200];
         static unsigned char ais_msgid_p1;
         int trueh;
         static int cog;
@@ -1661,19 +1675,23 @@ int main(int argc ,char **argv)
         // Get the next sentence from the mux and update
         // the struct of valid data for the duration of 'INVALID'
 
-        memset(txtbuf, 0, sizeof(txtbuf));
+        memset(nmeastr, 0, sizeof(nmeastr));
         
         // Clear out the ais structures if done with the message
         if (!ais_msgid_p1) memset( &ais, 0, sizeof(ais_state));      
 
         if (socketType == SOCK_STREAM) {
-            cnt = recv(muxFd, txtbuf, sizeof(txtbuf), 0);
+            cnt = recv(muxFd, nmeastr, sizeof(nmeastr), 0);
         } else {
-            cnt = recvfrom(muxFd, txtbuf, sizeof(txtbuf), 0,(struct sockaddr *) &peer_sa, &socklen);
+            cnt = recvfrom(muxFd, nmeastr, sizeof(nmeastr), 0,(struct sockaddr *) &peer_sa, &socklen);
         }
        
         if (cnt < 0) {
             if (errno == EAGAIN) {
+                continue;
+            }
+            if (errno == 107) { // Transport endpoint is not connected
+                sleep(3);       // kplex not ready yet ?
                 continue;
             }
             printlog("Error rerading NMEA-socket: %s", strerror(errno));
@@ -1681,54 +1699,54 @@ int main(int argc ,char **argv)
             continue;
         } else if (cnt > 0) {
 
-            if (NMPARSE(txtbuf, "ENV")) { // We are talking to our self. Skip it
-                continue;
+            if (NMPARSE(nmeastr, "ENV")) {
+                continue;   // We are talking to our self through threadPnmea->kplex. Skip it
             }
 
             cs = checksum = 0;     // Chekcsum portion at end of nmea string 
             for (i = 0; i < cnt; i++) {
-                if (txtbuf[i] == '*') cs=i+1;
-                if (txtbuf[i] == '\r' || txtbuf[i] == '\n') { txtbuf[i] = '\0'; break; }
+                if (nmeastr[i] == '*') cs=i+1;
+                if (nmeastr[i] == '\r' || nmeastr[i] == '\n') { nmeastr[i] = '\0'; break; }
             }
 
             if (cs > 0) {
                 for (i=0; i < cs-1; i++) {
-                    if (txtbuf[i] == '$' || txtbuf[i] == '!') continue;
-                    checksum ^= (uint8_t)txtbuf[i];
+                    if (nmeastr[i] == '$' || nmeastr[i] == '!') continue;
+                    checksum ^= (uint8_t)nmeastr[i];
                 }
             }            
             
-            if ( !cs || (checksum != (uint8_t)strtol(&txtbuf[cs], NULL, 16))) {
+            if ( !cs || (checksum != (uint8_t)strtol(&nmeastr[cs], NULL, 16))) {
                 if (debug) {
                     printlog("Checksum error in nmea sentence: 0x%02x/0x%02x - '%s'/'%s', pos %d", \
-                        checksum, (uint8_t)strtol(&txtbuf[cs], NULL, 16), txtbuf, &txtbuf[cs], cs);
+                        checksum, (uint8_t)strtol(&nmeastr[cs], NULL, 16), nmeastr, &nmeastr[cs], cs);
                 }
                 continue;
             }
 
-            if (debug) fprintf( stderr, "Got '%s' as a mux message. Lenght = %d\n", txtbuf, (int)strlen(txtbuf));
+            if (debug) fprintf( stderr, "Got '%s' as a mux message. Lenght = %d\n", nmeastr, (int)strlen(nmeastr));
 
             // Priority parsing order and logic:
             // See http://freenmea.net/docs and other sources out there
             
             // RMC - Recommended minimum specific GPS/Transit data
             // RMC feed is assumed to be present at all time 
-            if (NMPARSE(txtbuf, "RMC")) {
-                cnmea.rmc=atof(getf(7, txtbuf));
+            if (NMPARSE(nmeastr, "RMC")) {
+                cnmea.rmc=atof(getf(7, nmeastr));
                 cnmea.rmc_ts = ts;
-                strcpy(cnmea.gll, getf(3, txtbuf));
-                strcpy(cnmea.glo, getf(5, txtbuf));
-                strcpy(cnmea.glns, getf(4, txtbuf));
-                strcpy(cnmea.glne, getf(6, txtbuf));
+                strcpy(cnmea.gll, getf(3, nmeastr));
+                strcpy(cnmea.glo, getf(5, nmeastr));
+                strcpy(cnmea.glns, getf(4, nmeastr));
+                strcpy(cnmea.glne, getf(6, nmeastr));
                 cnmea.gll_ts = ts;           
                 continue;
             }
 
             // VTG - Track made good and ground speed
             if (ts - cnmea.rmc_ts > INVALID/2) { // If not from RMC
-                if (NMPARSE(txtbuf, "VTG")) {
-                    cnmea.rmc=atof(getf(5, txtbuf));
-                    if ((cnmea.hdm=atof(getf(1, txtbuf))) != 0) // Track made good
+                if (NMPARSE(nmeastr, "VTG")) {
+                    cnmea.rmc=atof(getf(5, nmeastr));
+                    if ((cnmea.hdm=atof(getf(1, nmeastr))) != 0) // Track made good
                         cnmea.hdm_ts = ts;
                     continue;
                 }
@@ -1736,19 +1754,19 @@ int main(int argc ,char **argv)
     
             // GLL - Geographic Position, Latitude / Longitude
             if (ts - cnmea.gll_ts > INVALID/2) { // If not from RMC
-                if (NMPARSE(txtbuf, "GLL")) {
-                    strcpy(cnmea.gll, getf(1, txtbuf)); 
-                    strcpy(cnmea.glo, getf(3, txtbuf));
-                    strcpy(cnmea.glns, getf(2, txtbuf));
-                    strcpy(cnmea.glne, getf(4, txtbuf));
+                if (NMPARSE(nmeastr, "GLL")) {
+                    strcpy(cnmea.gll, getf(1, nmeastr)); 
+                    strcpy(cnmea.glo, getf(3, nmeastr));
+                    strcpy(cnmea.glns, getf(2, nmeastr));
+                    strcpy(cnmea.glne, getf(4, nmeastr));
                     cnmea.gll_ts = ts;
                     continue;
                 }
             }
 
             // VHW - Water speed
-            if(NMPARSE(txtbuf, "VHW")) {
-                if ((cnmea.stw=atof(getf(5, txtbuf))) != 0)
+            if(NMPARSE(nmeastr, "VHW")) {
+                if ((cnmea.stw=atof(getf(5, nmeastr))) != 0)
                     cnmea.stw_ts = ts;
                 continue;
             }
@@ -1761,63 +1779,63 @@ int main(int argc ,char **argv)
             if (ts - cnmea.hdm_ts > INVALID/2) { // If not from VHW
 
                 // HDT - Heading - True
-                if (NMPARSE(txtbuf, "HDT")) {
-                    cnmea.hdm=atof(getf(1, txtbuf));
+                if (NMPARSE(nmeastr, "HDT")) {
+                    cnmea.hdm=atof(getf(1, nmeastr));
                     cnmea.hdm_ts = ts;
                     continue;
                 }
 
                 // HDG - Heading - Deviation and Variation 
-                if (NMPARSE(txtbuf, "HDG")) {
-                    cnmea.hdm=atof(getf(1, txtbuf));
+                if (NMPARSE(nmeastr, "HDG")) {
+                    cnmea.hdm=atof(getf(1, nmeastr));
                     cnmea.hdm_ts = ts;
                     continue;
                 }
              
                 // HDM Heading - Heading Magnetic
-                if (NMPARSE(txtbuf, "HDM")) {
-                    cnmea.hdm=atof(getf(1, txtbuf));
+                if (NMPARSE(nmeastr, "HDM")) {
+                    cnmea.hdm=atof(getf(1, nmeastr));
                     cnmea.hdm_ts = ts;
                     continue;
                 }
             }
 
             // DPT - Depth (Depth of transponder added)
-            if (NMPARSE(txtbuf, "DPT")) {
-                cnmea.dbt=atof(getf(1, txtbuf))+atof(getf(2, txtbuf));
+            if (NMPARSE(nmeastr, "DPT")) {
+                cnmea.dbt=atof(getf(1, nmeastr))+atof(getf(2, nmeastr));
                 cnmea.dbt_ts = ts;
                 continue;
             }
 
             // DBT - Depth Below Transponder + GUI defined transponder depth
             if (ts - cnmea.dbt_ts > INVALID/2) { // If not from DPT
-                if (NMPARSE(txtbuf, "DBT")) {
-                    cnmea.dbt=atof(getf(3, txtbuf)) + iconf.depth_transp;
+                if (NMPARSE(nmeastr, "DBT")) {
+                    cnmea.dbt=atof(getf(3, nmeastr)) + iconf.depth_transp;
                     cnmea.dbt_ts = ts;
                     continue;
                 }
             }
 
             // MTW - Water temperature in C
-            if (NMPARSE(txtbuf, "MTW")) {
-                cnmea.mtw=atof(getf(1, txtbuf));
+            if (NMPARSE(nmeastr, "MTW")) {
+                cnmea.mtw=atof(getf(1, nmeastr));
                 cnmea.mtw_ts = ts;
                 continue;
             }
 
             // MWV - Wind Speed and Angle (report VWR style)
-            if (NMPARSE(txtbuf, "MWV")) {
-                if (strncmp(getf(2, txtbuf),"R",1) + strncmp(getf(4, txtbuf),"N",1) == 0) {
-                    cnmea.vwra=atof(getf(1, txtbuf));
-                    cnmea.vwrs=atof(getf(3, txtbuf))/1.94; // kn 2 m/s;
+            if (NMPARSE(nmeastr, "MWV")) {
+                if (strncmp(getf(2, nmeastr),"R",1) + strncmp(getf(4, nmeastr),"N",1) == 0) {
+                    cnmea.vwra=atof(getf(1, nmeastr));
+                    cnmea.vwrs=atof(getf(3, nmeastr))/1.94; // kn 2 m/s;
                     if (cnmea.vwra > 180) {
                         cnmea.vwrd = 1;
                         cnmea.vwra = 360 - cnmea.vwra;
                     } else cnmea.vwrd = 0;
                     cnmea.vwr_ts = ts;
-                } else if (strncmp(getf(2, txtbuf),"T",1) + strncmp(getf(4, txtbuf),"N",1) == 0) {
-                    cnmea.vwta=atof(getf(1, txtbuf));
-                    cnmea.vwts=atof(getf(3, txtbuf))/1.94; // kn 2 m/s;
+                } else if (strncmp(getf(2, nmeastr),"T",1) + strncmp(getf(4, nmeastr),"N",1) == 0) {
+                    cnmea.vwta=atof(getf(1, nmeastr));
+                    cnmea.vwts=atof(getf(3, nmeastr))/1.94; // kn 2 m/s;
                     cnmea.vwt_ts = ts;
                 }
                 continue;
@@ -1825,28 +1843,28 @@ int main(int argc ,char **argv)
 
             // VWR - Relative Wind Speed and Angle (obsolete)
             if (ts - cnmea.vwr_ts > INVALID/2) { // If not from MWV
-                if (NMPARSE(txtbuf, "VWR")) {
-                    cnmea.vwra=atof(getf(1, txtbuf));
-                    cnmea.vwrs=atof(getf(3, txtbuf))/1.94; // kn 2 m/s
-                    cnmea.vwrd=strncmp(getf(2, txtbuf),"R",1)==0? 0:1;
+                if (NMPARSE(nmeastr, "VWR")) {
+                    cnmea.vwra=atof(getf(1, nmeastr));
+                    cnmea.vwrs=atof(getf(3, nmeastr))/1.94; // kn 2 m/s
+                    cnmea.vwrd=strncmp(getf(2, nmeastr),"R",1)==0? 0:1;
                     cnmea.vwr_ts = ts;
                     continue;
                 }
             }
 
-            if (*txtbuf != '!' || !aisconf.my_useais) continue;
+            if (*nmeastr != '!' || !aisconf.my_useais) continue;
 
             // AIS is handled last ....
 
-            ais_rval = assemble_vdm(&ais, txtbuf);
+            ais_rval = assemble_vdm(&ais, nmeastr);
 
             if (ais_rval == 1) { // We need to assemble part 2 of the message
-                (void)strcpy(txtbuf_p1, txtbuf);
+                (void)strcpy(nmeastr_p1, nmeastr);
                 ais_msgid_p1 = ais.msgid = (unsigned char)get_6bit( &ais.six_state, 6 );
                 continue;
             } else if (ais_msgid_p1) {
-                (void)strcat(txtbuf, txtbuf_p1);
-                *txtbuf_p1 = '\0';
+                (void)strcat(nmeastr, nmeastr_p1);
+                *nmeastr_p1 = '\0';
             }
 
             // Get the 6 bit message id
@@ -1961,7 +1979,7 @@ int main(int argc ,char **argv)
                 aisconf.my_buddy = 0;
             }
             if (++r_limit > 10) r_limit = 0;
-            if (debug && ais_rval) printlog("AIS return=%d, msgid=%d  msg='%s'\n", ais_rval, ais.msgid, txtbuf); 
+            if (debug && ais_rval) printlog("AIS return=%d, msgid=%d  msg='%s'\n", ais_rval, ais.msgid, nmeastr); 
        }
     }
 

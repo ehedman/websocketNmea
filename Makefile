@@ -71,7 +71,7 @@ ifeq ($(shell test -e $(GETC) && echo -n yes),yes)
 CFLAGS=-DREV=\"$(shell git log --pretty=format:'%h' -n 1 2>/dev/null)\"
 endif
 
-CFLAGS+= -Wall -g -std=gnu99 -pedantic
+CFLAGS+= -Wall -g -std=gnu99 -pedantic  -D_REENTRANT
 CFLAGS+= -DARCH=$(ARCH) -DUID=$(UID) -DGID=$(GID) -I$(INCDIR)
 CFLAGS+= -DNAVIDBPATH=\"$(NAVIDBPATH)\" -DKPCONFPATH=\"$(KPCONFPATH)\"
 
