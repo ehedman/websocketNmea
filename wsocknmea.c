@@ -559,7 +559,7 @@ static void wm_sock_open()
 #endif
 
 // The configuration database is maintained from the WEB GUI settings dialogue.
-static int  configure(int kpf)
+static int configure(int kpf)
 {
     sqlite3 *conn;
     sqlite3_stmt *res;
@@ -866,7 +866,6 @@ static float dms2dd(float coordinates, const char *val)
    float c; //to store de decimal
  
    // Calculate the value in format nn.nnnnnn
-   // Explanations at: http://www.mapwindow.org/phorum/read.php?3,16271,16310*/
  
    b = coordinates/100;
    c= (coordinates/100 - b)*100 ;
@@ -890,7 +889,7 @@ static int strm_init(z_stream * strm)
 }
 
 
-int callback_http(struct lws *wsi, enum lws_callback_reasons reason, void *user,
+static int callback_http(struct lws *wsi, enum lws_callback_reasons reason, void *user,
                   void *in, size_t len)
 {
     return 0;
