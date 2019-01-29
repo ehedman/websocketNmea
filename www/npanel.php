@@ -149,6 +149,11 @@ function dorelay()
 
 }
 
+function doAis(status)
+{
+    send(Cmd.AisTrxStatus + "-" + status);
+}
+
 function new_panel()
 {
     var options='toolbar=0,status=0,menubar=0,scrollbars=0,location=0,directories=0,resizable=0,width=1280,height=840';
@@ -566,7 +571,11 @@ function dragElement(elmnt) {
                     <h2>AIS</h2>
                     Vessel Name<br><input type="text" style="text-transform:uppercase" name="aisname" title="This vessel's name" id="aisname" maxlength="20" value="<?php echo $aisname ?>"><br>
                     Vessel Userid<br><input type="text" name="aisid" id="aisid" title="This vessel's i.d (MMSI) - nine digits" maxlength="9" value="<?php echo $aisid ?>"><br>
-                    Use<input type="checkbox" onclick="setaisuse(this);" title="Show AIS on Google Map"<?php echo $aisuse==1? " checked=checked":""; ?>>
+                    Use<input type="checkbox" onclick="setaisuse(this);" title="Show AIS on Google Map"<?php echo $aisuse==1? " checked=checked":""; ?>><br>
+                    <div>
+                        <input type="radio" name="trx-status" onclick="doAis(1)">Transmitter On<br>
+                        <input type="radio" name="trx-status" onclick="doAis(0)">Transmitter Off<br>
+                    </div>
                 </td>
             </tr>
             <tr>

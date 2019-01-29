@@ -99,6 +99,7 @@ enum requests {
     SensorTemp          = 202,
     SensorRelay         = 203,
     SensorRelayStatus   = 204,
+    AisTrxStatus        = 206,
     WaterMakerData      = 210,
     ServerPing          = 900,
     TimeOfDAy           = 901,
@@ -849,6 +850,43 @@ static void handle_ais_buddy(long userid)
     aisconf.my_buddy = userid;  // Leave it to be picked up later by addShip()
 }
 
+// SRT proprietary AIS commands
+static void aisSet(int status)
+{
+    struct stat sb;
+    int fd;
+    char buf[100];
+    char *device = "/dev/ttyUSB0";
+    char *trxOn  = "$PSRT,012,,,(--QuaRk--)*4B\r\n$PSRT,TRG,02,00*6A\r\n";
+    char *trxOff = "$PSRT,012,,,(--QuaRk--)*4B\r\n$PSRT,TRG,02,33*6A\r\n";
+
+    if (stat(device, &sb)) {
+        printlog("Error stat AIS device %s : %s", device, strerror(errno));
+        return;
+    }
+
+    if ((fd=open(device, O_WRONLY)) < 0) {
+        printlog("Error open AIS device %s : %s", device, strerror(errno));
+        return;
+    }
+
+    memset(buf, 0, sizeof(buf));
+
+    // Turn AIS transmitter on/off
+
+    printlog("Set AIS Transmitter %s", status==1? "on":"off");
+
+    if (!status)
+        sprintf(buf, trxOff);
+    else
+        sprintf(buf, trxOn);
+
+    write(fd, buf, strlen(buf));
+
+    close(fd);
+
+}
+
 #define MAX_LONGITUDE 180
 #define MAX_LATITUDE   90
 
@@ -1094,7 +1132,14 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                     break;
                 }
 #endif
-                
+                case AisTrxStatus: {
+                    sprintf(value, "{'aisSet':'%d'}-%d", 0, req);
+                    if (args != NULL && strlen(args)) {
+                        aisSet(atoi(args));
+                    }
+                    break;
+                }
+
                 case ServerPing: { // Diagnostics: ping kplex/talkers presence with RMC
                         sprintf(value, "{'status':'%d'}-%d", ct-cnmea.rmc_ts > INVALID?0:1, req);
                     break;
