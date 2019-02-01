@@ -101,6 +101,13 @@ install: $(BIN)
 	-sudo install -m 0644 -g root -o root wsocknmea.service -D /lib/systemd/system/
 	-sudo systemctl enable wsocknmea.service
 
+status: 
+	-sudo systemctl status wsocknmea.service --no-pager -l
+
+restart: $(DEST)/$(BIN)
+	-sudo systemctl restart wsocknmea.service
+	-sudo systemctl status wsocknmea.service --no-pager -l
+
 install-www:
 	$(MAKE) install
 	@for i in $(SUBDIRS); do \

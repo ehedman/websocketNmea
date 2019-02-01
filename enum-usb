@@ -26,7 +26,7 @@ do
     if [ ${devs[${d}]} -eq 1 ]; then continue; fi
 
     stty -F /dev/ttyUSB${d} speed 38400  > /dev/null 2>&1 
-    timeout 4 grep -q -m 1 "AIVDM" /dev/ttyUSB${d}
+    timeout 4 egrep -q -m 1 'AIVDM|AIVDO' /dev/ttyUSB${d}
     if [ $? -eq 0 ]; then
         rm -f /dev/ttyUSB-AIS
         ln -s /dev/ttyUSB${d} /dev/ttyUSB-AIS
@@ -39,7 +39,7 @@ for ((d=0; d<=$nd; d++))
 do
     if [ ${devs[${d}]} -eq 1 ]; then continue; fi
 
-    stty -F /dev/ttyUSB${d} speed 4800  > /dev/null 2>&1 
+    stty -F /dev/ttyUSB${d} speed 38400  > /dev/null 2>&1 
     timeout 4 grep -q -m 1 "GPRMC" /dev/ttyUSB${d}
     if [ $? -eq 0 ]; then
         rm -f /dev/ttyUSB-GPS

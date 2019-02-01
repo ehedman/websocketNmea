@@ -856,7 +856,7 @@ static void aisSet(int status)
     struct stat sb;
     int fd;
     char buf[100];
-    char *device = "/dev/ttyUSB0";
+    char *device = "/dev/ttyUSB-AIS";
     char *trxOn  = "$PSRT,012,,,(--QuaRk--)*4B\r\n$PSRT,TRG,02,00*6A\r\n";
     char *trxOff = "$PSRT,012,,,(--QuaRk--)*4B\r\n$PSRT,TRG,02,33*6A\r\n";
 
@@ -971,7 +971,7 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                 // target validation to be split out before parsing the json string.
          
                 case SpeedOverGround: {
-                    if (ct - cnmea.rmc_ts > INVALID || cnmea.rmc == 0)
+                    if (ct - cnmea.rmc_ts > INVALID || cnmea.rmc < 0.9)
                         sprintf(value, "Exp-%d", req);
                     else
                         sprintf(value, "{'speedog':'%.2f'}-%d",cnmea.rmc, req);
@@ -979,7 +979,7 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                 }
                
                 case SpeedThroughWater: {
-                    if (ct - cnmea.stw_ts > INVALID || cnmea.stw == 0)
+                    if (ct - cnmea.stw_ts > INVALID || cnmea.stw < 0.9)
                         sprintf(value, "Exp-%d", req);
                     else
                         sprintf(value, "{'sppedtw':'%.2f'}-%d", cnmea.stw, req);
