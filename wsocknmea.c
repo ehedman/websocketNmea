@@ -1451,6 +1451,8 @@ int main(int argc ,char **argv)
     int c;
     int kplex_fork = 1;
     int detachstate;
+    int aisnameSet = 0;
+    int aisuserSet = 0;
     pid_t pid;
     pthread_attr_t attr;  
     pthread_t t1;
@@ -1662,6 +1664,7 @@ int main(int argc ,char **argv)
     sleep(3);
     memset(&cnmea, 0, sizeof(cnmea));
     aisconf.my_buddy = 0;
+    aisconf.my_userid = 0;
     cnmea.startTime = time(NULL);
 
     // Main loop, to end this server, send signal INT(^c) or TERM
@@ -1700,7 +1703,7 @@ int main(int argc ,char **argv)
         double lat_dd = 0;
         double long_ddd = 0;
         double sog = 0.1;
-        name = NULL;
+        name = NULL;     
         userid = trueh = 0;
        
         // Reboot/re-configure request from PHP Gui code
@@ -1968,7 +1971,9 @@ int main(int argc ,char **argv)
 
                 case 18: // Message 18 - Class B Position Report 
                     if( !ais_rval && parse_ais_18( &ais, &msg_18 ) == 0 ) {
-                        userid = msg_18.userid;
+                        userid =  msg_18.userid;
+                        if (msg_18.userid > 100 && aisuserSet == 0)
+                            aisconf.my_userid = msg_18.userid;
                         pos2ddd( msg_18.latitude, msg_18.longitude, &lat_dd, &long_ddd );
                         trueh = msg_18.true;
                         sog =  msg_18.sog;
@@ -2023,8 +2028,49 @@ int main(int argc ,char **argv)
                 aisconf.my_buddy = 0;
             }
             if (++r_limit > 10) r_limit = 0;
-            if (debug && ais_rval) printlog("AIS return=%d, msgid=%d  msg='%s'\n", ais_rval, ais.msgid, nmeastr); 
-       }
+            if (debug && ais_rval) printlog("AIS return=%d, msgid=%d  msg='%s'\n", ais_rval, ais.msgid, nmeastr);
+
+            if ((ais.msgid == 18 || ais.msgid == 24) && fileFeed == 0) {
+                char vdobuf[40];
+                sqlite3 *conn;
+                sqlite3_stmt *res;
+                const char *tail;
+                vdobuf[0] = '\0';
+
+                if (ais.msgid == 18 && aisuserSet == 0 && aisconf.my_userid > 100) {
+                    sprintf(vdobuf, "UPDATE ais SET aisid = %ld", aisconf.my_userid);
+                    printlog("Update own MMSI=%ld from transceiver", aisconf.my_userid);
+                    aisuserSet = 1;
+                } else if (ais.msgid == 24 && aisnameSet == 0 && userid == aisconf.my_userid && name != NULL) {
+                    for (int i=0; i < strlen(name); i++) {
+                        if (name[i] == '@') {
+                            name[i] = '\0';
+                            break;
+                        }
+                    }
+                    sprintf(vdobuf, "UPDATE ais SET aisname = '%s'", name);
+                    printlog("Update own NAME=%s from transceiver", name);
+                    aisnameSet = 1;
+                }
+                        
+                if (strlen(vdobuf))
+                {
+                    (void)sqlite3_open_v2(NAVIDBPATH, &conn, SQLITE_OPEN_READWRITE, 0);
+                    if (conn == NULL) {
+                            printlog("Failed to open database %s: ", (char*)sqlite3_errmsg(conn));                    
+                    } else {
+                        if (sqlite3_prepare_v2(conn, vdobuf, -1,  &res, &tail)  == SQLITE_OK) {
+                            if (sqlite3_step(res) != SQLITE_DONE) {
+                                printlog("Failed to update AIS record aisid %s: ", (char*)sqlite3_errmsg(conn));
+                            }
+                            sqlite3_finalize(res);
+                            sqlite3_close(conn);
+                            
+                        }
+                    }
+                }              
+            }
+        }
     }
 
     exit_clean(SIGSTOP);
