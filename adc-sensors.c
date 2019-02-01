@@ -74,7 +74,7 @@ static int getPrompt(void)
             (void)usleep(IOWAIT);
             cnt = read(serialDev.fd, buffer, ADBZ); // Get the response
             if (cnt == -1 && errno == EAGAIN) continue;
-            if (cnt >= pz && !strncmp(buffer, PUK1104, pz)) {
+            if (cnt >= pz && !strncmp(&buffer[strlen(buffer)-pz], PUK1104, pz)) {
                 rval = 0;
                 break;
             }

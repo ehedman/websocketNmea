@@ -20,7 +20,7 @@ extern struct aisShip_struct *getShips(int size);
 
 //#define MT1800              // Instrument support for ENWA Watermaker 
 //#define MCP3208             // Analog input valtage, current .... etc.
-//#define UK1104              // CanaKit 4-Channel USB Relay Board with 6-Channel A/D Interface
+#define UK1104              // CanaKit 4-Channel USB Relay Board with 6-Channel A/D Interface
 
 #if defined (MCP3208) || defined (UK1104)
 #define DOADC
@@ -43,7 +43,7 @@ extern float tick2current(int tick);
 #ifdef UK1104
 
 #define UK1104P         "\r"
-#define PUK1104         "\r\n\r\n::"
+#define PUK1104         "::"
 #define CHxSETMOD       "CH%d.SETMODE(%d)\r"
 #define CHxGETANALOG    "CH%d.GETANALOG\r"
 #define CHxGETTEMP      "CH%d.GETTEMP\r"
