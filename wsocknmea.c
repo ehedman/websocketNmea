@@ -672,7 +672,7 @@ static int configure(int kpf)
                     sqlite3_prepare_v2(conn, "INSERT INTO sumlog (display,cal) VALUES (1,2)", -1, &res, &tail);
                     sqlite3_step(res);
 
-                    sqlite3_prepare_v2(conn, "INSERT INTO ais (aisname,callsign,aisid,aisuse,ro) VALUES ('my yacht','my call',366881180,1,0)", -1, &res, &tail);
+                    sqlite3_prepare_v2(conn, "INSERT INTO ais (aisname,aiscallsign,aisid,aisuse,ro) VALUES ('my yacht','my call',366881180,1,0)", -1, &res, &tail);
                     sqlite3_step(res);
 
                     sqlite3_prepare_v2(conn, "INSERT INTO file (fname,rate,use) VALUES ('nofile',1,'off')", -1, &res, &tail);
