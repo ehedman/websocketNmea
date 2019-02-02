@@ -643,7 +643,7 @@ static int configure(int kpf)
                     sqlite3_prepare_v2(conn, "CREATE TABLE file (Id INTEGER PRIMARY KEY, fname TEXT, rate INTEGER, use TEXT)", -1, &res, &tail);
                     sqlite3_step(res);
 
-                    sqlite3_prepare_v2(conn, "CREATE TABLE ais (Id INTEGER PRIMARY KEY, aisname TEXT, aisid BIGINT, aisuse INTEGER)", -1, &res, &tail);
+                    sqlite3_prepare_v2(conn, "CREATE TABLE ais (Id INTEGER PRIMARY KEY, aisname TEXT, aiscallsign TEXT, aisid BIGINT, aisuse INTEGER, ro INTEGER)", -1, &res, &tail);
                     sqlite3_step(res);
 
                     sqlite3_prepare_v2(conn, "CREATE TABLE abuddies (Id INTEGER PRIMARY KEY, userid BIGINT)", -1, &res, &tail);
@@ -672,7 +672,7 @@ static int configure(int kpf)
                     sqlite3_prepare_v2(conn, "INSERT INTO sumlog (display,cal) VALUES (1,2)", -1, &res, &tail);
                     sqlite3_step(res);
 
-                    sqlite3_prepare_v2(conn, "INSERT INTO ais (aisname,aisid,aisuse) VALUES ('my yacht',366881180,1)", -1, &res, &tail);
+                    sqlite3_prepare_v2(conn, "INSERT INTO ais (aisname,callsign,aisid,aisuse,ro) VALUES ('my yacht','my call',366881180,1,0)", -1, &res, &tail);
                     sqlite3_step(res);
 
                     sqlite3_prepare_v2(conn, "INSERT INTO file (fname,rate,use) VALUES ('nofile',1,'off')", -1, &res, &tail);
@@ -1451,8 +1451,6 @@ int main(int argc ,char **argv)
     int c;
     int kplex_fork = 1;
     int detachstate;
-    int aisnameSet = 0;
-    int aisuserSet = 0;
     pid_t pid;
     pthread_attr_t attr;  
     pthread_t t1;
@@ -1680,13 +1678,16 @@ int main(int argc ,char **argv)
 
         ais_state ais;
         int ais_rval;
-        long   userid;
-        char *name;
+        long  userid = 0;
+        int trueh = 0;
+        static char *name;
+        static char *callsign;
         static int r_limit;
         char nmeastr_p1[200];
         static unsigned char ais_msgid_p1;
-        int trueh;
+
         static int cog;
+        static int aisnameSet;
 
         // AIS message structures
         aismsg_1  msg_1;
@@ -1703,8 +1704,6 @@ int main(int argc ,char **argv)
         double lat_dd = 0;
         double long_ddd = 0;
         double sog = 0.1;
-        name = NULL;     
-        userid = trueh = 0;
        
         // Reboot/re-configure request from PHP Gui code
         // Only if not under control of systemd
@@ -1972,8 +1971,6 @@ int main(int argc ,char **argv)
                 case 18: // Message 18 - Class B Position Report 
                     if( !ais_rval && parse_ais_18( &ais, &msg_18 ) == 0 ) {
                         userid =  msg_18.userid;
-                        if (msg_18.userid > 100 && aisuserSet == 0)
-                            aisconf.my_userid = msg_18.userid;
                         pos2ddd( msg_18.latitude, msg_18.longitude, &lat_dd, &long_ddd );
                         trueh = msg_18.true;
                         sog =  msg_18.sog;
@@ -2002,6 +1999,8 @@ int main(int argc ,char **argv)
                         if (msg_24.flags & 1) {
                             userid = msg_24.userid;
                             name = msg_24.name;
+                            if (strlen(msg_24.callsign))
+                                callsign = msg_24.callsign;
 					    }                     
                     }
                     break;
@@ -2030,45 +2029,43 @@ int main(int argc ,char **argv)
             if (++r_limit > 10) r_limit = 0;
             if (debug && ais_rval) printlog("AIS return=%d, msgid=%d  msg='%s'\n", ais_rval, ais.msgid, nmeastr);
 
-            if ((ais.msgid == 18 || ais.msgid == 24) && fileFeed == 0) {
+            // Update GUI with this vessels' data
+            if (aisnameSet == 0 && ais.msgid == 24 && name != NULL && callsign != NULL && userid > 100) {
                 char vdobuf[40];
                 sqlite3 *conn;
                 sqlite3_stmt *res;
                 const char *tail;
-                vdobuf[0] = '\0';
 
-                if (ais.msgid == 18 && aisuserSet == 0 && aisconf.my_userid > 100) {
-                    sprintf(vdobuf, "UPDATE ais SET aisid = %ld", aisconf.my_userid);
-                    printlog("Update own MMSI=%ld from transceiver", aisconf.my_userid);
-                    aisuserSet = 1;
-                } else if (ais.msgid == 24 && aisnameSet == 0 && userid == aisconf.my_userid && name != NULL) {
-                    for (int i=0; i < strlen(name); i++) {
-                        if (name[i] == '@') {
-                            name[i] = '\0';
-                            break;
-                        }
+                for (int i=0; i < strlen(name); i++) {
+                    if (name[i] == '@') {
+                        name[i] = '\0';
+                        break;
                     }
-                    sprintf(vdobuf, "UPDATE ais SET aisname = '%s'", name);
-                    printlog("Update own NAME=%s from transceiver", name);
-                    aisnameSet = 1;
                 }
-                        
-                if (strlen(vdobuf))
-                {
-                    (void)sqlite3_open_v2(NAVIDBPATH, &conn, SQLITE_OPEN_READWRITE, 0);
-                    if (conn == NULL) {
-                            printlog("Failed to open database %s: ", (char*)sqlite3_errmsg(conn));                    
-                    } else {
-                        if (sqlite3_prepare_v2(conn, vdobuf, -1,  &res, &tail)  == SQLITE_OK) {
-                            if (sqlite3_step(res) != SQLITE_DONE) {
-                                printlog("Failed to update AIS record aisid %s: ", (char*)sqlite3_errmsg(conn));
-                            }
-                            sqlite3_finalize(res);
-                            sqlite3_close(conn);
-                            
-                        }
+
+                for (int i=0; i < strlen(callsign); i++) {
+                    if (callsign[i] == '@') {
+                        callsign[i] = '\0';
+                        break;
                     }
-                }              
+                }
+
+                sprintf(vdobuf, "UPDATE ais SET aisname = '%s', aiscallsign = '%s', aisid = %ld, ro = 1", name, callsign, userid);
+                printlog("Got VDO from transceiver: MMSI= %ld, NAME= %s, CALLSIGN = %s", userid, name, callsign);
+                aisnameSet = 1;
+            
+                (void)sqlite3_open_v2(NAVIDBPATH, &conn, SQLITE_OPEN_READWRITE, 0);
+                if (conn == NULL) {
+                        printlog("Failed to open database %s: ", (char*)sqlite3_errmsg(conn));                    
+                } else {
+                    if (sqlite3_prepare_v2(conn, vdobuf, -1,  &res, &tail)  == SQLITE_OK) {
+                        if (sqlite3_step(res) != SQLITE_DONE) {
+                            printlog("Failed to update row AIS: %s", (char*)sqlite3_errmsg(conn));
+                        }
+                        sqlite3_finalize(res);
+                        sqlite3_close(conn);
+                    }
+                }           
             }
         }
     }

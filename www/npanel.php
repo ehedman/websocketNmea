@@ -569,8 +569,9 @@ function dragElement(elmnt) {
              <tr>
                 <td class="contentBox">
                     <h2>AIS</h2>
-                    Vessel Name<br><input type="text" style="text-transform:uppercase" name="aisname" title="This vessel's name" id="aisname" maxlength="20" value="<?php echo $aisname ?>"><br>
-                    Vessel Userid<br><input type="text" name="aisid" id="aisid" title="This vessel's i.d (MMSI) - nine digits" maxlength="9" value="<?php echo $aisid ?>"><br>
+                    Vessel Name<br><input <?php echo $aisro==1? "readonly ":""; ?>type="text" style="text-transform:uppercase" name="aisname" title="This vessels' name" id="aisname" maxlength="20" value="<?php echo $aisname ?>"><br>
+                    Vessel Callsign<br><input <?php echo $aisro==1? "readonly ":""; ?>type="text" style="text-transform:uppercase" name="aiscallsign" title="This vessels' Callsign" id="aiscallsign" maxlength="20" value="<?php echo $aiscallsign ?>"><br>
+                    Vessel Userid<br><input <?php echo $aisro==1? "readonly ":""; ?>type="text" name="aisid" id="aisid" title="This vessels' i.d (MMSI) - nine digits" maxlength="9" value="<?php echo $aisid ?>"><br>
                     Use<input type="checkbox" onclick="setaisuse(this);" title="Show AIS on Google Map"<?php echo $aisuse==1? " checked=checked":""; ?>><br>
                     <div>
                         <input type="radio" name="trx-status" onclick="doAis(1)">Transmitter On<br>

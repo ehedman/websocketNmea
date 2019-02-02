@@ -104,6 +104,11 @@ install: $(BIN)
 status: 
 	-sudo systemctl status wsocknmea.service --no-pager -l
 
+stop: 
+	-sudo systemctl stop wsocknmea.service
+	-sudo systemctl status wsocknmea.service --no-pager -l
+
+
 restart: $(DEST)/$(BIN)
 	-sudo systemctl restart wsocknmea.service
 	-sudo systemctl status wsocknmea.service --no-pager -l

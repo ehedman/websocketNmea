@@ -63,7 +63,8 @@
         $sql="UPDATE `devadc` SET `device`='".$_POST['a2dserial']."',`relay1txt`='".$_POST['relay1txt']."',`relay2txt`='".$_POST['relay2txt']."',`relay3txt`='".$_POST['relay3txt']."',`relay4txt`='".$_POST['relay4txt']."' WHERE `Id`=1";
         $DBH->exec($sql);
 
-        $sql="UPDATE `ais` SET `aisname`='".strtoupper($_POST['aisname'])."', `aisid`='".$_POST['aisid']."', `aisuse`='".$_POST['aisuse']."' WHERE `Id`=1";
+        $sql="UPDATE `ais` SET `aisname`='".strtoupper($_POST['aisname'])."', `aiscallsign`='".strtoupper($_POST['aiscallsign'])."', `aisid`='".$_POST['aisid']."', `aisuse`='".$_POST['aisuse']."' WHERE `Id`=1";
+        $DBH->exec($sql);
         $DBH->exec($sql);
 
         if (($n=intval($_POST['nttys'])) > 0) {
@@ -140,12 +141,14 @@
         $smlog_disp=$row['display'];
         $smlog_calb=$row['cal'];
 
-        $stmt = $DBH->prepare("SELECT aisname, aisid, aisuse FROM ais LIMIT 1");
+        $stmt = $DBH->prepare("SELECT aisname, aiscallsign, aisid, aisuse, ro FROM ais LIMIT 1");
         $stmt->execute(); 
         $row = $stmt->fetch();
         $aisname=$row['aisname'];
+        $aiscallsign=$row['aiscallsign'];
         $aisid=$row['aisid'];
         $aisuse=$row['aisuse'];
+        $aisro=$row['ro'];
 
         $stmt = $DBH->prepare("SELECT device,relay1txt,relay2txt,relay3txt,relay4txt FROM devadc LIMIT 1");
         $stmt->execute(); 
