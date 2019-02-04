@@ -72,6 +72,13 @@
 #define SWREV __DATE__
 #endif
 
+// Sentences to control AIS transmitter on/off. Works for Ray, SRT and others.
+// NOTE: NOTE: "--QuaRk--" is actually a password that might changed by the manufacturer.
+#define AIXTRXON	"$PSRT,012,,,(--QuaRk--)*4B\r\n$PSRT,TRG,02,00*6A\r\n"
+#define AISTRXOFF	"$PSRT,012,,,(--QuaRk--)*4B\r\n$PSRT,TRG,02,33*6A\r\n"
+// The serial device to send the AIXTRX* messages to.
+#define USBAISSERIAL	"/dev/ttyUSB-AIS"
+
 #define MAX_LWSZ    32768   // Max payload size for uncompressed websockets data 
 #define WS_FRAMEZ   8192    // Websocket frame size  
 #define MAX_TTYS    50      // No of serial devices to manage in the db
@@ -856,9 +863,7 @@ static void aisSet(int status)
     struct stat sb;
     int fd;
     char buf[100];
-    char *device = "/dev/ttyUSB-AIS";
-    char *trxOn  = "$PSRT,012,,,(--QuaRk--)*4B\r\n$PSRT,TRG,02,00*6A\r\n";
-    char *trxOff = "$PSRT,012,,,(--QuaRk--)*4B\r\n$PSRT,TRG,02,33*6A\r\n";
+    char *device = USBAISSERIAL;
 
     if (stat(device, &sb)) {
         printlog("Error stat AIS device %s : %s", device, strerror(errno));
@@ -877,9 +882,9 @@ static void aisSet(int status)
     printlog("Set AIS Transmitter %s", status==1? "on":"off");
 
     if (!status)
-        sprintf(buf, trxOff);
+        sprintf(buf, AISTRXOFF);
     else
-        sprintf(buf, trxOn);
+        sprintf(buf, AIXTRXON);
 
     write(fd, buf, strlen(buf));
 
@@ -2030,8 +2035,8 @@ int main(int argc ,char **argv)
             if (debug && ais_rval) printlog("AIS return=%d, msgid=%d  msg='%s'\n", ais_rval, ais.msgid, nmeastr);
 
             // Update GUI with this vessels' data
-            if (aisnameSet == 0 && ais.msgid == 24 && name != NULL && callsign != NULL && userid > 100) {
-                char vdobuf[40];
+            if (aisnameSet == 0 && fileFeed == 0 && ais.msgid == 24 && name != NULL && callsign != NULL && userid > 100) {
+                char vdobuf[100];
                 sqlite3 *conn;
                 sqlite3_stmt *res;
                 const char *tail;
