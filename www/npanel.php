@@ -320,10 +320,6 @@ function enter_key()
     document.getElementById("msg").innerHTML="";
     
     if (key.length) {
-        if (!/^[a-z0-9]+$/i.test(key)) {
-            document.getElementById("msg").innerHTML="Invalid key string";
-            return;
-        }
         document.getElementById("msg").innerHTML="Your key: '"+key+"', now save your configuration";
         document.getElementById("gkey").value = key;
         return;
