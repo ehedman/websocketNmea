@@ -65,9 +65,11 @@
 
         $sql="UPDATE `ais` SET `aisname`='".strtoupper($_POST['aisname'])."', `aiscallsign`='".strtoupper($_POST['aiscallsign'])."', `aisid`='".$_POST['aisid']."', `aisuse`='".$_POST['aisuse']."' WHERE `Id`=1";
         $DBH->exec($sql);
-        $DBH->exec($sql);
 
         if (($n=intval($_POST['nttys'])) > 0) {
+            $stmt = $DBH->prepare("UPDATE `ttys` SET `name`='undef', `baud`='4800', `dir`='in', `use`='off' WHERE `name`!='undef'");
+            $stmt->execute();
+
             for ($i=1; $i <$n+1; $i++) {
                 if (isset($_POST['tty'][$i]['use'])) {
                     $sql="UPDATE `ttys` SET `name`='".$_POST['tty'][$i]['name']."', ";
@@ -75,14 +77,15 @@
                     $sql.="`dir`='".$_POST['tty'][$i]['dir']."', ";
                     $sql.="`use`='".$_POST['tty'][$i]['use']."' ";
                     $sql.="WHERE `Id`=$i";
-                } else {
-                    $sql="UPDATE `ttys` SET `use`='off' WHERE `Id`=$i";
                 }
                 $DBH->exec($sql);
             }
         }
  
         if (($n=intval($_POST['nnetifs'])) > 0) {
+            $stmt = $DBH->prepare("UPDATE `netif` SET `device`='undef', `port`='10110', `addr`='127.0.0.1', `type`='unicast', `proto`='tcp', `use`='off' WHERE `device`!='undef'");
+            $stmt->execute();
+
             $ipa=array();
             $bca=array();
             for ($i=1; $i <$n+1; $i++) {
