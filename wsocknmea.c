@@ -66,6 +66,8 @@
 #define GID 33
 #endif
 
+#define DEFAULT_AUTH "200ceb26807d6bf99fd6f4f0d1ca54d4" // MD5 password = "administrator" used outside LAN
+
 #ifdef REV
 #define SWREV REV
 #else
@@ -362,11 +364,13 @@ static void exit_clean(int sig)
     pNmeaStatus = 0;
 
     sleep(1);
-   
+ 
+#if 0  
     if (threadKplex) {
         if (pthread_self() != threadKplex)
             pthread_cancel(threadKplex);
     }
+#endif
     
     if (pidKplex) {
         kill (pidKplex, SIGINT);
@@ -632,6 +636,9 @@ static int configure(int kpf)
                     sqlite3_prepare_v2(conn, "CREATE TABLE rev(Id INTEGER PRIMARY KEY,  rev TEXT)", -1, &res, &tail);
                     sqlite3_step(res);
 
+                    sqlite3_prepare_v2(conn, "CREATE TABLE auth(Id INTEGER PRIMARY KEY,  password TEXT)", -1, &res, &tail);
+                    sqlite3_step(res);
+
                     sqlite3_prepare_v2(conn, "CREATE TABLE gmap(Id INTEGER PRIMARY KEY, zoom INTEGER, updt INTEGER, key TEXT)", -1, &res, &tail);
                     sqlite3_step(res);
   
@@ -667,6 +674,10 @@ static int configure(int kpf)
 #else
                     sprintf(buf, "INSERT INTO rev (rev) VALUES ('unknown')");
 #endif
+                    sqlite3_prepare_v2(conn, buf, -1, &res, &tail);
+                    sqlite3_step(res);
+
+                    sprintf(buf, "INSERT INTO auth (password) VALUES ('%s')", DEFAULT_AUTH);
                     sqlite3_prepare_v2(conn, buf, -1, &res, &tail);
                     sqlite3_step(res);
 

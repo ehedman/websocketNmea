@@ -34,6 +34,7 @@
         <link rel="stylesheet" type="text/css" href="inc/navi.css">
         <script type="text/javascript" src="inc/jquery-2.1.1.min.js"></script>
         <script type="text/javascript" src="inc/pako.js"></script>
+        <script type="text/javascript" src="inc/webtoolkit.md5.js"></script>
         
 <?php if($NIGHT==1) { ?>
 
@@ -152,6 +153,25 @@ function dorelay()
 function doAis(status)
 {
     send(Cmd.AisTrxStatus + "-" + status);
+}
+
+function docheckpw()
+{
+    var status;
+    if (document.getElementById("password").value.length >8) {
+        md5pw = MD5(document.getElementById("password").value);
+        if (md5pw.trim() === "<?php echo $password; ?>".trim()) {
+            document.getElementById("msg").innerHTML="";
+            status = false;
+        } else {
+            document.getElementById("msg").innerHTML="Invalid authentication string";
+            status = true;
+        }
+        document.getElementById("Play").disabled = status;
+        document.getElementById("Save").disabled = status;
+        document.getElementById("trx-status").disabled = status;
+        document.getElementById("relayAction").disabled = status;        
+    }
 }
 
 function new_panel()
@@ -385,6 +405,13 @@ function done_config(val)
         }
     }
 
+<?php if ($NOSAVE==1 ) {?>
+    if (document.getElementById("password").value.length > 7) {
+        var md5pw = MD5(document.getElementById("password").value);
+        document.getElementById("password").value = md5pw.trim();
+    } else document.getElementById("password").value = "";
+<?php } ?>
+
     f.submit();
 }
 
@@ -534,12 +561,10 @@ function dragElement(elmnt) {
                         
     <table style="padding:6px;padding-top:30px">
         <tr>
-            <td style="width:33%"><h1>Instrument Settings</h1></td>
-            <td style="width:33%"><h1>KPlex Settings</h1></td>  
-            <td style="width:33%"><h1>Network Settings</h1></td>
+            <td style="text-align:center;" colspan="3"><h1><?php echo $aisname ?> Settings</h1></td>
         </tr>
     <tr>
-        <td> <!-- Left Column -->
+        <td style="width:33%;"> <!-- Left Column -->
         <table>
             <tr>
                 <td class="contentBox">
@@ -570,8 +595,8 @@ function dragElement(elmnt) {
                     Vessel Userid<br><input <?php echo $aisro==1? "readonly ":""; ?>type="text" name="aisid" id="aisid" title="This vessels' i.d (MMSI) - nine digits" maxlength="9" value="<?php echo $aisid ?>"><br>
                     Use<input type="checkbox" onclick="setaisuse(this);" title="Show AIS on Google Map"<?php echo $aisuse==1? " checked=checked":""; ?>><br>
                     <div>
-                        <input type="radio" name="trx-status" onclick="doAis(1)">Transmitter On<br>
-                        <input type="radio" name="trx-status" onclick="doAis(0)">Transmitter Off<br>
+                        <input type="radio"<?php echo $NOSAVE==1? " disabled":""; ?> id="trx-status" name="trx-status" onclick="doAis(1)">Transmitter On<br>
+                        <input type="radio"<?php echo $NOSAVE==1? " disabled":""; ?> id="trx-status" name="trx-status" onclick="doAis(0)">Transmitter Off<br>
                     </div>
                 </td>
             </tr>
@@ -626,12 +651,13 @@ function dragElement(elmnt) {
         </table>
         </td>
         
-        <td>  <!-- Center Column -->
+        <td style="width:33%;">  <!-- Center Column -->
         <table>
             <tr>
                 <td class="contentBox">
                     <h2>Serial</h2>
                    <?php print_serInterfaces(); ?>
+
                 </td>
             </tr>
             <tr>
@@ -652,15 +678,14 @@ function dragElement(elmnt) {
                           <option value="48">48</option>
                         </select>
                     </label>
-                    <input style="position:relative;left:30%;" type="submit" title="Play this file<?php echo $NOSAVE==1? " (Restricted to LAN only)":""; ?>" value="Play"<?php echo $NOSAVE==1? " disabled":""; ?> onclick="submit_file();">
+                    <input style="position:relative;left:30%;" type="submit" title="Play this file<?php echo $NOSAVE==1? " (Restricted to LAN only)":""; ?>" value="Play"<?php echo $NOSAVE==1? " disabled":""; ?> id="Play" onclick="submit_file();">
                     
                 </td>
             </tr>
             <tr>
                 <td class="contentBox" style="padding-right:16px; padding-left:16px">
-                    <h1>Data Acquisition Module</h1>
-                    <h2>UK1104 I/O Board</h2>
-                    <input type="text" name="a2dserial" title="UK1104 Serial Device" id="a2dserial" maxlength="20" value="<?php echo $a2dserial ?>"><br>
+                    <h2>Relay Settings</h2>
+                    <input type="text" name="a2dserial" title="UK1104 Data Acquisition Module" id="a2dserial" maxlength="20" value="<?php echo $a2dserial ?>"><br>
                     <div id="relayContent">
                         Relay-1<input type="checkbox" id="relay1" title="Relay 1 ON/OFF">
                         <input type="text" title="Description" name ="relay1txt" id="relay1txt" size="14" value="<?php echo $a2dreltxt1 ?>"><br>
@@ -670,7 +695,7 @@ function dragElement(elmnt) {
                         <input type="text" title="Description" name ="relay3txt" id="relay3txt" size="14" value="<?php echo $a2dreltxt3 ?>"><br>
                         Relay-4<input type="checkbox" id="relay4" title="Relay 4 ON/OFF">
                         <input type="text" title="Description" name ="relay4txt" id="relay4txt" size="14" value="<?php echo $a2dreltxt4 ?>"><br>
-                        <input type="button" id="relayAction" value="Send settings" title="Send settings now" onclick="dorelay()">
+                        <input type="button"<?php echo $NOSAVE==1? " disabled":""; ?> id="relayAction" value="Send settings" title="Send settings now" onclick="dorelay()">
                     </div>
                 </td>
             </tr>
@@ -678,7 +703,7 @@ function dragElement(elmnt) {
         </table>
         </td>
         
-        <td> <!-- Right Column -->
+        <td style="width:33%;"> <!-- Right Column -->
         <table>
             <tr>
                 <td class="contentBox">
@@ -687,16 +712,28 @@ function dragElement(elmnt) {
                     
                 </td>
             </tr>
+<?php if ($NOSAVE==1 ) {?>
+            <tr>
+                <td class="contentBox">
+                    <h2 title="Unlock protected fields">Authentication</h2>
+                    <input title="Password (8 characters minimum)" type="password" id="password" name="password" minlength="8" required>
+                    <input type="button" title="Confirm" value="OK" onclick="docheckpw();">
+                </td>
+            </tr>
+<?php }?>
+            <tr>       
+                <td style="padding-top:60px;text-align:right;"><input type="submit" title="Save settings<?php echo $NOSAVE==1? " (Restricted to LAN only)":""; ?>" id="Save" value="Save"<?php echo $NOSAVE==1? " disabled":""; ?>>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding-top:170px;"><a title="Go to GitHub" href="http://github.com/ehedman/websocketNmea" target="_blank">About Navigation Panel rev <?php echo $revision; ?></a></td>
+            </tr>
         </table>
         </td>
-       
+         
     </tr>
     <tr>
         <td colspan="3" style="text-align: left;"><div id="msg"></div></td>
-    </tr>
-    <tr>
-        <td style="text-align: left;"><a title="Go to github" href="http://github.com/ehedman/websocketNmea" target="_blank">About Navigation Panel</a></td>
-        <td colspan="2" style="text-align: right;"><input type="submit" title="Save settings<?php echo $NOSAVE==1? " (Restricted to LAN only)":""; ?>" value="Save"<?php echo $NOSAVE==1? " disabled":""; ?>></td>
     </tr>
     </table> 
     </form>

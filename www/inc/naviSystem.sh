@@ -48,10 +48,9 @@ get_nrecordings()
 
 restart_wsserver()
 {
-    systemctl status wsocknmea.service 2> /dev/null | grep -q "(running)"
-    if [ $? -eq 0 ]; then
-        systemctl restart wsocknmea.service
-    else
+    systemctl restart wsocknmea.service &> /dev/null
+    if [ $? -ne 0 ]; then
+        # Lost for systemd but alive with new pid
         echo $* > /tmp/wss-reboot
     fi
 }
