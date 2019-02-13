@@ -79,8 +79,8 @@ function do_update()
             toggle = true;
 
         if (document.getElementById("a2dserial").value == "/dev/null" || document.getElementById("a2dserial").value == "")
-            document.getElementById("relayContent").style.visibility="hidden";
-        else document.getElementById("relayContent").style.visibility="visible";
+            document.getElementById("relayContent").style.display = "none";
+        else document.getElementById("relayContent").style.display = "block";
 
         if (toggle == true)
             send(Cmd.ServerPing);
@@ -150,9 +150,9 @@ function dorelay()
 
 }
 
-function doAis(status)
+function doAis(cb)
 {
-    send(Cmd.AisTrxStatus + "-" + status);
+    send(Cmd.AisTrxStatus + "-" + cb.checked);
 }
 
 function docheckpw()
@@ -161,10 +161,10 @@ function docheckpw()
     if (document.getElementById("password").value.length >8) {
         md5pw = MD5(document.getElementById("password").value);
         if (md5pw.trim() === "<?php echo $password; ?>".trim()) {
-            document.getElementById("msg").innerHTML="";
+            document.getElementById("msg").innerHTML=": Unlocked";
             status = false;
         } else {
-            document.getElementById("msg").innerHTML="Invalid authentication string";
+            document.getElementById("msg").innerHTML=": Invalid authentication string";
             status = true;
         }
         document.getElementById("Play").disabled = status;
@@ -268,7 +268,7 @@ $(document).ready(function()
     window.onresize=check_overlap;
     check_overlap();
     <?php echo count($_FILES)? 'document.getElementById("config").style.display = "block";':""; ?>
-    document.getElementById("msg").innerHTML="<?php echo $PMESSAGE ?>";
+    document.getElementById("msg").innerHTML=": <?php echo $PMESSAGE ?>";
 
     init(); // common.js.php
 });
@@ -337,10 +337,10 @@ function enter_key()
 {
     var key = prompt("Please enter your Google Map Key"<?php echo strlen($KEY)? ',"'.$KEY.'"':""; ?>);
 
-    document.getElementById("msg").innerHTML="";
+    document.getElementById("msg").innerHTML=":";
     
     if (key.length) {
-        document.getElementById("msg").innerHTML="Your key: '"+key+"', now save your configuration";
+        document.getElementById("msg").innerHTML=": Your key: '"+key+"', now save your configuration";
         document.getElementById("gkey").value = key;
         return;
     }  
@@ -350,7 +350,7 @@ function delete_key()
 {
     var key = "<?php echo $KEY; ?>";
 
-    document.getElementById("msg").innerHTML="Your key: '"+key+"', is to be deleted. Now save your configuration";
+    document.getElementById("msg").innerHTML=": Your key: '"+key+"', is to be deleted. Now save your configuration";
     document.getElementById("gkey").value = "invalid";
 }
 
@@ -368,17 +368,17 @@ function done_config(val)
     var l;
     if ((l=document.getElementById("aisid").value.length) >0) {
         if (l != 9) {
-            document.getElementById("msg").innerHTML="Invalid lenght in field 'Vessel Userid'. Should be 9 digits";
+            document.getElementById("msg").innerHTML=": Invalid lenght in field 'Vessel Userid'. Should be 9 digits";
             return false;
         }
         if (isDecimal(document.getElementById("aisid").value) == false) {
-            document.getElementById("msg").innerHTML="Invalid digit(s) in field 'Vessel Userid'";
+            document.getElementById("msg").innerHTML=": Invalid digit(s) in field 'Vessel Userid'";
             return false;
         }
     }
 
     if (/[^0-9a-zA-Z/\s]/gi.test(document.getElementById("aisname").value)) {
-        document.getElementById("msg").innerHTML="Invalid character(s) in field 'Vessel Name'";
+        document.getElementById("msg").innerHTML=": Invalid character(s) in field 'Vessel Name'";
         return false;
     }
     
@@ -391,14 +391,14 @@ function done_config(val)
             
         obj=document.getElementById("nwaddr-"+i);
         if (isIPValid(obj) == false) {
-            document.getElementById("msg").innerHTML="Invalid I.P address";
+            document.getElementById("msg").innerHTML=": Invalid I.P address";
             document.getElementById("nifs-"+i).style.display = "block";
             obj.focus();
             return false;
         }
         obj=document.getElementById("nwport-"+i);
         if (isDecimal(obj.value) == false) {
-            document.getElementById("msg").innerHTML="Invalid Port number";
+            document.getElementById("msg").innerHTML=": Invalid Port number";
             document.getElementById("nifs-"+i).style.display = "block";
             obj.focus();
             return false;
@@ -593,11 +593,8 @@ function dragElement(elmnt) {
                     Vessel Name<br><input <?php echo $aisro==1? "readonly ":""; ?>type="text" style="text-transform:uppercase" name="aisname" title="This vessels' name" id="aisname" maxlength="20" value="<?php echo $aisname ?>"><br>
                     Vessel Callsign<br><input <?php echo $aisro==1? "readonly ":""; ?>type="text" style="text-transform:uppercase" name="aiscallsign" title="This vessels' Callsign" id="aiscallsign" maxlength="20" value="<?php echo $aiscallsign ?>"><br>
                     Vessel Userid<br><input <?php echo $aisro==1? "readonly ":""; ?>type="text" name="aisid" id="aisid" title="This vessels' i.d (MMSI) - nine digits" maxlength="9" value="<?php echo $aisid ?>"><br>
-                    Use<input type="checkbox" onclick="setaisuse(this);" title="Show AIS on Google Map"<?php echo $aisuse==1? " checked=checked":""; ?>><br>
-                    <div>
-                        <input type="radio"<?php echo $NOSAVE==1? " disabled":""; ?> id="trx-status" name="trx-status" onclick="doAis(1)">Transmitter On<br>
-                        <input type="radio"<?php echo $NOSAVE==1? " disabled":""; ?> id="trx-status" name="trx-status" onclick="doAis(0)">Transmitter Off<br>
-                    </div>
+                    Use<input type="checkbox" onclick="setaisuse(this);" title="Show AIS on Google Map"<?php echo $aisuse==1? " checked=checked":""; ?>>
+                    Transmitter On<input type="checkbox"<?php echo $NOSAVE==1? " disabled":""; ?> id="trx-status" title="Send settings now" onchange="doAis(this)">
                 </td>
             </tr>
             <tr>
@@ -678,7 +675,7 @@ function dragElement(elmnt) {
                           <option value="48">48</option>
                         </select>
                     </label>
-                    <input style="position:relative;left:30%;" type="submit" title="Play this file<?php echo $NOSAVE==1? " (Restricted to LAN only)":""; ?>" value="Play"<?php echo $NOSAVE==1? " disabled":""; ?> id="Play" onclick="submit_file();">
+                    <input style="position:relative;left:30%;" type="submit" title="Play this file" value="Play"<?php echo $NOSAVE==1? " disabled":""; ?> id="Play" onclick="submit_file();">
                     
                 </td>
             </tr>
@@ -716,24 +713,26 @@ function dragElement(elmnt) {
             <tr>
                 <td class="contentBox">
                     <h2 title="Unlock protected fields">Authentication</h2>
-                    <input title="Password (8 characters minimum)" type="password" id="password" name="password" minlength="8" required>
+                    <input title="Password (8 characters minimum)" type="password" id="password" name="password" autocomplete="off" minlength="8" required>
                     <input type="button" title="Confirm" value="OK" onclick="docheckpw();">
                 </td>
             </tr>
 <?php }?>
-            <tr>       
-                <td style="padding-top:60px;text-align:right;"><input type="submit" title="Save settings<?php echo $NOSAVE==1? " (Restricted to LAN only)":""; ?>" id="Save" value="Save"<?php echo $NOSAVE==1? " disabled":""; ?>>
-                </td>
-            </tr>
             <tr>
-                <td style="padding-top:170px;"><a title="Go to GitHub" href="http://github.com/ehedman/websocketNmea" target="_blank">About Navigation Panel rev <?php echo $revision; ?></a></td>
+                <td class="contentBox">
+                    <h2 title="Save and restart server">Save configuration</h2>
+                    <input type="submit" title="Save settings" id="Save" value="Save"<?php echo $NOSAVE==1? " disabled":""; ?>>
+                </td>
             </tr>
         </table>
         </td>
          
     </tr>
     <tr>
-        <td colspan="3" style="text-align: left;"><div id="msg"></div></td>
+        <td colspan="2" style="text-align: left;"><div id="msg"></div></td>
+        <td style="text-align: right">
+            <a title="Go to GitHub" href="http://github.com/ehedman/websocketNmea" target="_blank">About Panel rev <?php echo $revision; ?></a>
+        </td>
     </tr>
     </table> 
     </form>
