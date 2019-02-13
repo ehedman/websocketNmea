@@ -165,12 +165,14 @@ function docheckpw()
             status = false;
         } else {
             document.getElementById("msg").innerHTML=": Invalid authentication string";
+            document.getElementById("dosavePw").checked = false;
             status = true;
         }
         document.getElementById("Play").disabled = status;
         document.getElementById("Save").disabled = status;
         document.getElementById("trx-status").disabled = status;
-        document.getElementById("relayAction").disabled = status;        
+        document.getElementById("relayAction").disabled = status;  
+        document.getElementById("dosavePw").disabled = status;       
     }
 }
 
@@ -406,9 +408,11 @@ function done_config(val)
     }
 
 <?php if ($NOSAVE==1 ) {?>
-    if (document.getElementById("password").value.length > 7) {
-        var md5pw = MD5(document.getElementById("password").value);
-        document.getElementById("password").value = md5pw.trim();
+    if (document.getElementById("dosavePw").checked == true) {
+        if (document.getElementById("password").value.length > 7) {
+            var md5pw = MD5(document.getElementById("password").value);
+            document.getElementById("password").value = md5pw.trim();
+        } else document.getElementById("password").value = "";
     } else document.getElementById("password").value = "";
 <?php } ?>
 
@@ -713,8 +717,9 @@ function dragElement(elmnt) {
             <tr>
                 <td class="contentBox">
                     <h2 title="Unlock protected fields">Authentication</h2>
-                    <input title="Password (8 characters minimum)" type="password" id="password" name="password" autocomplete="off" minlength="8" required>
-                    <input type="button" title="Confirm" value="OK" onclick="docheckpw();">
+                    <input title="Password (8 characters minimum)" type="password" id="password" name="password" autocomplete="off" minlength="8" required><br>
+                    Autosave &nbsp;<input type="checkbox"<?php echo $NOSAVE==1? " disabled":""; ?> title="Save new password on save configuration" id="dosavePw">
+                    Confirm &nbsp;<input type="button" title="Set password" value="OK" onclick="docheckpw();">
                 </td>
             </tr>
 <?php }?>
