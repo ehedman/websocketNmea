@@ -31,6 +31,7 @@ var Cmd = {
     SensorRelay         : "203",
     SensorRelayStatus   : "204",
     AisTrxStatus        : "206",
+    AisTrxTxs           : "207",
     WaterMakerData      : "210",
     ServerPing          : "900",
     TimeOfDAy           : "901",

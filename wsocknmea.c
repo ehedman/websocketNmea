@@ -109,6 +109,7 @@ enum requests {
     SensorRelay         = 203,
     SensorRelayStatus   = 204,
     AisTrxStatus        = 206,
+    AisTrxTxs           = 207,
     WaterMakerData      = 210,
     ServerPing          = 900,
     TimeOfDAy           = 901,
@@ -186,6 +187,8 @@ typedef struct {
     char    glo[40];    // Position Longitude
     char    glns[2];    // North (N) or South (S)
     char    glne[2];    // East (E) or West (W)
+    int     txs;        // AIS transponder transmitter status
+    time_t  txs_ts;     // AIS transponder Timestamp
     // Sensors non NMEA
     float   volt;       // Sensor Volt
     time_t  volt_ts;    // Volt Timestamp
@@ -1156,6 +1159,12 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                     break;
                 }
 
+                case AisTrxTxs: {
+                    cnmea.txs = ct - cnmea.txs_ts > INVALID? -1:cnmea.txs;
+                        sprintf(value, "{'aisTxs':'%d'}-%d", cnmea.txs, req);
+                    break;
+                }
+
                 case ServerPing: { // Diagnostics: ping kplex/talkers presence with RMC
                         sprintf(value, "{'status':'%d'}-%d", ct-cnmea.rmc_ts > INVALID?0:1, req);
                     break;
@@ -1912,6 +1921,19 @@ int main(int argc ,char **argv)
                     cnmea.vwr_ts = ts;
                     continue;
                 }
+            }
+
+            // SRT ($PSRT,TXS,0008,1*4F)
+            if (NMPARSE(nmeastr, "RT")) {
+                if (!strncmp("TXS", getf(1, nmeastr),3)) {
+                    if (atoi(getf(2, nmeastr)))
+                        cnmea.txs = 0;
+                    else
+                        cnmea.txs = 1;
+
+                    cnmea.txs_ts = ts;
+                }
+                continue;
             }
 
             if (*nmeastr != '!' || !aisconf.my_useais) continue;

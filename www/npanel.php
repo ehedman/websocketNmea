@@ -59,8 +59,9 @@ var update = 2000;
 var ticks = 1000;
 var debug = false;
 var connection = true;
-var toggle = true;
 var underConfig = false;
+var aisping = 1;
+var pollitem = 0;
 
 var stled = document.createElement("img");
 stled.setAttribute("height", "46");
@@ -68,24 +69,30 @@ stled.setAttribute("width", "46");
 
 function do_update()
 {
-    toggle = (toggle? 0 : 1);
-
     if (connection) {
         stled.src = 'img/indicator-green.png'
         stled.setAttribute("title", "Server OK");
         document.getElementById("status").appendChild(stled);
 
-        if (underConfig == true)
-            toggle = true;
-
         if (document.getElementById("a2dserial").value == "/dev/null" || document.getElementById("a2dserial").value == "")
             document.getElementById("relayContent").style.display = "none";
         else document.getElementById("relayContent").style.display = "block";
 
-        if (toggle == true)
-            send(Cmd.ServerPing);
-        else
-            send(Cmd.SensorRelayStatus);
+         if (underConfig == true) {
+                switch (pollitem++)
+                {
+                    case 0: send(Cmd.ServerPing); break;
+                    case 1: send(Cmd.AisTrxTxs); break;              
+                    default: pollitem = 0; break;
+                }
+            } else {
+                switch (pollitem++)
+                {
+                    case 0: send(Cmd.ServerPing); break;
+                    case 1: send(Cmd.SensorRelayStatus); break;               
+                    default: pollitem = 0; break;
+                }
+            }
         
         if (pt == 0)           
             pt = setInterval(function () {do_poll();}, ticks);
@@ -114,16 +121,28 @@ function do_poll()
     if (valid == Cmd.SensorRelayStatus) {
         setRelayStatus(val.relaySts);
         return;
-    }
+    } else if (valid == Cmd.SensorRelay) { return; }
+
+    if (valid == Cmd.AisTrxTxs && --aisping == 0) {
+        aisping++;
+
+        if (val.aisTxs == -1) {
+             document.getElementById("trx-status-div").style.display = "none";
+        } else {        
+            document.getElementById("trx-status-div").style.display = "inline-block";
+            document.getElementById("trx-status").checked = val.aisTxs == 1? true : false;
+        }
+        return;
+    } else if (valid == Cmd.AisTrxTxs || valid == Cmd.AisTrxStatus) { return; }
 
     if (connection == false || !(valid == Cmd.ServerPing)) {
-        stled.src = 'img/indicator-red.png'
+        stled.src = 'img/indicator-red.png'; alert(valid);
         stled.setAttribute("title", "Server Fail");
         document.getElementById("status").appendChild(stled);
         return;
     }
 
-    if (val.status == 0) {
+    if (valid == Cmd.ServerPing && val.status == 0) {
         stled.src = 'img/indicator-yellow.png'
         stled.setAttribute("title", "No data (kplex)");
         document.getElementById("status").appendChild(stled);
@@ -147,12 +166,13 @@ function dorelay()
         rlbits |= (1 << 3);
     }
     send(Cmd.SensorRelay + "-" + rlbits);
-
 }
 
 function doAis(cb)
 {
-    send(Cmd.AisTrxStatus + "-" + cb.checked);
+    var status = cb.checked == true? 1:0;
+    aisping = 5;
+    send(Cmd.AisTrxStatus + "-" + status);
 }
 
 function docheckpw()
@@ -598,7 +618,9 @@ function dragElement(elmnt) {
                     Vessel Callsign<br><input <?php echo $aisro==1? "readonly ":""; ?>type="text" style="text-transform:uppercase" name="aiscallsign" title="This vessels' Callsign" id="aiscallsign" maxlength="20" value="<?php echo $aiscallsign ?>"><br>
                     Vessel Userid<br><input <?php echo $aisro==1? "readonly ":""; ?>type="text" name="aisid" id="aisid" title="This vessels' i.d (MMSI) - nine digits" maxlength="9" value="<?php echo $aisid ?>"><br>
                     Use<input type="checkbox" onclick="setaisuse(this);" title="Show AIS on Google Map"<?php echo $aisuse==1? " checked=checked":""; ?>>
-                    Transmitter On<input type="checkbox"<?php echo $NOSAVE==1? " disabled":""; ?> id="trx-status" title="Send settings now" onchange="doAis(this)">
+                    <div id="trx-status-div" style="display: inline-block;">
+                        Transmitter On<input type="checkbox"<?php echo $NOSAVE==1? " disabled":""; ?> id="trx-status" title="Send settings now" onchange="doAis(this)">
+                    </div>
                 </td>
             </tr>
             <tr>
