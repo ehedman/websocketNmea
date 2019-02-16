@@ -285,7 +285,8 @@ function kplex_config($args)
                 if ($STTYS[$i]['use'] != 'on')
                     continue;
                 $str="[serial]\n";
-                $str.="direction=".$STTYS[$i]['dir']."\n";
+                $dir=$STTYS[$i]['dir'] === "Ais"? "in" : $STTYS[$i]['dir'];
+                $str.="direction=".$dir."\n";
                 $str.="filename=".$STTYS[$i]['name']."\n";
                 $str.="baud=".$STTYS[$i]['baud']."\n\n";
                 fputs($fd, $str);   
@@ -423,6 +424,7 @@ function print_serInterfaces()
                             <option <?php echo $STTYS[$dev]['dir']=='In'?  'selected ':' ' ?>value="In">In</option>
                             <option <?php echo $STTYS[$dev]['dir']=='Out'? 'selected ':' ' ?>value="Out">Out</option>
                             <option <?php echo $STTYS[$dev]['dir']=='Both'? 'selected ':' ' ?>value="Both">Both</option>
+                            <option <?php echo $STTYS[$dev]['dir']=='Ais'? 'selected ':' ' ?>value="Ais" title="If transceiver">Ais</option>
                         </select>
                         <label title="Use this device">Use:</label>
                         <input <?php echo $STTYS[$dev]['use']=='on'? 'checked ':' ' ?>type="checkbox" name="<?php echo "tty[$dev][use]"; ?>">

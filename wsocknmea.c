@@ -75,11 +75,9 @@
 #endif
 
 // Sentences to control AIS transmitter on/off. Works for Ray, SRT and others.
-// NOTE: NOTE: "--QuaRk--" is actually a password that might changed by the manufacturer.
+// NOTE: "--QuaRk--" is actually a password that might changed by the manufacturer.
 #define AIXTRXON	"$PSRT,012,,,(--QuaRk--)*4B\r\n$PSRT,TRG,02,00*6A\r\n"
 #define AISTRXOFF	"$PSRT,012,,,(--QuaRk--)*4B\r\n$PSRT,TRG,02,33*6A\r\n"
-// The serial device to send the AIXTRX* messages to.
-#define USBAISSERIAL	"/dev/ttyUSB-AIS"
 
 #define MAX_LWSZ    32768   // Max payload size for uncompressed websockets data 
 #define WS_FRAMEZ   8192    // Websocket frame size  
@@ -150,6 +148,7 @@ typedef struct {
     int     depth_vwrn;     // Depth visual low warning
     float   depth_transp;   // Depth of transponer
     char    adc_dev[40];    // ADC in /dev
+    char    ais_dev[40];    // AIS in /dev
 } in_configs;
 
 static in_configs iconf;
@@ -763,6 +762,11 @@ static int configure(int kpf)
             aisconf.my_userid = (long)sqlite3_column_int(res, 1);
             aisconf.my_useais = sqlite3_column_int(res, 2);
     }
+    rval = sqlite3_prepare_v2(conn, "select name from ttys where dir = 'Ais' limit 1", -1, &res, &tail);
+    if (rval == SQLITE_OK && sqlite3_step(res) == SQLITE_ROW) {
+        (void)strcpy(iconf.ais_dev, (char*)sqlite3_column_text(res, 0));
+        printlog("   AIS device:  %s", iconf.ais_dev);
+    } else iconf.ais_dev[0]= '\0';
 
     // Still in file feed config mode?
     if ((fd=open(KPCONFPATH, O_RDONLY)) > 0) {    
@@ -877,15 +881,17 @@ static void aisSet(int status)
     struct stat sb;
     int fd;
     char buf[100];
-    char *device = USBAISSERIAL;
 
-    if (stat(device, &sb)) {
-        printlog("Error stat AIS device %s : %s", device, strerror(errno));
+    if (!strlen(iconf.ais_dev))
+        return;
+
+    if (stat(iconf.ais_dev, &sb)) {
+        printlog("Error stat AIS device %s : %s", iconf.ais_dev, strerror(errno));
         return;
     }
 
-    if ((fd=open(device, O_WRONLY)) < 0) {
-        printlog("Error open AIS device %s : %s", device, strerror(errno));
+    if ((fd=open(iconf.ais_dev, O_WRONLY)) < 0) {
+        printlog("Error open AIS device %s : %s", iconf.ais_dev, strerror(errno));
         return;
     }
 

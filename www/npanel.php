@@ -34,7 +34,7 @@
         <link rel="stylesheet" type="text/css" href="inc/navi.css">
         <script type="text/javascript" src="inc/jquery-2.1.1.min.js"></script>
         <script type="text/javascript" src="inc/pako.js"></script>
-        <script type="text/javascript" src="inc/webtoolkit.md5.js"></script>
+<?php if ($NOSAVE==1 ) {?>        <script type="text/javascript" src="inc/webtoolkit.md5.js"></script><?php } ?>
         
 <?php if($NIGHT==1) { ?>
 
@@ -136,7 +136,7 @@ function do_poll()
     } else if (valid == Cmd.AisTrxTxs || valid == Cmd.AisTrxStatus) { return; }
 
     if (connection == false || !(valid == Cmd.ServerPing)) {
-        stled.src = 'img/indicator-red.png'; alert(valid);
+        stled.src = 'img/indicator-red.png';
         stled.setAttribute("title", "Server Fail");
         document.getElementById("status").appendChild(stled);
         return;
@@ -678,7 +678,7 @@ function dragElement(elmnt) {
         <table>
             <tr>
                 <td class="contentBox">
-                    <h2>Serial</h2>
+                    <h2>Multiplexer I/O</h2>
                    <?php print_serInterfaces(); ?>
 
                 </td>
@@ -758,7 +758,7 @@ function dragElement(elmnt) {
     <tr>
         <td colspan="2" style="text-align: left;"><div id="msg"></div></td>
         <td style="text-align: right">
-            <a title="Go to GitHub" href="http://github.com/ehedman/websocketNmea" target="_blank">About Panel rev <?php echo $revision; ?></a>
+            <a title="Go to GitHub" href="https://github.com/ehedman/websocketNmea/tree/<?php echo $revision; ?>" target="_blank">About</a>
         </td>
     </tr>
     </table> 
