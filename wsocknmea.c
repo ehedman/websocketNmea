@@ -76,8 +76,8 @@
 
 // Sentences to control AIS transmitter on/off. Works for Ray, SRT and others.
 // NOTE: "--QuaRk--" is actually a password that might changed by the manufacturer.
-#define AIXTRXON	"$PSRT,012,,,(--QuaRk--)*4B\r\n$PSRT,TRG,02,00*6A\r\n"
-#define AISTRXOFF	"$PSRT,012,,,(--QuaRk--)*4B\r\n$PSRT,TRG,02,33*6A\r\n"
+#define AIXTRXON	"\r\n$PSRT,012,,,(--QuaRk--)*4B\r\n$PSRT,TRG,02,00*6A\r\n"
+#define AISTRXOFF	"\r\n$PSRT,012,,,(--QuaRk--)*4B\r\n$PSRT,TRG,02,33*6A\r\n"
 
 #define MAX_LWSZ    32768   // Max payload size for uncompressed websockets data 
 #define WS_FRAMEZ   8192    // Websocket frame size  
@@ -154,10 +154,10 @@ typedef struct {
 static in_configs iconf;
 
 typedef struct {
-    long    my_userid;  // AIS own user i.d
-    long    my_buddy;   // AIS new buddy
-    char    my_name[80];// AIS own name
-    int     my_useais;  // AIS use or not
+    long    my_userid;          // AIS own user i.d
+    long    my_buddy;           // AIS new buddy
+    char    my_name[80];        // AIS own name
+    int     my_useais;          // AIS use or not
 } in_aisconfigs;
 
 static in_aisconfigs aisconf;
@@ -1478,6 +1478,7 @@ int main(int argc ,char **argv)
 {
     int wsport;
     char nmeastr[300];
+    ais_state ais;
     int opts = 0;
     int c;
     int kplex_fork = 1;
@@ -1691,9 +1692,14 @@ int main(int argc ,char **argv)
 #endif
     
     sleep(3);
+   /* Clear out the structures */
     memset(&cnmea, 0, sizeof(cnmea));
+    memset(&ais, 0, sizeof(ais_state));
+
     aisconf.my_buddy = 0;
-    aisconf.my_userid = 0;
+    long my_userid = 0;
+    char my_callsign[40] = {'\0'};
+    char my_aisname[40]  = {'\0'};
     cnmea.startTime = time(NULL);
 
     // Main loop, to end this server, send signal INT(^c) or TERM
@@ -1706,17 +1712,14 @@ int main(int argc ,char **argv)
         uint8_t checksum;
         socklen_t socklen = sizeof(peer_sa);
         struct stat sb;
-
-        ais_state ais;
         int ais_rval;
         long  userid = 0;
         int trueh = 0;
-        static char *name;
-        static char *callsign;
+        int is_vdo = 0;
+        int is_vdm = 0;
+        char *callsign = NULL;
+        char *aisname;
         static int r_limit;
-        char nmeastr_p1[200];
-        static unsigned char ais_msgid_p1;
-
         static int cog;
         static int aisnameSet;
 
@@ -1735,6 +1738,7 @@ int main(int argc ,char **argv)
         double lat_dd = 0;
         double long_ddd = 0;
         double sog = 0.1;
+        aisname = NULL;
        
         // Reboot/re-configure request from PHP Gui code
         // Only if not under control of systemd
@@ -1752,10 +1756,7 @@ int main(int argc ,char **argv)
         // Get the next sentence from the mux and update
         // the struct of valid data for the duration of 'INVALID'
 
-        memset(nmeastr, 0, sizeof(nmeastr));
-        
-        // Clear out the ais structures if done with the message
-        if (!ais_msgid_p1) memset( &ais, 0, sizeof(ais_state));      
+        memset(nmeastr, 0, sizeof(nmeastr));    
 
         if (socketType == SOCK_STREAM) {
             cnt = recv(muxFd, nmeastr, sizeof(nmeastr), 0);
@@ -1942,160 +1943,183 @@ int main(int argc ,char **argv)
                 continue;
             }
 
-            if (*nmeastr != '!' || !aisconf.my_useais) continue;
+            if (NMPARSE(nmeastr, "VDM")) {
+                is_vdm = 1;
+            }
+            if (NMPARSE(nmeastr, "VDO")) {
+                is_vdo = 1;
+            }
+
+            if (!(is_vdm + is_vdo) || !aisconf.my_useais) continue;
 
             // AIS is handled last ....
 
             ais_rval = assemble_vdm(&ais, nmeastr);
-
-            if (ais_rval == 1) { // We need to assemble part 2 of the message
-                (void)strcpy(nmeastr_p1, nmeastr);
-                ais_msgid_p1 = ais.msgid = (unsigned char)get_6bit( &ais.six_state, 6 );
-                continue;
-            } else if (ais_msgid_p1) {
-                (void)strcat(nmeastr, nmeastr_p1);
-                *nmeastr_p1 = '\0';
-            }
-
-            // Get the 6 bit message id
-            if (!ais_msgid_p1)
-                ais.msgid = (unsigned char)get_6bit( &ais.six_state, 6 );
-            else { // Do with part 2
-                ais.msgid = ais_msgid_p1;
-                ais_msgid_p1 = 0;
-            }
-              
+            ais.msgid = (unsigned char)get_6bit( &ais.six_state, 6 ); 
+        
             // process message with appropriate parser
             switch( ais.msgid ) {
                 case 1: // Message 1,2,3 - Position Report
-                    if( !ais_rval && parse_ais_1( &ais, &msg_1 ) == 0 ) {
-                        userid = msg_1.userid;
-                        pos2ddd( msg_1.latitude, msg_1.longitude, &lat_dd, &long_ddd );
-                        trueh = msg_1.true;
-                        sog =  msg_1.sog;
-                        cog = msg_1.cog;
+                    if( ais_rval >= 0 && parse_ais_1( &ais, &msg_1 ) == 0 ) {
+                        if ((userid = msg_1.userid)) {
+                            pos2ddd( msg_1.latitude, msg_1.longitude, &lat_dd, &long_ddd );
+                            trueh = msg_1.true;
+                            sog =  msg_1.sog;
+                            cog = msg_1.cog;
+                        }
                     }
                     break;
 
                 case 2:
-                    if( !ais_rval && parse_ais_2( &ais, &msg_2 ) == 0 ) {
-                        userid = msg_2.userid;
-                        pos2ddd( msg_2.latitude, msg_2.longitude, &lat_dd, &long_ddd );
-                        trueh = msg_2.true;
-                        sog =  msg_2.sog;
-                        cog = msg_2.cog;
+                    if( ais_rval >= 0 && parse_ais_2( &ais, &msg_2 ) == 0 ) {
+                        if ((userid = msg_2.userid)) {
+                            pos2ddd( msg_2.latitude, msg_2.longitude, &lat_dd, &long_ddd );
+                            trueh = msg_2.true;
+                            sog =  msg_2.sog;
+                            cog = msg_2.cog;
+                        }
                     }
                     break;
 
                 case 3:
-                    if( !ais_rval && parse_ais_3( &ais, &msg_3 ) == 0 ) {
-                        userid = msg_3.userid;
-                        pos2ddd( msg_3.latitude, msg_3.longitude, &lat_dd, &long_ddd );
-                        trueh = msg_3.true;
-                        sog =  msg_3.sog;
-                        cog = msg_2.cog;
+                    if( ais_rval >= 0 && parse_ais_3( &ais, &msg_3 ) == 0 ) {
+                        if ((userid = msg_3.userid)) {
+                            pos2ddd( msg_3.latitude, msg_3.longitude, &lat_dd, &long_ddd );
+                            trueh = msg_3.true;
+                            sog =  msg_3.sog;
+                            cog = msg_2.cog;
+                        }
                     }
                     break;
 
                 case 4: // Message 4 - Base station report
-                   if( r_limit == 10 && !ais_rval && parse_ais_4( &ais, &msg_4 ) == 0 ) {
-                        userid = msg_4.userid;
-                        pos2ddd( msg_4.latitude, msg_4.longitude, &lat_dd, &long_ddd );
-                        name = "BASE STATION";
+                   if( r_limit == 10 && ais_rval >= 0 && parse_ais_4( &ais, &msg_4 ) == 0 ) {
+                        if ((userid = msg_4.userid)) {
+                            pos2ddd( msg_4.latitude, msg_4.longitude, &lat_dd, &long_ddd );
+                            aisname = "BASE STATION";
+
+                        }
                     }
                     break;
 
                 case 5: // Message 5: Ship static and voyage related data  
-                    if( !ais_rval && parse_ais_5( &ais, &msg_5 ) == 0 ) {
-                        userid = msg_5.userid;
-                        name = msg_5.name;
+                    if( ais_rval >= 0 && parse_ais_5( &ais, &msg_5 ) == 0 ) {
+                        if ((userid = msg_5.userid))                                 
+                            aisname = msg_5.name;
                     }
                     break;
 
+
                 case 18: // Message 18 - Class B Position Report 
-                    if( !ais_rval && parse_ais_18( &ais, &msg_18 ) == 0 ) {
-                        userid =  msg_18.userid;
-                        pos2ddd( msg_18.latitude, msg_18.longitude, &lat_dd, &long_ddd );
-                        trueh = msg_18.true;
-                        sog =  msg_18.sog;
+                    if( ais_rval >= 0 && parse_ais_18( &ais, &msg_18 ) == 0 ) {
+                        if((userid =  msg_18.userid)) {
+                            pos2ddd( msg_18.latitude, msg_18.longitude, &lat_dd, &long_ddd );
+                            trueh = msg_18.true;
+                            sog =  msg_18.sog;
+                            if (!my_userid && is_vdo)
+                                my_userid = aisconf.my_userid = userid;
+                        }
                     }
                     break;
 
                 case 19: // Message 19 - Extended Class B equipment position report 
-                    if( !ais_rval && parse_ais_19( &ais, &msg_19 ) == 0 ) {
-                        userid = msg_19.userid;
-                        pos2ddd( msg_19.latitude, msg_19.longitude, &lat_dd, &long_ddd );
-                        name = msg_19.name;
-                        trueh = msg_19.true;
-                        sog =  msg_19.sog;
+                    if( ais_rval >= 0 && parse_ais_19( &ais, &msg_19 ) == 0 ) {
+                        if((userid = msg_19.userid)) {
+                            pos2ddd( msg_19.latitude, msg_19.longitude, &lat_dd, &long_ddd );
+                            trueh = msg_19.true;
+                            sog =  msg_19.sog;
+                            aisname = msg_19.name;
+                        }
                     }
                     break;
 
                 case 21: // Message 21 - Aids To Navigation Report 
-                    if( !ais_rval && parse_ais_21( &ais, &msg_21 ) == 0 ) { 
-                        userid = msg_21.userid;                         
-                        name = msg_21.name;
+                    if( ais_rval >= 0 && parse_ais_21( &ais, &msg_21 ) == 0 ) { 
+                        if((userid = msg_21.userid))                         
+                            aisname = msg_21.name;
                     }
                     break;
 
-                case 24: // Message 24 - Class B/CS Static Data Report - Part A 
-                    if( !ais_rval && parse_ais_24( &ais, &msg_24 ) == 0 ) {      
+                case 24: // Message 24 - Class B/CS Static Data Report 
+                    if( ais_rval >= 0 && parse_ais_24( &ais, &msg_24 ) == 0 ) {      
                         if (msg_24.flags & 1) {
-                            userid = msg_24.userid;
-                            name = msg_24.name;
-                            if (strlen(msg_24.callsign))
-                                callsign = msg_24.callsign;
-					    }                     
+                            if((userid = msg_24.userid)) {
+
+                                if(msg_24.part_number == 0) 
+                                    aisname = msg_24.name;
+
+                                if(!strlen(my_aisname) && is_vdo && my_userid && msg_24.part_number == 0) {
+                                    strcpy(my_aisname, msg_24.name);
+                                }
+
+                                if ((msg_24.flags & 2) && msg_24.part_number == 1) {
+                                    callsign = msg_24.callsign;
+                                    if (!strlen(my_callsign) && is_vdo && my_userid) {
+                                        strcpy(my_callsign, callsign);
+                                    }
+                                }
+                                if (msg_24.part_number == 1)
+                                    memset( &msg_24, 0, sizeof( aismsg_24 ));
+					        }
+                        }
                     }
                     break;
 
-                default: continue; break;
+                default:
+                    if(debug)
+                        printf("not handled msgid = %d --- %s\n", ais.msgid, nmeastr);
+                    continue; break;
 
             }
+            if (!userid)
+                continue;
 
-            if (debug) {
+            if(debug) {
+                printf("%s\n", nmeastr);
                 printlog( "MESSAGE ID   : %d", ais.msgid );
-                printlog( "NAME         : %s", name );
+                printlog( "PART         : %d", ais_rval );
+                printlog( "NAME         : %s", aisname );
                 printlog( "USER ID      : %ld", userid );
-                printlog( "POSITION     : %0.6f %0.6f", fabs(lat_dd), fabs(long_ddd));
-                printlog( "TRUE HEADING : %ld", trueh);
+                printlog( "POSITION     : %0.6f %0.6f", fabs(lat_dd), fabs(long_ddd) );
+                printlog( "TRUE HEADING : %ld", trueh );
                 printlog( "SOG          : %0.1f", sog/10 );
             }
+
             if (!ais_rval && userid != aisconf.my_userid) {
                 sog = sog == 1023? 0 : sog;
                 if (trueh == 511) {
                     trueh = cog >= 3600? 360: cog/10; 
                 }
                 
-                (void)addShip(ais.msgid, userid, fabs(lat_dd), fabs(long_ddd), trueh, sog/10, name, aisconf.my_buddy);
+                (void)addShip(ais.msgid, userid, fabs(lat_dd), fabs(long_ddd), trueh, sog/10, aisname, aisconf.my_buddy);
                 aisconf.my_buddy = 0;
             }
             if (++r_limit > 10) r_limit = 0;
             if (debug && ais_rval) printlog("AIS return=%d, msgid=%d  msg='%s'\n", ais_rval, ais.msgid, nmeastr);
 
             // Update GUI with this vessels' data
-            if (aisnameSet == 0 && fileFeed == 0 && ais.msgid == 24 && name != NULL && callsign != NULL && userid > 100) {
+            if (aisnameSet == 0 && fileFeed == 0 && strlen(my_aisname) && strlen(my_callsign)) {
                 char vdobuf[100];
                 sqlite3 *conn;
                 sqlite3_stmt *res;
                 const char *tail;
 
-                for (int i=0; i < strlen(name); i++) {
-                    if (name[i] == '@') {
-                        name[i] = '\0';
+                for (int i=0; i < strlen(my_aisname); i++) {
+                    if (my_aisname[i] == '@') {
+                        my_aisname[i] = '\0';
                         break;
                     }
                 }
 
-                for (int i=0; i < strlen(callsign); i++) {
-                    if (callsign[i] == '@') {
-                        callsign[i] = '\0';
+                for (int i=0; i < strlen(my_callsign); i++) {
+                    if (my_callsign[i] == '@') {
+                        my_callsign[i] = '\0';
                         break;
                     }
                 }
 
-                sprintf(vdobuf, "UPDATE ais SET aisname = '%s', aiscallsign = '%s', aisid = %ld, ro = 1", name, callsign, userid);
-                printlog("Got VDO from transceiver: MMSI= %ld, NAME= %s, CALLSIGN = %s", userid, name, callsign);
+                sprintf(vdobuf, "UPDATE ais SET aisname = '%s', aiscallsign = '%s', aisid = %ld, ro = 1", my_aisname, my_callsign, aisconf.my_userid);
+                printlog("Got VDO from transceiver: MMSI= %ld, NAME= %s, CALLSIGN = %s", aisconf.my_userid, my_aisname, my_callsign);
                 aisnameSet = 1;
             
                 (void)sqlite3_open_v2(NAVIDBPATH, &conn, SQLITE_OPEN_READWRITE, 0);
