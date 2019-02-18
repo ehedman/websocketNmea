@@ -1712,13 +1712,13 @@ int main(int argc ,char **argv)
         uint8_t checksum;
         socklen_t socklen = sizeof(peer_sa);
         struct stat sb;
-        int ais_rval;
+        static int ais_rval;
         long  userid = 0;
         int trueh = 0;
         int is_vdo = 0;
         int is_vdm = 0;
         char *callsign = NULL;
-        char *aisname;
+        char *aisname = NULL;
         static int r_limit;
         static int cog;
         static int aisnameSet;
@@ -1738,7 +1738,6 @@ int main(int argc ,char **argv)
         double lat_dd = 0;
         double long_ddd = 0;
         double sog = 0.1;
-        aisname = NULL;
        
         // Reboot/re-configure request from PHP Gui code
         // Only if not under control of systemd
@@ -1755,8 +1754,6 @@ int main(int argc ,char **argv)
   
         // Get the next sentence from the mux and update
         // the struct of valid data for the duration of 'INVALID'
-
-        memset(nmeastr, 0, sizeof(nmeastr));    
 
         if (socketType == SOCK_STREAM) {
             cnt = recv(muxFd, nmeastr, sizeof(nmeastr), 0);
@@ -1930,7 +1927,7 @@ int main(int argc ,char **argv)
                 }
             }
 
-            // SRT ($PSRT,TXS,0008,1*4F)
+            // SRT - Get transceiver status on/off.
             if (NMPARSE(nmeastr, "RT")) {
                 if (!strncmp("TXS", getf(1, nmeastr),3)) {
                     if (atoi(getf(2, nmeastr)))
@@ -1943,6 +1940,8 @@ int main(int argc ,char **argv)
                 continue;
             }
 
+            // AIS is handled last 
+
             if (NMPARSE(nmeastr, "VDM")) {
                 is_vdm = 1;
             }
@@ -1952,15 +1951,29 @@ int main(int argc ,char **argv)
 
             if (!(is_vdm + is_vdo) || !aisconf.my_useais) continue;
 
-            // AIS is handled last ....
+            char p0b[sizeof(nmeastr)];    // Only for debug
 
+            if (ais_rval == 0)    // Clear the structure if we are done with the message(s).
+                memset(&ais, 0 ,sizeof(ais_state));
+
+            // Handle re-assembly and extraction of the 6-bit data from AIVDM/AIVDO sentences.
             ais_rval = assemble_vdm(&ais, nmeastr);
+
+            if (ais_rval) { // Multipart message (1) or error, get netxt!
+                if (ais_rval > 1) ais_rval = 0;
+                if (debug && ais_rval == 1) {
+                    strcpy(p0b,nmeastr); 
+                }
+                continue;
+            }
+
+            // Get the 6 bit message id
             ais.msgid = (unsigned char)get_6bit( &ais.six_state, 6 ); 
-        
+
             // process message with appropriate parser
             switch( ais.msgid ) {
                 case 1: // Message 1,2,3 - Position Report
-                    if( ais_rval >= 0 && parse_ais_1( &ais, &msg_1 ) == 0 ) {
+                   if ( parse_ais_1( &ais, &msg_1 ) == 0 ) {
                         if ((userid = msg_1.userid)) {
                             pos2ddd( msg_1.latitude, msg_1.longitude, &lat_dd, &long_ddd );
                             trueh = msg_1.true;
@@ -1971,7 +1984,7 @@ int main(int argc ,char **argv)
                     break;
 
                 case 2:
-                    if( ais_rval >= 0 && parse_ais_2( &ais, &msg_2 ) == 0 ) {
+                   if ( parse_ais_2( &ais, &msg_2 ) == 0 ) {
                         if ((userid = msg_2.userid)) {
                             pos2ddd( msg_2.latitude, msg_2.longitude, &lat_dd, &long_ddd );
                             trueh = msg_2.true;
@@ -1982,7 +1995,7 @@ int main(int argc ,char **argv)
                     break;
 
                 case 3:
-                    if( ais_rval >= 0 && parse_ais_3( &ais, &msg_3 ) == 0 ) {
+                   if ( parse_ais_3( &ais, &msg_3 ) == 0 ) {
                         if ((userid = msg_3.userid)) {
                             pos2ddd( msg_3.latitude, msg_3.longitude, &lat_dd, &long_ddd );
                             trueh = msg_3.true;
@@ -1993,7 +2006,7 @@ int main(int argc ,char **argv)
                     break;
 
                 case 4: // Message 4 - Base station report
-                   if( r_limit == 10 && ais_rval >= 0 && parse_ais_4( &ais, &msg_4 ) == 0 ) {
+                   if( r_limit == 10 && parse_ais_4( &ais, &msg_4 ) == 0 ) {
                         if ((userid = msg_4.userid)) {
                             pos2ddd( msg_4.latitude, msg_4.longitude, &lat_dd, &long_ddd );
                             aisname = "BASE STATION";
@@ -2003,7 +2016,7 @@ int main(int argc ,char **argv)
                     break;
 
                 case 5: // Message 5: Ship static and voyage related data  
-                    if( ais_rval >= 0 && parse_ais_5( &ais, &msg_5 ) == 0 ) {
+                   if ( parse_ais_5( &ais, &msg_5 ) == 0 ) {
                         if ((userid = msg_5.userid))                                 
                             aisname = msg_5.name;
                     }
@@ -2011,19 +2024,19 @@ int main(int argc ,char **argv)
 
 
                 case 18: // Message 18 - Class B Position Report 
-                    if( ais_rval >= 0 && parse_ais_18( &ais, &msg_18 ) == 0 ) {
+                   if ( parse_ais_18( &ais, &msg_18 ) == 0 ) {
                         if((userid =  msg_18.userid)) {
                             pos2ddd( msg_18.latitude, msg_18.longitude, &lat_dd, &long_ddd );
                             trueh = msg_18.true;
                             sog =  msg_18.sog;
                             if (!my_userid && is_vdo)
-                                my_userid = aisconf.my_userid = userid;
+                                my_userid = aisconf.my_userid = userid; // Our userid (if the transceiver is on)
                         }
                     }
                     break;
 
                 case 19: // Message 19 - Extended Class B equipment position report 
-                    if( ais_rval >= 0 && parse_ais_19( &ais, &msg_19 ) == 0 ) {
+                   if ( parse_ais_19( &ais, &msg_19 ) == 0 ) {
                         if((userid = msg_19.userid)) {
                             pos2ddd( msg_19.latitude, msg_19.longitude, &lat_dd, &long_ddd );
                             trueh = msg_19.true;
@@ -2034,28 +2047,28 @@ int main(int argc ,char **argv)
                     break;
 
                 case 21: // Message 21 - Aids To Navigation Report 
-                    if( ais_rval >= 0 && parse_ais_21( &ais, &msg_21 ) == 0 ) { 
+                   if ( parse_ais_21( &ais, &msg_21 ) == 0 ) { 
                         if((userid = msg_21.userid))                         
                             aisname = msg_21.name;
                     }
                     break;
 
                 case 24: // Message 24 - Class B/CS Static Data Report 
-                    if( ais_rval >= 0 && parse_ais_24( &ais, &msg_24 ) == 0 ) {      
+                   if ( parse_ais_24( &ais, &msg_24 ) == 0 ) {      
                         if (msg_24.flags & 1) {
                             if((userid = msg_24.userid)) {
-
+                                // Message 24 is a 2 part message. The first part only contains the MMSI
+                                // and the ship name. The second part gives us the callsign.
                                 if(msg_24.part_number == 0) 
                                     aisname = msg_24.name;
 
-                                if(!strlen(my_aisname) && is_vdo && my_userid && msg_24.part_number == 0) {
-                                    strcpy(my_aisname, msg_24.name);
-                                }
+                                if(!strlen(my_aisname) && is_vdo && my_userid && msg_24.part_number == 0)
+                                    strcpy(my_aisname, msg_24.name); // This is us (if the transceiver is on)
 
                                 if ((msg_24.flags & 2) && msg_24.part_number == 1) {
                                     callsign = msg_24.callsign;
                                     if (!strlen(my_callsign) && is_vdo && my_userid) {
-                                        strcpy(my_callsign, callsign);
+                                        strcpy(my_callsign, callsign); // Our callsign (if the transceiver is on)
                                     }
                                 }
                                 if (msg_24.part_number == 1)
@@ -2074,10 +2087,13 @@ int main(int argc ,char **argv)
             if (!userid)
                 continue;
 
-            if(debug) {
-                printf("%s\n", nmeastr);
+            if (debug) {
+                if (strlen(p0b)) {
+                    printlog( "%s", p0b);
+                    p0b[0] = '\0';
+                }
+                printlog( "%s", nmeastr);
                 printlog( "MESSAGE ID   : %d", ais.msgid );
-                printlog( "PART         : %d", ais_rval );
                 printlog( "NAME         : %s", aisname );
                 printlog( "USER ID      : %ld", userid );
                 printlog( "POSITION     : %0.6f %0.6f", fabs(lat_dd), fabs(long_ddd) );
@@ -2090,14 +2106,14 @@ int main(int argc ,char **argv)
                 if (trueh == 511) {
                     trueh = cog >= 3600? 360: cog/10; 
                 }
-                
+                // Add ship to the SQL RAM database
                 (void)addShip(ais.msgid, userid, fabs(lat_dd), fabs(long_ddd), trueh, sog/10, aisname, aisconf.my_buddy);
                 aisconf.my_buddy = 0;
             }
-            if (++r_limit > 10) r_limit = 0;
-            if (debug && ais_rval) printlog("AIS return=%d, msgid=%d  msg='%s'\n", ais_rval, ais.msgid, nmeastr);
 
-            // Update GUI with this vessels' data
+            if (++r_limit > 10) r_limit = 0;
+
+            // Update GUI with this vessels' data (only if VDO and only once per session)
             if (aisnameSet == 0 && fileFeed == 0 && strlen(my_aisname) && strlen(my_callsign)) {
                 char vdobuf[100];
                 sqlite3 *conn;
@@ -2119,7 +2135,7 @@ int main(int argc ,char **argv)
                 }
 
                 sprintf(vdobuf, "UPDATE ais SET aisname = '%s', aiscallsign = '%s', aisid = %ld, ro = 1", my_aisname, my_callsign, aisconf.my_userid);
-                printlog("Got VDO from transceiver: MMSI= %ld, NAME= %s, CALLSIGN = %s", aisconf.my_userid, my_aisname, my_callsign);
+                printlog("Got VDO from transceiver: MMSI= %ld, NAME= %s, CALLSIGN= %s", aisconf.my_userid, my_aisname, my_callsign);
                 aisnameSet = 1;
             
                 (void)sqlite3_open_v2(NAVIDBPATH, &conn, SQLITE_OPEN_READWRITE, 0);
