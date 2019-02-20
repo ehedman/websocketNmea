@@ -1,7 +1,7 @@
 /*
  * wsocknmea.c
  *
- *  Copyright (C) 2013-2018 by Erland Hedman <erland@hedmanshome.se>
+ *  Copyright (C) 2013-2019 by Erland Hedman <erland@hedmanshome.se>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -1712,16 +1712,16 @@ int main(int argc ,char **argv)
         uint8_t checksum;
         socklen_t socklen = sizeof(peer_sa);
         struct stat sb;
-        static int ais_rval;
+        int ais_rval;
         long  userid = 0;
         int trueh = 0;
         int is_vdo = 0;
         int is_vdm = 0;
+        static int got_vdo;
         char *callsign = NULL;
         char *aisname = NULL;
         static int r_limit;
         static int cog;
-        static int aisnameSet;
 
         // AIS message structures
         aismsg_1  msg_1;
@@ -1801,154 +1801,159 @@ int main(int argc ,char **argv)
 
             if (debug) fprintf( stderr, "Got '%s' as a mux message. Lenght = %d\n", nmeastr, (int)strlen(nmeastr));
 
-            // Priority parsing order and logic:
-            // See http://freenmea.net/docs and other sources out there
-            
-            // RMC - Recommended minimum specific GPS/Transit data
-            // RMC feed is assumed to be present at all time 
-            if (NMPARSE(nmeastr, "RMC")) {
-                cnmea.rmc=atof(getf(7, nmeastr));
-                cnmea.rmc_ts = ts;
-                strcpy(cnmea.gll, getf(3, nmeastr));
-                strcpy(cnmea.glo, getf(5, nmeastr));
-                strcpy(cnmea.glns, getf(4, nmeastr));
-                strcpy(cnmea.glne, getf(6, nmeastr));
-                cnmea.gll_ts = ts;           
-                continue;
-            }
-
-            // VTG - Track made good and ground speed
-            if (ts - cnmea.rmc_ts > INVALID/2) { // If not from RMC
-                if (NMPARSE(nmeastr, "VTG")) {
-                    cnmea.rmc=atof(getf(5, nmeastr));
-                    if ((cnmea.hdm=atof(getf(1, nmeastr))) != 0) // Track made good
-                        cnmea.hdm_ts = ts;
-                    continue;
-                }
-            }
-    
-            // GLL - Geographic Position, Latitude / Longitude
-            if (ts - cnmea.gll_ts > INVALID/2) { // If not from RMC
-                if (NMPARSE(nmeastr, "GLL")) {
-                    strcpy(cnmea.gll, getf(1, nmeastr)); 
-                    strcpy(cnmea.glo, getf(3, nmeastr));
-                    strcpy(cnmea.glns, getf(2, nmeastr));
-                    strcpy(cnmea.glne, getf(4, nmeastr));
-                    cnmea.gll_ts = ts;
-                    continue;
-                }
-            }
-
-            // VHW - Water speed
-            if(NMPARSE(nmeastr, "VHW")) {
-                if ((cnmea.stw=atof(getf(5, nmeastr))) != 0)
-                    cnmea.stw_ts = ts;
-                continue;
-            }
-
-            if (ts - cnmea.stw_ts > INVALID && ts - cnmea.rmc_ts  <= INVALID) {
-                cnmea.stw=cnmea.rmc;    // Not entirely correct but better than a blank instrument
-                cnmea.stw_ts = ts;
-            }
-
-            if (ts - cnmea.hdm_ts > INVALID/2) { // If not from VHW
-
-                // HDT - Heading - True
-                if (NMPARSE(nmeastr, "HDT")) {
-                    cnmea.hdm=atof(getf(1, nmeastr));
-                    cnmea.hdm_ts = ts;
-                    continue;
-                }
-
-                // HDG - Heading - Deviation and Variation 
-                if (NMPARSE(nmeastr, "HDG")) {
-                    cnmea.hdm=atof(getf(1, nmeastr));
-                    cnmea.hdm_ts = ts;
-                    continue;
-                }
-             
-                // HDM Heading - Heading Magnetic
-                if (NMPARSE(nmeastr, "HDM")) {
-                    cnmea.hdm=atof(getf(1, nmeastr));
-                    cnmea.hdm_ts = ts;
-                    continue;
-                }
-            }
-
-            // DPT - Depth (Depth of transponder added)
-            if (NMPARSE(nmeastr, "DPT")) {
-                cnmea.dbt=atof(getf(1, nmeastr))+atof(getf(2, nmeastr));
-                cnmea.dbt_ts = ts;
-                continue;
-            }
-
-            // DBT - Depth Below Transponder + GUI defined transponder depth
-            if (ts - cnmea.dbt_ts > INVALID/2) { // If not from DPT
-                if (NMPARSE(nmeastr, "DBT")) {
-                    cnmea.dbt=atof(getf(3, nmeastr)) + iconf.depth_transp;
-                    cnmea.dbt_ts = ts;
-                    continue;
-                }
-            }
-
-            // MTW - Water temperature in C
-            if (NMPARSE(nmeastr, "MTW")) {
-                cnmea.mtw=atof(getf(1, nmeastr));
-                cnmea.mtw_ts = ts;
-                continue;
-            }
-
-            // MWV - Wind Speed and Angle (report VWR style)
-            if (NMPARSE(nmeastr, "MWV")) {
-                if (strncmp(getf(2, nmeastr),"R",1) + strncmp(getf(4, nmeastr),"N",1) == 0) {
-                    cnmea.vwra=atof(getf(1, nmeastr));
-                    cnmea.vwrs=atof(getf(3, nmeastr))/1.94; // kn 2 m/s;
-                    if (cnmea.vwra > 180) {
-                        cnmea.vwrd = 1;
-                        cnmea.vwra = 360 - cnmea.vwra;
-                    } else cnmea.vwrd = 0;
-                    cnmea.vwr_ts = ts;
-                } else if (strncmp(getf(2, nmeastr),"T",1) + strncmp(getf(4, nmeastr),"N",1) == 0) {
-                    cnmea.vwta=atof(getf(1, nmeastr));
-                    cnmea.vwts=atof(getf(3, nmeastr))/1.94; // kn 2 m/s;
-                    cnmea.vwt_ts = ts;
-                }
-                continue;
-            }
-
-            // VWR - Relative Wind Speed and Angle (obsolete)
-            if (ts - cnmea.vwr_ts > INVALID/2) { // If not from MWV
-                if (NMPARSE(nmeastr, "VWR")) {
-                    cnmea.vwra=atof(getf(1, nmeastr));
-                    cnmea.vwrs=atof(getf(3, nmeastr))/1.94; // kn 2 m/s
-                    cnmea.vwrd=strncmp(getf(2, nmeastr),"R",1)==0? 0:1;
-                    cnmea.vwr_ts = ts;
-                    continue;
-                }
-            }
-
-            // SRT - Get transceiver status on/off.
-            if (NMPARSE(nmeastr, "RT")) {
-                if (!strncmp("TXS", getf(1, nmeastr),3)) {
-                    if (atoi(getf(2, nmeastr)))
-                        cnmea.txs = 0;
-                    else
-                        cnmea.txs = 1;
-
-                    cnmea.txs_ts = ts;
-                }
-                continue;
-            }
-
-            // AIS is handled last 
-
+            // Check if AIS VDM/VDO
             if (NMPARSE(nmeastr, "VDM")) {
                 is_vdm = 1;
             }
             if (NMPARSE(nmeastr, "VDO")) {
+                if (got_vdo)
+                    continue;
                 is_vdo = 1;
             }
 
+            if (!(is_vdm + is_vdo)) {
+
+                // Priority parsing order and logic:
+                // See http://freenmea.net/docs and other sources out there
+                
+                // RMC - Recommended minimum specific GPS/Transit data
+                // RMC feed is assumed to be present at all time 
+                if (NMPARSE(nmeastr, "RMC")) {
+                    cnmea.rmc=atof(getf(7, nmeastr));
+                    cnmea.rmc_ts = ts;
+                    strcpy(cnmea.gll, getf(3, nmeastr));
+                    strcpy(cnmea.glo, getf(5, nmeastr));
+                    strcpy(cnmea.glns, getf(4, nmeastr));
+                    strcpy(cnmea.glne, getf(6, nmeastr));
+                    cnmea.gll_ts = ts;           
+                    continue;
+                }
+
+                // VTG - Track made good and ground speed
+                if (ts - cnmea.rmc_ts > INVALID/2) { // If not from RMC
+                    if (NMPARSE(nmeastr, "VTG")) {
+                        cnmea.rmc=atof(getf(5, nmeastr));
+                        if ((cnmea.hdm=atof(getf(1, nmeastr))) != 0) // Track made good
+                            cnmea.hdm_ts = ts;
+                        continue;
+                    }
+                }
+        
+                // GLL - Geographic Position, Latitude / Longitude
+                if (ts - cnmea.gll_ts > INVALID/2) { // If not from RMC
+                    if (NMPARSE(nmeastr, "GLL")) {
+                        strcpy(cnmea.gll, getf(1, nmeastr)); 
+                        strcpy(cnmea.glo, getf(3, nmeastr));
+                        strcpy(cnmea.glns, getf(2, nmeastr));
+                        strcpy(cnmea.glne, getf(4, nmeastr));
+                        cnmea.gll_ts = ts;
+                        continue;
+                    }
+                }
+
+                // VHW - Water speed
+                if(NMPARSE(nmeastr, "VHW")) {
+                    if ((cnmea.stw=atof(getf(5, nmeastr))) != 0)
+                        cnmea.stw_ts = ts;
+                    continue;
+                }
+
+                if (ts - cnmea.stw_ts > INVALID && ts - cnmea.rmc_ts  <= INVALID) {
+                    cnmea.stw=cnmea.rmc;    // Not entirely correct but better than a blank instrument
+                    cnmea.stw_ts = ts;
+                }
+
+                if (ts - cnmea.hdm_ts > INVALID/2) { // If not from VHW
+
+                    // HDT - Heading - True
+                    if (NMPARSE(nmeastr, "HDT")) {
+                        cnmea.hdm=atof(getf(1, nmeastr));
+                        cnmea.hdm_ts = ts;
+                        continue;
+                    }
+
+                    // HDG - Heading - Deviation and Variation 
+                    if (NMPARSE(nmeastr, "HDG")) {
+                        cnmea.hdm=atof(getf(1, nmeastr));
+                        cnmea.hdm_ts = ts;
+                        continue;
+                    }
+                 
+                    // HDM Heading - Heading Magnetic
+                    if (NMPARSE(nmeastr, "HDM")) {
+                        cnmea.hdm=atof(getf(1, nmeastr));
+                        cnmea.hdm_ts = ts;
+                        continue;
+                    }
+                }
+
+                // DPT - Depth (Depth of transponder added)
+                if (NMPARSE(nmeastr, "DPT")) {
+                    cnmea.dbt=atof(getf(1, nmeastr))+atof(getf(2, nmeastr));
+                    cnmea.dbt_ts = ts;
+                    continue;
+                }
+
+                // DBT - Depth Below Transponder + GUI defined transponder depth
+                if (ts - cnmea.dbt_ts > INVALID/2) { // If not from DPT
+                    if (NMPARSE(nmeastr, "DBT")) {
+                        cnmea.dbt=atof(getf(3, nmeastr)) + iconf.depth_transp;
+                        cnmea.dbt_ts = ts;
+                        continue;
+                    }
+                }
+
+                // MTW - Water temperature in C
+                if (NMPARSE(nmeastr, "MTW")) {
+                    cnmea.mtw=atof(getf(1, nmeastr));
+                    cnmea.mtw_ts = ts;
+                    continue;
+                }
+
+                // MWV - Wind Speed and Angle (report VWR style)
+                if (NMPARSE(nmeastr, "MWV")) {
+                    if (strncmp(getf(2, nmeastr),"R",1) + strncmp(getf(4, nmeastr),"N",1) == 0) {
+                        cnmea.vwra=atof(getf(1, nmeastr));
+                        cnmea.vwrs=atof(getf(3, nmeastr))/1.94; // kn 2 m/s;
+                        if (cnmea.vwra > 180) {
+                            cnmea.vwrd = 1;
+                            cnmea.vwra = 360 - cnmea.vwra;
+                        } else cnmea.vwrd = 0;
+                        cnmea.vwr_ts = ts;
+                    } else if (strncmp(getf(2, nmeastr),"T",1) + strncmp(getf(4, nmeastr),"N",1) == 0) {
+                        cnmea.vwta=atof(getf(1, nmeastr));
+                        cnmea.vwts=atof(getf(3, nmeastr))/1.94; // kn 2 m/s;
+                        cnmea.vwt_ts = ts;
+                    }
+                    continue;
+                }
+
+                // VWR - Relative Wind Speed and Angle (obsolete)
+                if (ts - cnmea.vwr_ts > INVALID/2) { // If not from MWV
+                    if (NMPARSE(nmeastr, "VWR")) {
+                        cnmea.vwra=atof(getf(1, nmeastr));
+                        cnmea.vwrs=atof(getf(3, nmeastr))/1.94; // kn 2 m/s
+                        cnmea.vwrd=strncmp(getf(2, nmeastr),"R",1)==0? 0:1;
+                        cnmea.vwr_ts = ts;
+                        continue;
+                    }
+                }
+
+                // SRT - Get AIS transceiver status on/off.
+                if (NMPARSE(nmeastr, "RT")) {
+                    if (!strncmp("TXS", getf(1, nmeastr),3)) {
+                        if (atoi(getf(2, nmeastr)))
+                            cnmea.txs = 0;
+                        else
+                            cnmea.txs = 1;
+
+                        cnmea.txs_ts = ts;
+                    }
+                    continue;
+                }
+            }
+
+            // AIS VDM/VDO section
             if (!(is_vdm + is_vdo) || !aisconf.my_useais) continue;
 
             char p0b[sizeof(nmeastr)];    // Only for debug
@@ -2101,7 +2106,7 @@ int main(int argc ,char **argv)
                 printlog( "SOG          : %0.1f", sog/10 );
             }
 
-            if (!ais_rval && userid != aisconf.my_userid) {
+            if (userid != aisconf.my_userid) {
                 sog = sog == 1023? 0 : sog;
                 if (trueh == 511) {
                     trueh = cog >= 3600? 360: cog/10; 
@@ -2114,7 +2119,7 @@ int main(int argc ,char **argv)
             if (++r_limit > 10) r_limit = 0;
 
             // Update GUI with this vessels' data (only if VDO and only once per session)
-            if (aisnameSet == 0 && fileFeed == 0 && strlen(my_aisname) && strlen(my_callsign)) {
+            if (got_vdo == 0 && fileFeed == 0 && strlen(my_aisname) && strlen(my_callsign)) {
                 char vdobuf[100];
                 sqlite3 *conn;
                 sqlite3_stmt *res;
@@ -2135,8 +2140,8 @@ int main(int argc ,char **argv)
                 }
 
                 sprintf(vdobuf, "UPDATE ais SET aisname = '%s', aiscallsign = '%s', aisid = %ld, ro = 1", my_aisname, my_callsign, aisconf.my_userid);
-                printlog("Got VDO from transceiver: MMSI= %ld, NAME= %s, CALLSIGN= %s", aisconf.my_userid, my_aisname, my_callsign);
-                aisnameSet = 1;
+                printlog("Got our VDO from transceiver: MMSI= %ld, NAME= %s, CALLSIGN= %s", aisconf.my_userid, my_aisname, my_callsign);
+                got_vdo = 1;
             
                 (void)sqlite3_open_v2(NAVIDBPATH, &conn, SQLITE_OPEN_READWRITE, 0);
                 if (conn == NULL) {
