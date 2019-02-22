@@ -29,12 +29,12 @@ var Cmd = {
     SensorCurr          : "201",
     SensorTemp          : "202",
     SensorRelay         : "203",
-    SensorRelayStatus   : "204",
     AisTrxStatus        : "206",
-    AisTrxTxs           : "207",
     WaterMakerData      : "210",
     ServerPing          : "900",
     TimeOfDAy           : "901",
+    SaveNMEAstream      : "904",
+    StatusReport        : "906",
     UpdateSettings      : "910"
 };
 

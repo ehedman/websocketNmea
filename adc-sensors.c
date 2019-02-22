@@ -627,6 +627,28 @@ int adcRead(int a2dChannel)
 
     return a2dVal;
 }
+
+/* API */
+void relayInit(int nchannels)
+{
+}
+int relayStatus(void)
+{
+    return 0;
+}
+
+void relaySet(int channels) // A bitmask
+{
+}
 #endif // UK1104
 #endif // MCP3208
+#else
+int relayStatus(void)
+{
+    return 0;
+}
+
+void relaySet(int channels) // A bitmask
+{
+}
 #endif // DOADC

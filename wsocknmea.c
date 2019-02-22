@@ -53,6 +53,9 @@
 #ifndef KPCONFPATH
 #define KPCONFPATH  "/etc/default/kplex.conf"   // KPlex configuration file writable for webserver
 #endif
+#ifndef UPLOADPATH
+#define UPLOADPATH  "/var/www/upload"           // PATH to NMEA recordings
+#endif
 
 #define FIFOKPLEX   "/tmp/fifo_kplex"       // KPlex fifo for file nmea input
 #define FIFOPNMEA   "/tmp/fifo_nmea_p"      // KPlex fifo for "$P". These extended messages are not standardized. 
@@ -105,12 +108,12 @@ enum requests {
     SensorCurr          = 201,
     SensorTemp          = 202,
     SensorRelay         = 203,
-    SensorRelayStatus   = 204,
     AisTrxStatus        = 206,
-    AisTrxTxs           = 207,
     WaterMakerData      = 210,
     ServerPing          = 900,
     TimeOfDAy           = 901,
+    SaveNMEAstream      = 904,
+    StatusReport        = 906,
     UpdateSettings      = 910
 };
 
@@ -123,7 +126,6 @@ static int kplexStatus = 0;
 static int pNmeaStatus = 1;
 static int sigExit = 0;
 static useconds_t lineRate = 1;
-static char recFile[250];
 static int fileFeed = 0;
 static struct sockaddr_in peer_sa;
 static struct lws_context *ws_context = NULL;
@@ -143,12 +145,17 @@ static struct sockaddr_in wmpeer_sa;
 
 typedef struct {
     // Static configs from GUI sql db
-    int     map_zoom;       // Google Map Zoom factor;
-    int     map_updt;       // Update Time
-    int     depth_vwrn;     // Depth visual low warning
-    float   depth_transp;   // Depth of transponer
-    char    adc_dev[40];    // ADC in /dev
-    char    ais_dev[40];    // AIS in /dev
+    int     map_zoom;           // Google Map Zoom factor;
+    int     map_updt;           // Update Time
+    int     depth_vwrn;         // Depth visual low warning
+    float   depth_transp;       // Depth of transponer
+    char    adc_dev[40];        // ADC in /dev
+    char    ais_dev[40];        // AIS in /dev
+    char    fdn_outf[120];      // NMEA stream output file name
+    FILE    *fdn_stream;        // Save NMEA stream file
+    time_t  fdn_starttime;      // Start time for recording
+    time_t  fdn_endtime;        // End time for recording
+    char    fdn_inf[PATH_MAX];  // NMEA stream input file
 } in_configs;
 
 static in_configs iconf;
@@ -773,7 +780,7 @@ static int configure(int kpf)
         if (read(fd, buf, sizeof(buf)) >0 && strstr(buf, FIFOKPLEX) != NULL) {
             rval = sqlite3_prepare_v2(conn, "select fname,rate from file", -1, &res, &tail);        
             if (rval == SQLITE_OK && sqlite3_step(res) == SQLITE_ROW) {
-                    (void)strcpy(recFile, (char*)sqlite3_column_text(res, 0));
+                    (void)strcpy(iconf.fdn_inf, (char*)sqlite3_column_text(res, 0));
                     lineRate = sqlite3_column_int(res, 1);
             }            
             if (access( FIFOKPLEX, F_OK ) == -1) { // Must exist from now on ..
@@ -873,6 +880,41 @@ static void handle_ais_buddy(long userid)
     (void)sqlite3_close(conn);
 
     aisconf.my_buddy = userid;  // Leave it to be picked up later by addShip()
+}
+
+// Save NMEA stream to file
+static void saveNmea(void)
+{
+    FILE *fd;
+    char *ptr;
+    int mins=0;
+    char fname[PATH_MAX];
+
+    iconf.fdn_stream = NULL;
+    iconf.fdn_starttime = iconf.fdn_endtime= 0;
+
+    if (!strlen(iconf.fdn_outf))
+        return;
+
+    if ((ptr=strchr(iconf.fdn_outf, ':')) == NULL) {
+        iconf.fdn_outf[0] = '\0';
+        return;
+    }
+    ptr[0] = '\0';
+    if ((mins=atoi(++ptr)) <= 0) {
+        iconf.fdn_outf[0] = '\0';
+        return;
+    }
+
+    sprintf(fname, "%s/%s", UPLOADPATH, iconf.fdn_outf);
+    if ((fd=fopen(fname, "w")) == NULL) {
+        iconf.fdn_outf[0] = '\0';
+        return;
+    }
+    printlog("Begin recording %d minutes of the NMEA stream to %s", mins, fname);
+    iconf.fdn_starttime = time(NULL);
+    iconf.fdn_endtime = iconf.fdn_starttime+mins*60;
+    iconf.fdn_stream = fd;
 }
 
 // SRT proprietary AIS commands
@@ -1126,7 +1168,13 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                         sprintf(value, "{'temp':'%.1f'}-%d", cnmea.temp, req);
                     break;
                 }
-#ifdef UK1104
+
+                case StatusReport: {
+                    cnmea.txs = ct - cnmea.txs_ts > INVALID? -1:cnmea.txs;
+                    sprintf(value, "{'relaySts':'%d','aisTxSts':'%d','nmRec':'%s','nmPlay':'%s'}-%d",
+                        relayStatus(), cnmea.txs, iconf.fdn_outf, fileFeed==1? basename(iconf.fdn_inf):"", req);
+                }
+
                 case SensorRelay: {
                     if (args != NULL && strlen(args)) {
                         relaySet(atoi(args));
@@ -1135,17 +1183,6 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                     break;
                 }
 
-                case SensorRelayStatus: {
-                    sprintf(value, "{'relaySts':'%d'}-%d", relayStatus(), req);
-                    break;
-                }
-#else
-                case SensorRelay:
-                case SensorRelayStatus: {
-                    sprintf(value, "{'relaySts':'%d'}-%d", 0, req);
-                    break;
-                }          
-#endif
 #ifdef MT1800
                 case WaterMakerData: {
                     if (ct - cnmea.cond_ts > INVALID*10)
@@ -1165,9 +1202,14 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                     break;
                 }
 
-                case AisTrxTxs: {
-                    cnmea.txs = ct - cnmea.txs_ts > INVALID? -1:cnmea.txs;
-                        sprintf(value, "{'aisTxs':'%d'}-%d", cnmea.txs, req);
+                case SaveNMEAstream: {           
+                    sprintf(value, "{'saveNmea':'%d'}-%d", 0, req);
+                    if (args != NULL && !strncmp(args, "ABORT", 5)) {
+                        iconf.fdn_endtime = 0;
+                    } else  if (args != NULL && strlen(args)) {
+                        strcpy(iconf.fdn_outf, args);
+                        saveNmea();
+                    }
                     break;
                 }
 
@@ -1439,7 +1481,7 @@ static void *t_fileFeed()
         }
     }
 
-    if ((fdi=fopen(recFile,"r")) == NULL) {
+    if ((fdi=fopen(iconf.fdn_inf,"r")) == NULL) {
         printlog("Error open feed file: %s", strerror(errno));
         pthread_exit(&rval);
     }
@@ -1500,7 +1542,7 @@ int main(int argc ,char **argv)
     memset(interFace, 0 ,sizeof(interFace));
     peer_sa.sin_family = AF_INET;
     
-    recFile[0] = '\0';
+    iconf.fdn_inf[0] = '\0';
     (void)unlink(WSREBOOT);
 
     while ((c = getopt (argc, argv, "a:bdf:hi:np:r:s:vw:")) != -1)
@@ -1516,7 +1558,7 @@ int main(int argc ,char **argv)
                 debug = 1;
                 break;          
             case 'f':
-                (void)strcpy(recFile, optarg);
+                (void)strcpy(iconf.fdn_inf, optarg);
                 break;
             case 'i':
                 (void)strcpy(interFace, optarg);
@@ -1562,7 +1604,7 @@ int main(int argc ,char **argv)
         exit(EXIT_FAILURE);
     }
 
-    if (strlen(recFile) && !kplex_fork) {
+    if (strlen(iconf.fdn_inf) && !kplex_fork) {
         fprintf(stderr, "Error: incompatible options -n and -f\n");
         exit(EXIT_FAILURE);
     }
@@ -1637,7 +1679,7 @@ int main(int argc ,char **argv)
     pthread_attr_setdetachstate(&attr, detachstate);
     
     // Thread for the file re-play service
-    if (strlen(recFile)) {  
+    if (strlen(iconf.fdn_inf)) {  
         fileFeed = 1;
         pthread_create(&t1, &attr, t_fileFeed, NULL);         
     }
@@ -1685,9 +1727,7 @@ int main(int argc ,char **argv)
         (void)adcInit(iconf.adc_dev, voltChannel);
         (void)adcInit(iconf.adc_dev, currChannel);
         (void)adcInit(iconf.adc_dev, tempChannel);
-#ifdef UK1104
         (void)relayInit(4);      
-#endif
     }
 #endif
     
@@ -1809,6 +1849,19 @@ int main(int argc ,char **argv)
                 if (got_vdo)
                     continue;
                 is_vdo = 1;
+            }
+
+            if (iconf.fdn_stream != NULL) {
+                static int tcnt;
+                int rcnt = fwrite(nmeastr, 1, cnt, iconf.fdn_stream);
+                tcnt += rcnt;
+                if ((rcnt != cnt) || ts >= iconf.fdn_endtime) {
+                    printlog("The recording of the NMEA stream ended after %.1f minutes and %d bytes", (float)(ts-iconf.fdn_starttime)/60, tcnt);
+                    fclose(iconf.fdn_stream);
+                    iconf.fdn_stream = NULL;
+                    iconf.fdn_outf[0] = '\0';
+                    iconf.fdn_starttime = iconf.fdn_endtime = tcnt = 0;
+                }
             }
 
             if (!(is_vdm + is_vdo)) {

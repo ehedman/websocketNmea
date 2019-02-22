@@ -18,6 +18,10 @@ struct aisShip_struct
 extern int addShip(int msgid, long userid, double lat_dd, double long_ddd, int trueh, double sog, char *name, long buddie);
 extern struct aisShip_struct *getShips(int size);
 
+extern void relayInit(int nchannels);
+extern void relaySet(int channels);
+extern int relayStatus(void);
+
 //#define MT1800              // Instrument support for ENWA Watermaker 
 //#define MCP3208             // Analog input valtage, current .... etc.
 #define UK1104              // CanaKit 4-Channel USB Relay Board with 6-Channel A/D Interface
@@ -77,9 +81,6 @@ enum types {
     Relay
 };
 
-extern void relayInit(int nchannels);
-extern void relaySet(int channels);
-extern int relayStatus(void);
 extern int ioPinInit(int channel, int type);
 extern void ioPinset(int channel, int mode);
 extern int ioPinGet(int channel);

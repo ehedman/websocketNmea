@@ -2,7 +2,7 @@
     /*
      * npanel.php
      *
-     *  Copyright (C) 2013-2018 by Erland Hedman <erland@hedmanshome.se>
+     *  Copyright (C) 2013-2019 by Erland Hedman <erland@hedmanshome.se>
      *
      * This program is free software; you can redistribute it and/or
      * modify it under the terms of the GNU General Public License
@@ -78,23 +78,14 @@ function do_update()
             document.getElementById("relayContent").style.display = "none";
         else document.getElementById("relayContent").style.display = "block";
 
-         if (underConfig == true) {
-                switch (pollitem++)
-                {
-                    case 0: send(Cmd.ServerPing); break;
-                    case 1: send(Cmd.AisTrxTxs); break;              
-                    default: pollitem = 0; break;
-                }
-            } else {
-                switch (pollitem++)
-                {
-                    case 0: send(Cmd.ServerPing); break;
-                    case 1: send(Cmd.SensorRelayStatus); break;               
-                    default: pollitem = 0; break;
-                }
-            }
-        
-        if (pt == 0)           
+        switch (pollitem++)
+        {
+            case 0: send(Cmd.ServerPing); break;
+            case 1: send(Cmd.StatusReport); break;              
+            default: pollitem = 0; break;
+        }
+       
+        if (pt == 0)
             pt = setInterval(function () {do_poll();}, ticks);
     } else {
         stled.src = 'img/indicator-red.png'
@@ -115,25 +106,41 @@ function setRelayStatus(mask)
 
 function do_poll()
 {
-
     var val = JSON.parse(target);
 
-    if (valid == Cmd.SensorRelayStatus) {
-        setRelayStatus(val.relaySts);
-        return;
-    } else if (valid == Cmd.SensorRelay) { return; }
-
-    if (valid == Cmd.AisTrxTxs && --aisping == 0) {
-        aisping++;
-
-        if (val.aisTxs == -1) {
-             document.getElementById("trx-status-div").style.display = "none";
-        } else {        
-            document.getElementById("trx-status-div").style.display = "inline-block";
-            document.getElementById("trx-status").checked = val.aisTxs == 1? true : false;
+    if (valid == Cmd.StatusReport)
+    {
+        if (underConfig == false) {
+            setRelayStatus(val.relaySts);
         }
+
+        if (--aisping == 0) {
+            aisping++;
+
+            if (val.aisTxSts == -1) {
+                 document.getElementById("trx-status-div").style.display = "none";
+            } else {        
+                document.getElementById("trx-status-div").style.display = "inline-block";
+                document.getElementById("trx-status").checked = val.aisTxSts == 1? true : false;
+            }
+        }
+
+        if (val.nmRec.length) {
+            document.getElementById("msg").innerHTML=": Recording of NMEA stream to file " + val.nmRec + " in progress";
+            document.getElementById("Record").value = "Stop";
+        } else {
+            document.getElementById("msg").innerHTML=":";
+            document.getElementById("Record").value = "Record";
+        }
+
+        document.getElementById("Record").disabled = false;
+
+        if (val.nmPlay.length && !val.nmRec.length) {
+            document.getElementById("msg").innerHTML=": Replaying of NMEA stream from file " + val.nmPlay;
+        }
+
         return;
-    } else if (valid == Cmd.AisTrxTxs || valid == Cmd.AisTrxStatus) { return; }
+    }
 
     if (connection == false || !(valid == Cmd.ServerPing)) {
         stled.src = 'img/indicator-red.png';
@@ -175,6 +182,32 @@ function doAis(cb)
     send(Cmd.AisTrxStatus + "-" + status);
 }
 
+function dosavenmea()
+{
+
+    if (document.getElementById("Record").value == "Stop") {
+        send(Cmd.SaveNMEAstream + "-ABORT");
+        return;
+    }
+
+    document.getElementById("Record").disabled = true;
+
+    var fpath = document.getElementById("record_file");
+    if (!fpath.value.trim().length) {
+        return;
+    }
+    if (/[^0-9a-zA-Z\.\-\_/\s]/gi.test(fpath.value.trim())) {
+        document.getElementById("msg").innerHTML=": Invalid character(s) in file name";
+        fpath.focus();
+        return;
+    }
+   
+    document.getElementById("msg").innerHTML=": Recording of NMEA stream to " + fpath.value.trim() + " initiated";
+
+    var m = document.getElementById("record_max");
+    send(Cmd.SaveNMEAstream + "-" + fpath.value.trim() + ":" + m.options[m.selectedIndex].value);
+}
+
 function docheckpw()
 {
     var status;
@@ -189,6 +222,7 @@ function docheckpw()
             status = true;
         }
         document.getElementById("Play").disabled = status;
+        document.getElementById("Record").disabled = status;
         document.getElementById("Save").disabled = status;
         document.getElementById("trx-status").disabled = status;
         document.getElementById("relayAction").disabled = status;  
@@ -678,14 +712,7 @@ function dragElement(elmnt) {
         <table>
             <tr>
                 <td class="contentBox">
-                    <h2>Multiplexer I/O</h2>
-                   <?php print_serInterfaces(); ?>
-
-                </td>
-            </tr>
-            <tr>
-                <td class="contentBox">
-                    <h2>Replay from File</h2>
+                    <h2>Replay NMEA from File</h2>
                     <label title="Select existing file">File:&nbsp;&nbsp;<?php print_nmea_recordings(); ?></label>
                     <label title="New File:">
                         New:&nbsp;<input style="max-width:80%" name="uploaded_file" type="file" accept="text/plain"></label>
@@ -702,6 +729,25 @@ function dragElement(elmnt) {
                         </select>
                     </label>
                     <input style="position:relative;left:30%;" type="submit" title="Play this file" value="Play"<?php echo $NOSAVE==1? " disabled":""; ?> id="Play" onclick="submit_file();">
+                    
+                </td>
+            </tr>
+            <tr>
+                <td class="contentBox">
+                    <h2>Record NMEA to File</h2>
+                    <input type="text" title="Filename to record" id="record_file" maxlength="60" ></br>
+                          <select title="Duration" id="record_max">
+                          <option value="1">1</option>
+                          <option value="4">4</option>
+                          <option selected value="6">6</option>
+                          <option value="8">8</option>
+                          <option value="10">10</option>
+                          <option value="30">30</option>
+                          <option value="60">60</option>
+                          <option value="120">120</option>
+                          <option value="180">180</option>
+                        </select>&nbsp minutes                
+                    <input style="position:relative;left:10%;" type="button" title="Record NMEA stream to file now" value="Record" id="Record"<?php echo $NOSAVE==1? " disabled":""; ?> onclick="dosavenmea();">
                     
                 </td>
             </tr>
@@ -728,6 +774,13 @@ function dragElement(elmnt) {
         
         <td style="width:33%;"> <!-- Right Column -->
         <table>
+            <tr>
+                <td class="contentBox">
+                    <h2>NMEA Multiplexer I/O</h2>
+                   <?php print_serInterfaces(); ?>
+
+                </td>
+            </tr>
             <tr>
                 <td class="contentBox">
                     <h2 title="All listeners must be set accordingly">Network  Properties</h2>

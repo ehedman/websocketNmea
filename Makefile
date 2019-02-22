@@ -53,6 +53,8 @@ NAVIDBPATH = $(WWWTOP)/inc/navi.db
 # Kplex config file
 KPCONFPATH = $(WWWTOP)/inc/kplex.conf
 
+UPLOADPATH = $(WWWTOP)/upload
+
 # Where to install binaries
 DEST=/usr/local/bin
 
@@ -63,7 +65,6 @@ LIBDIR=/usr/local/lib
 INCDIR=/usr/local/include
 
 CC=gcc
-ARCH=$(shell $(CC) -dumpmachine |  cut -d- -f1 | tr '[:lower:]' '[:upper:]')
 
 GETC=".git/HEAD"
 
@@ -72,7 +73,7 @@ CFLAGS=-DREV=\"$(shell git log --pretty=format:'%h' -n 1 2>/dev/null)\"
 endif
 
 CFLAGS+= -Wall -g -std=gnu99 -pedantic  -D_REENTRANT
-CFLAGS+= -DARCH=$(ARCH) -DUID=$(UID) -DGID=$(GID) -I$(INCDIR)
+CFLAGS+= -DUID=$(UID) -DGID=$(GID) -I$(INCDIR) -DUPLOADPATH=\"$(UPLOADPATH)\"
 CFLAGS+= -DNAVIDBPATH=\"$(NAVIDBPATH)\" -DKPCONFPATH=\"$(KPCONFPATH)\"
 
 LDFLAGS=-L$(LIBDIR) -lwebsockets -lsqlite3 -lais -lpthread -lrt -lz -Wl,-rpath=$(LIBDIR)
@@ -102,16 +103,16 @@ install: $(BIN)
 	-sudo systemctl enable wsocknmea.service
 
 status: 
-	-sudo systemctl status wsocknmea.service --no-pager -l
+	-sudo systemctl status wsocknmea.service --no-pager -l || true
 
 stop: 
-	-sudo systemctl stop wsocknmea.service
-	-sudo systemctl status wsocknmea.service --no-pager -l
+	-sudo systemctl stop wsocknmea.service || true
+	-sudo systemctl status wsocknmea.service --no-pager -l || true
 
 
 restart: $(DEST)/$(BIN)
-	-sudo systemctl restart wsocknmea.service
-	-sudo systemctl status wsocknmea.service --no-pager -l
+	-sudo systemctl restart wsocknmea.service || true
+	-sudo systemctl status wsocknmea.service --no-pager -l || true
 
 install-www:
 	$(MAKE) install
