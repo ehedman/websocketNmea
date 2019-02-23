@@ -61,6 +61,7 @@ var debug = false;
 var connection = true;
 var underConfig = false;
 var aisping = 1;
+var relayping = 1;
 var pollitem = 0;
 
 var stled = document.createElement("img");
@@ -110,7 +111,8 @@ function do_poll()
 
     if (valid == Cmd.StatusReport)
     {
-        if (underConfig == false) {
+        if (--relayping == 0) {
+            relayping++;
             setRelayStatus(val.relaySts);
         }
 
@@ -172,6 +174,7 @@ function dorelay()
     if (document.getElementById("relay4").checked == true) {
         rlbits |= (1 << 3);
     }
+    relayping = 5;
     send(Cmd.SensorRelay + "-" + rlbits);
 }
 
@@ -717,13 +720,13 @@ function dragElement(elmnt) {
                     <label title="New File:">
                         New:&nbsp;<input style="max-width:80%" name="uploaded_file" type="file" accept="text/plain"></label>
                     <label title="Sentences per second">Rate:&nbsp;<select name="nmea_rate">
-                          <option value="1">1</option>
-                          <option value="3">3</option>
-                          <option selected value="5">5</option>
-                          <option value="7">7</option>
-                          <option value="9">9</option>
-                          <option value="11">11</option>
-                          <option value="13">13</option>
+                          <option value="2">2</option>
+                          <option value="4">4</option>
+                          <option value="6">6</option>
+                          <option value="8">8</option>
+                          <option value="10">10</option>
+                          <option value="12">12</option>
+                          <option selected value="14">14</option>
                           <option value="24">24</option>
                           <option value="48">48</option>
                         </select>
@@ -746,7 +749,7 @@ function dragElement(elmnt) {
                           <option value="60">60</option>
                           <option value="120">120</option>
                           <option value="180">180</option>
-                        </select>&nbsp minutes                
+                        </select>&nbsp; minutes                
                     <input style="position:relative;left:10%;" type="button" title="Record NMEA stream to file now" value="Record" id="Record"<?php echo $NOSAVE==1? " disabled":""; ?> onclick="dosavenmea();">
                     
                 </td>
@@ -756,13 +759,13 @@ function dragElement(elmnt) {
                     <h2>Relay Settings</h2>
                     <input type="text" name="a2dserial" title="UK1104 Data Acquisition Module" id="a2dserial" maxlength="20" value="<?php echo $a2dserial ?>"><br>
                     <div id="relayContent">
-                        Relay-1<input type="checkbox" id="relay1" title="Relay 1 ON/OFF">
+                        Relay-1<input type="checkbox" id="relay1" onclick="relayping = 5;" title="Relay 1 ON/OFF">
                         <input type="text" title="Description" name ="relay1txt" id="relay1txt" size="14" value="<?php echo $a2dreltxt1 ?>"><br>
-                        Relay-2<input type="checkbox" id="relay2" title="Relay 2 ON/OFF">
+                        Relay-2<input type="checkbox" id="relay2" onclick="relayping = 5;" title="Relay 2 ON/OFF">
                         <input type="text" title="Description" name ="relay2txt" id="relay2txt" size="14" value="<?php echo $a2dreltxt2 ?>"><br>
-                        Relay-3<input type="checkbox" id="relay3" title="Relay 3 ON/OFF">
+                        Relay-3<input type="checkbox" id="relay3" onclick="relayping = 5;" title="Relay 3 ON/OFF">
                         <input type="text" title="Description" name ="relay3txt" id="relay3txt" size="14" value="<?php echo $a2dreltxt3 ?>"><br>
-                        Relay-4<input type="checkbox" id="relay4" title="Relay 4 ON/OFF">
+                        Relay-4<input type="checkbox" id="relay4" onclick="relayping = 5;" title="Relay 4 ON/OFF">
                         <input type="text" title="Description" name ="relay4txt" id="relay4txt" size="14" value="<?php echo $a2dreltxt4 ?>"><br>
                         <input type="button"<?php echo $NOSAVE==1? " disabled":""; ?> id="relayAction" value="Send settings" title="Send settings now" onclick="dorelay()">
                     </div>
@@ -798,6 +801,8 @@ function dragElement(elmnt) {
                 </td>
             </tr>
 <?php }?>
+            
+            <tr><td>&nbsp;</td></tr>
             <tr>
                 <td class="contentBox">
                     <h2 title="Save and restart server">Save configuration</h2>

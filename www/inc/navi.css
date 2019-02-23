@@ -202,7 +202,7 @@ div
     background-color: #DEDEDE;
     background-image: url('../img/empty-w.png');
     z-index: 13;
-    height: 560px;
+    height: 494px;
     width: 760px;
     display: none;
     border-radius:10px;
@@ -279,8 +279,17 @@ h2 {
     border-spacing: 0; 
 }
 
-input, select
-{
-   font-size: 0.9em;
-} 
+@-moz-document url-prefix() {
+    input[type="text"], [type="password"] {
+      margin-bottom: 4px;
+      background-color:  #FEFEFE;
+    }
+
+    select {
+      padding: none;
+      margin: 2px;
+      background-color:  #FEFEFE;
+      margin-bottom: 4px;
+    }
+}
 
