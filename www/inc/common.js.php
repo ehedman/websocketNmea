@@ -35,6 +35,7 @@ var Cmd = {
     TimeOfDAy           : "901",
     SaveNMEAstream      : "904",
     StatusReport        : "906",
+    Authentication      : "908",
     UpdateSettings      : "910"
 };
 

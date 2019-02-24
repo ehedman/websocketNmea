@@ -70,6 +70,7 @@
 #endif
 
 #define DEFAULT_AUTH "200ceb26807d6bf99fd6f4f0d1ca54d4" // MD5 password = "administrator" used outside LAN
+#define DEFAULT_AUTH_DURATION   60                      // Seconds of open GUI
 
 #ifdef REV
 #define SWREV REV
@@ -114,6 +115,7 @@ enum requests {
     TimeOfDAy           = 901,
     SaveNMEAstream      = 904,
     StatusReport        = 906,
+    Authentication      = 908,
     UpdateSettings      = 910
 };
 
@@ -156,6 +158,8 @@ typedef struct {
     time_t  fdn_starttime;      // Start time for recording
     time_t  fdn_endtime;        // End time for recording
     char    fdn_inf[PATH_MAX];  // NMEA stream input file
+    char    md5pw[40];          // Password to GUI
+    int     m55pw_ts;           // Passwd valid x seconds;
 } in_configs;
 
 static in_configs iconf;
@@ -775,6 +779,13 @@ static int configure(int kpf)
         printlog("   AIS device:  %s", iconf.ais_dev);
     } else iconf.ais_dev[0]= '\0';
 
+    // Authentication for GUI
+    rval = sqlite3_prepare_v2(conn, "select password from auth", -1, &res, &tail);
+    if (rval == SQLITE_OK && sqlite3_step(res) == SQLITE_ROW) {
+        (void)strcpy(iconf.md5pw, (char*)sqlite3_column_text(res, 0));
+        iconf.m55pw_ts = 0;
+    } else iconf.md5pw[0]= '\0';
+
     // Still in file feed config mode?
     if ((fd=open(KPCONFPATH, O_RDONLY)) > 0) {    
         if (read(fd, buf, sizeof(buf)) >0 && strstr(buf, FIFOKPLEX) != NULL) {
@@ -1169,10 +1180,21 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                     break;
                 }
 
+                case Authentication: {
+                    if (args != NULL && strlen(args)) {
+                        int autval = strncmp(args, iconf.md5pw, 32) == 0? 3:2;
+                        autval == 3? iconf.m55pw_ts = time(NULL)+DEFAULT_AUTH_DURATION:0;               
+                        sprintf(value, "{'Authen':'%d'}-%d", autval, req);
+                        printlog("Authentication for client %s", autval == 3? "granted" : "denied");
+                    }
+                    break;
+                }
+
                 case StatusReport: {
                     cnmea.txs = ct - cnmea.txs_ts > INVALID? -1:cnmea.txs;
-                    sprintf(value, "{'relaySts':'%d','aisTxSts':'%d','nmRec':'%s','nmPlay':'%s'}-%d",
-                        relayStatus(), cnmea.txs, iconf.fdn_outf, fileFeed==1? basename(iconf.fdn_inf):"", req);
+                    int auttmo = iconf.m55pw_ts > ct? 3:4;
+                    sprintf(value, "{'relaySts':'%d','aisTxSts':'%d','nmRec':'%s','nmPlay':'%s','Authen':'%d'}-%d",
+                        relayStatus(), cnmea.txs, iconf.fdn_outf, fileFeed==1? basename(iconf.fdn_inf):"", auttmo, req);
                 }
 
                 case SensorRelay: {

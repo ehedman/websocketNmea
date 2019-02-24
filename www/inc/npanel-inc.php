@@ -66,9 +66,11 @@
         $sql="UPDATE `ais` SET `aisname`='".strtoupper($_POST['aisname'])."', `aiscallsign`='".strtoupper($_POST['aiscallsign'])."', `aisid`='".$_POST['aisid']."', `aisuse`='".$_POST['aisuse']."' WHERE `Id`=1";
         $DBH->exec($sql);
 
-        if (strlen(trim($_POST['password'])) == 32) {
-            $sql="UPDATE `auth` SET `password`='".trim($_POST['password'])."' WHERE `Id`=1";
-            $DBH->exec($sql);
+        if ($NOSAVE==1) {
+            if (strlen(trim($_POST['password'])) == 32) {
+                $sql="UPDATE `auth` SET `password`='".trim($_POST['password'])."' WHERE `Id`=1";
+                $DBH->exec($sql);
+            }
         }
 
         if (($n=intval($_POST['nttys'])) > 0) {
@@ -129,12 +131,7 @@
         }
     }
     
-    if ($DBH) { 
-        $stmt = $DBH->prepare("SELECT password FROM auth LIMIT 1");
-        $stmt->execute(); 
-        $row = $stmt->fetch();
-        $password=$row['password'];
-
+    if ($DBH) {
         $stmt = $DBH->prepare("SELECT rev FROM rev LIMIT 1");
         $stmt->execute(); 
         $row = $stmt->fetch();

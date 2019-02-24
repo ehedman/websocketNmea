@@ -129,20 +129,36 @@ function do_poll()
 
         if (val.nmRec.length) {
             document.getElementById("msg").innerHTML=": Recording of NMEA stream to file " + val.nmRec + " in progress";
-            document.getElementById("Record").value = "Stop";
+            document.getElementById("recordAction").value = "Stop";
         } else {
             document.getElementById("msg").innerHTML=":";
-            document.getElementById("Record").value = "Record";
+            document.getElementById("recordAction").value = "Record";
         }
 
-        document.getElementById("Record").disabled = false;
+        document.getElementById("recordAction").disabled = false;
 
         if (val.nmPlay.length && !val.nmRec.length) {
             document.getElementById("msg").innerHTML=": Replaying of NMEA stream from file " + val.nmPlay;
         }
 
+<?php if ($NOSAVE==1 ) {?>
+        if (val.Authen.length) {
+            docheckpw(val.Authen);
+        } else {
+            docheckpw(4);
+        }
+<?php } ?>
+        
         return;
     }
+
+<?php if ($NOSAVE==1 ) {?>
+    if (valid == Cmd.Authentication) {
+        if (val.Authen.length) {
+            docheckpw(val.Authen);
+        }
+    }
+<?php } ?>
 
     if (connection == false || !(valid == Cmd.ServerPing)) {
         stled.src = 'img/indicator-red.png';
@@ -188,12 +204,12 @@ function doAis(cb)
 function dosavenmea()
 {
 
-    if (document.getElementById("Record").value == "Stop") {
+    if (document.getElementById("recordAction").value == "Stop") {
         send(Cmd.SaveNMEAstream + "-ABORT");
         return;
     }
 
-    document.getElementById("Record").disabled = true;
+    document.getElementById("recordAction").disabled = true;
 
     var fpath = document.getElementById("record_file");
     if (!fpath.value.trim().length) {
@@ -211,28 +227,48 @@ function dosavenmea()
     send(Cmd.SaveNMEAstream + "-" + fpath.value.trim() + ":" + m.options[m.selectedIndex].value);
 }
 
-function docheckpw()
+<?php if ($NOSAVE==1 ) {?>
+
+function docheckpw(seq)
 {
     var status;
-    if (document.getElementById("password").value.length >8) {
-        md5pw = MD5(document.getElementById("password").value);
-        if (md5pw.trim() === "<?php echo $password; ?>".trim()) {
-            document.getElementById("msg").innerHTML=": Unlocked";
-            status = false;
-        } else {
-            document.getElementById("msg").innerHTML=": Invalid authentication string";
-            document.getElementById("dosavePw").checked = false;
-            status = true;
-        }
-        document.getElementById("Play").disabled = status;
-        document.getElementById("record_file").disabled = status;
-        document.getElementById("Save").disabled = status;
-        document.getElementById("trx-status").disabled = status;
-        document.getElementById("ais-use-cb").disabled = status;
-        document.getElementById("relayAction").disabled = status;  
-        document.getElementById("dosavePw").disabled = status;       
+
+    if (seq == 0)
+        return;
+
+    if (seq == 1) {
+        send(Cmd.Authentication + "-" + MD5(document.getElementById("password").value).trim());
+        status = true;
     }
+    if (seq == 2) {
+        document.getElementById("msg").innerHTML=": Invalid authentication string";
+        document.getElementById("dosavePw").checked = false;
+        status = true;
+    }
+
+    if (seq == 3) {
+       status = false;
+    }
+
+    if (seq == 4) {
+       status = true;
+    }
+  
+    document.getElementById("Play").disabled = status;
+    if (status == true) {
+        document.getElementById("record_file").value = "";
+        document.getElementById("password").value = "";
+    }
+    document.getElementById("recordAction").disabled = status;
+    document.getElementById("record_file").disabled = status;
+    document.getElementById("Save").disabled = status;
+    document.getElementById("trx-status").disabled = status;
+    document.getElementById("ais-use-cb").disabled = status;
+    document.getElementById("relayAction").disabled = status;  
+    document.getElementById("dosavePw").disabled = status;       
 }
+
+<?php }?>
 
 function new_panel()
 {
@@ -751,7 +787,7 @@ function dragElement(elmnt) {
                           <option value="120">120</option>
                           <option value="180">180</option>
                         </select>&nbsp; minutes                
-                    <input style="position:relative;left:10%;" type="button" title="Record NMEA stream to file now" value="Record" id="Record" onclick="dosavenmea();">
+                    <input style="position:relative;left:10%;" type="button" title="Record NMEA stream to file now" value="Record" id="recordAction" onclick="dosavenmea();">
                     
                 </td>
             </tr>
@@ -798,7 +834,7 @@ function dragElement(elmnt) {
                     <h2 title="Unlock protected fields">Authentication</h2>
                     <input title="Password (8 characters minimum)" type="password" id="password" name="password" autocomplete="off" minlength="8" required><br>
                     Autosave &nbsp;<input type="checkbox"<?php echo $NOSAVE==1? " disabled":""; ?> title="Save new password on save configuration" id="dosavePw">
-                    Confirm &nbsp;<input type="button" title="Set password" value="OK" onclick="docheckpw();">
+                    Confirm &nbsp;<input type="button" title="Set password" value="OK" onclick="docheckpw(1);">
                 </td>
             </tr>
 <?php }?>
