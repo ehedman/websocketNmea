@@ -243,6 +243,7 @@ function docheckpw(seq)
     if (seq == 2) {
         document.getElementById("msg").innerHTML=": Invalid authentication string";
         document.getElementById("dosavePw").checked = false;
+        document.getElementById("password").value = "";
         status = true;
     }
 
@@ -256,8 +257,7 @@ function docheckpw(seq)
   
     document.getElementById("Play").disabled = status;
     if (status == true) {
-        document.getElementById("record_file").value = "";
-        document.getElementById("password").value = "";
+        document.getElementById("record_file").value = "";     
     }
     document.getElementById("recordAction").disabled = status;
     document.getElementById("record_file").disabled = status;
