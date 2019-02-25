@@ -82,7 +82,7 @@ function do_update()
         switch (pollitem++)
         {
             case 0: send(Cmd.ServerPing); break;
-            case 1: send(Cmd.StatusReport); break;              
+            case 1: send(Cmd.StatusReport + "-" + "Status"); break;              
             default: pollitem = 0; break;
         }
        
@@ -241,7 +241,7 @@ function docheckpw(seq)
         status = true;
     }
     if (seq == 2) {
-        document.getElementById("msg").innerHTML=": Invalid authentication string";
+        document.getElementById("msg").innerHTML=": Authentication denied";
         document.getElementById("dosavePw").checked = false;
         document.getElementById("password").value = "";
         status = true;
@@ -257,7 +257,7 @@ function docheckpw(seq)
   
     document.getElementById("Play").disabled = status;
     if (status == true) {
-        document.getElementById("record_file").value = "";     
+        document.getElementById("record_file").value = "";
     }
     document.getElementById("recordAction").disabled = status;
     document.getElementById("record_file").disabled = status;

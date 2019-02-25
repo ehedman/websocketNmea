@@ -158,8 +158,9 @@ typedef struct {
     time_t  fdn_starttime;      // Start time for recording
     time_t  fdn_endtime;        // End time for recording
     char    fdn_inf[PATH_MAX];  // NMEA stream input file
-    char    md5pw[40];          // Password to GUI
+    char    md5pw[40];          // Password for GUI
     int     m55pw_ts;           // Passwd valid x seconds;
+    char    client_ip[20];      // Granted client
 } in_configs;
 
 static in_configs iconf;
@@ -598,6 +599,7 @@ static int configure(int kpf)
     iconf.map_zoom = 12;
     iconf.map_updt = 6;
     iconf.depth_vwrn = 4;
+    iconf.client_ip[0] = '\0';
 
     // If kplex.conf and/or a config database file is missing, create templates so that
     // we keep the system going. The user has then to create his own profile from the web gui.
@@ -1035,6 +1037,11 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
 
         case LWS_CALLBACK_RECEIVE: {
 
+            char clientName[40];
+            char clientIp[20] = { '\0' };
+
+            lws_get_peer_addresses(wsi, lws_get_socket_fd(wsi), clientName, sizeof(clientName), clientIp, sizeof(clientIp));
+
             if ((args=index(in, '-')) != NULL)
                 *args++ = '\0';
 
@@ -1182,19 +1189,52 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
 
                 case Authentication: {
                     if (args != NULL && strlen(args)) {
-                        int autval = strncmp(args, iconf.md5pw, 32) == 0? 3:2;
-                        autval == 3? iconf.m55pw_ts = time(NULL)+DEFAULT_AUTH_DURATION:0;               
+                        int autval = 2;
+
+                        if (strlen(clientIp) && !strcmp(clientIp, iconf.client_ip) && !strncmp(args, iconf.md5pw, 32)) {
+                            autval = 3; // Renew auth
+                            iconf.m55pw_ts = time(NULL)+DEFAULT_AUTH_DURATION;
+                        } else {
+                        
+                            if (!strlen(iconf.client_ip)) {  
+                                if (!strlen(clientIp)) {
+                                    autval = 2;
+                                } else {
+                                    autval = strncmp(args, iconf.md5pw, 32) == 0? 3:2;
+                                    if (autval == 3) {
+                                        strcpy(iconf.client_ip, clientIp);
+                                        iconf.m55pw_ts = time(NULL)+DEFAULT_AUTH_DURATION;
+                                    } else autval = 2;
+                                }                                
+
+                            } else autval = 2;
+                        }
+
                         sprintf(value, "{'Authen':'%d'}-%d", autval, req);
-                        printlog("Authentication for client %s", autval == 3? "granted" : "denied");
+                        printlog("Authentication for client %s %s", clientIp, autval == 3? "granted" : "denied");
                     }
                     break;
                 }
 
                 case StatusReport: {
+                    int auttmo = 4;
                     cnmea.txs = ct - cnmea.txs_ts > INVALID? -1:cnmea.txs;
-                    int auttmo = iconf.m55pw_ts > ct? 3:4;
+
+                    if (args != NULL && strlen(args)) {
+                        if (strlen(clientIp) && !strcmp(clientIp, iconf.client_ip)) {
+                            auttmo = iconf.m55pw_ts > ct? 3:4;
+                            if (auttmo == 4) {
+                                printlog("Authentication for client %s closed", clientIp);
+                                iconf.client_ip[0] = '\0';
+                                iconf.m55pw_ts = 0;
+                            }
+                        }
+                    }
+
                     sprintf(value, "{'relaySts':'%d','aisTxSts':'%d','nmRec':'%s','nmPlay':'%s','Authen':'%d'}-%d",
                         relayStatus(), cnmea.txs, iconf.fdn_outf, fileFeed==1? basename(iconf.fdn_inf):"", auttmo, req);
+
+                    break;
                 }
 
                 case SensorRelay: {
