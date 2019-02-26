@@ -237,9 +237,14 @@ function docheckpw(seq)
         return;
 
     if (seq == 1) {
+
+        if (document.getElementById("password").value.length < 8)
+            return;
+
         send(Cmd.Authentication + "-" + MD5(document.getElementById("password").value).trim());
         status = true;
     }
+
     if (seq == 2) {
         document.getElementById("msg").innerHTML=": Authentication denied";
         document.getElementById("dosavePw").checked = false;
@@ -265,16 +270,10 @@ function docheckpw(seq)
     document.getElementById("trx-status").disabled = status;
     document.getElementById("ais-use-cb").disabled = status;
     document.getElementById("relayAction").disabled = status;  
-    document.getElementById("dosavePw").disabled = status;       
+    document.getElementById("dosavePw").disabled = status;
 }
 
 <?php }?>
-
-function new_panel()
-{
-    var options='toolbar=0,status=0,menubar=0,scrollbars=0,location=0,directories=0,resizable=0,width=1280,height=840';
-    window.open("npanel.php",'_blank',options);
-}
 
 function full_screen() {
 
