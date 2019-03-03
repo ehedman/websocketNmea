@@ -1218,7 +1218,7 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
 
                 case StatusReport: {
                     int auttmo = 4;
-                    cnmea.txs = ct - cnmea.txs_ts > INVALID? -1:cnmea.txs;
+                    cnmea.txs = ct - cnmea.txs_ts > INVALID*2? -1:cnmea.txs;
 
                     if (args != NULL && strlen(args)) {
                         if (strlen(clientIp) && !strcmp(clientIp, iconf.client_ip)) {
