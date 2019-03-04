@@ -65,11 +65,10 @@
         </div>
         <div id=adc_r2_div>
             <div id="adc_right_div">       
-                <iframe  width="256" height="256" frameborder="0" border="0" cellspacing="0" scrolling=no src="in-10-temp.php" id="adc_right_fr"></iframe>
+                <iframe  width="256" height="256" frameborder="0" border="0" cellspacing="0" scrolling=no src="in-9-curr.php" id="adc_right_fr"></iframe>
             </div>
-
              <div id="adc_center_div">       
-                <iframe  width="256" height="256" frameborder="0" border="0" cellspacing="0" scrolling=no src="in-9-curr.php" id="adc_center_fr"></iframe>
+                <iframe  width="256" height="256" frameborder="0" border="0" cellspacing="0" scrolling=no src="in-10-temp.php" id="adc_center_fr"></iframe>
             </div>
         </div>
         <input id="next-butt" type="button" value="N" title="Click to shift instrument" onclick="nextinstrument();">
