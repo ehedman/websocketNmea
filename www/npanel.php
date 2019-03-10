@@ -18,6 +18,8 @@
     define('MAXFILESIZE', "10000000");
     
     require  DOCROOT.'/inc/npanel-inc.php';
+
+    $NULLPAGE = "http://".$_SERVER['HTTP_HOST'].dirname($_SERVER['PHP_SELF'])."/null.html";
     
 ?>
 <!DOCTYPE html>
@@ -270,7 +272,7 @@ function docheckpw(seq)
     document.getElementById("trx-status").disabled = status;
     document.getElementById("ais-use-cb").disabled = status;
     document.getElementById("relayAction").disabled = status;  
-    document.getElementById("dosavePw").disabled = status;
+    document.getElementById("dosavePw").disabled = status;   
 }
 
 <?php }?>
@@ -622,25 +624,25 @@ function dragElement(elmnt) {
     
     <div id="top_section">
         <div id="left_div">   
-            <iframe src="tbd" id="left_fr">
+            <iframe src="<?php echo $NULLPAGE; ?>" id="left_fr">
                 <p>Your browser does not support iframes.</p>
             </iframe>
         </div>
         <div id="right_div">       
-            <iframe src="tbd" id="right_fr"></iframe>
+            <iframe src="<?php echo $NULLPAGE; ?>" id="right_fr"></iframe>
         </div>     
          <div id="center_div">       
-            <iframe src="tbd" id="center_fr"></iframe>
+            <iframe src="<?php echo $NULLPAGE; ?>" id="center_fr"></iframe>
         </div>
     </div>
         
     <div id="bottom_section"> 
         <div id="show_bottom">    
             <div id="left_div_b">
-                <iframe src="tbd" id="left_fr_b"></iframe> 
+                <iframe src="<?php echo $NULLPAGE; ?>" id="left_fr_b"></iframe> 
             </div>
             <div id="right_div_b">       
-                <iframe src="tbd" id="right_fr_b"></iframe>
+                <iframe src="<?php echo $NULLPAGE; ?>" id="right_fr_b"></iframe>
             </div>          
         </div>  
     </div>
@@ -680,8 +682,8 @@ function dragElement(elmnt) {
                           <option <?php echo $map_updt==10? "selected ":""; ?>value="10">10</option>
                           <option <?php echo $map_updt==12? "selected ":""; ?>value="12">12</option>
                     </select><br>
-                    Enter : <input type="button" value="key" title="Enter a Google Map Key" onclick="enter_key();">
-                    <?php if (strlen($KEY)) { ?>Delete : <input type="button" value="key" title="Delete the Google Map Key" onclick="delete_key();"><?php } ?>
+                        Enter : <input type="button" value="key" title="Enter a Google Map Key" onclick="enter_key();">
+                        <?php if (strlen($KEY)) { ?>Delete : <input type="button" value="key" title="Delete the Google Map Key" onclick="delete_key();"><?php } ?>
                 </td>
             </tr>
              <tr>
