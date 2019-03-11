@@ -31,7 +31,7 @@ HDRS = wsocknmea.h
 BIN = wsocknmea
 
 # Where to install web pages
-WWWTOP?=/var/www
+WWWTOP?=/var/ww
 
 # The web-server's runtime user and group belongings
 WO = www-data
@@ -96,7 +96,9 @@ distclean:
 
 install: $(BIN)
 	sudo install -m 0755 -g root -o root $(BIN) -D $(DEST)/$(BIN)
-	sudo install -m 0644 -g root -o root a2dnotice -D $(DEST)/a2dnotice
+	@if [ ! -e $(DEST)/a2dnotice ]; then \
+		sudo install -m 755 -g root -o root a2dnotice -D $(DEST)/a2dnotice; \
+	fi
 	-sudo systemctl stop wsocknmea.service
 	-sudo systemctl disable wsocknmea.service
 	-sudo install -m 0644 -g root -o root wsocknmea.service -D /lib/systemd/system/
@@ -108,7 +110,6 @@ status:
 stop: 
 	-sudo systemctl stop wsocknmea.service || true
 	-sudo systemctl status wsocknmea.service --no-pager -l || true
-
 
 restart: $(DEST)/$(BIN)
 	-sudo systemctl restart wsocknmea.service || true
