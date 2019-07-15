@@ -241,7 +241,7 @@ void printlog(char *format, ...)
         va_end(args);
         return; // Do not repeate same msgs from thread loops
     } else {
-        strncpy(oldbuf,buf, sizeof(buf));
+        strncpy(oldbuf,buf, sizeof(oldbuf));
     }
 
     if (backGround) {
@@ -2301,7 +2301,7 @@ int main(int argc ,char **argv)
 
             // Update GUI with this vessels' data (only if VDO and only once per session)
             if (got_vdo == 0 && fileFeed == 0 && strlen(my_aisname) && strlen(my_callsign)) {
-                char vdobuf[100];
+                char vdobuf[200];
                 sqlite3 *conn;
                 sqlite3_stmt *res;
                 const char *tail;
