@@ -263,7 +263,9 @@ static void do_sensors(time_t ts, collected_nmea *cn)
 #endif
 
 #ifdef DOADC
+
     float a2dVal;
+    float crefVal;
     int ad2Tick;
     static int ccnt;
     static float avcurr;
@@ -274,19 +276,29 @@ static void do_sensors(time_t ts, collected_nmea *cn)
     static int vcnt;
     static float sampvolt[20];
     static float avvolt;
+    const float tickVolt = 0.01356;     // Volt / tick according to external electrical circuits
+    const float tickcrVolt = 0.004882;   // 10-bit adc over 5V for current messurement
+    const float crShunt = 0.001;        // Current shunt (ohm) according to external electrical circuits
+    const float cGain = 50;             // Current sense amplifier gain for LT1999-50
+    const float cZero = 0.1;            // Sense lines in short-circuit should read 0
+    const int linearize = 0;            // No extra compesation needed
 
     ad2Tick = adcRead(voltChannel);
-    a2dVal = tick2volt(ad2Tick); // Linearize this value and return voltage
+    a2dVal = tick2volt(ad2Tick, tickVolt, 0); // Return voltage, no invert
 
     // Calculate an average in case of ADC drifts.
     if (a2dVal >= VOLTLOWLEVEL) {
-        sampvolt[vcnt] = a2dVal;
-        if (++vcnt > sizeof(sampvolt)/sizeof(float)) {
-            vcnt = avvolt = 0;
-            for (int i=0; i < sizeof(sampvolt)/sizeof(float); i++) {
-                avvolt += sampvolt[i];
+        if (linearize) {
+            sampvolt[vcnt] = a2dVal;
+            if (++vcnt > sizeof(sampvolt)/sizeof(float)) {
+                vcnt = 0;
+                for (int i=0; i < sizeof(sampvolt)/sizeof(float); i++) {
+                    avvolt += sampvolt[i];
+                }
+                avvolt /= sizeof(sampvolt)/sizeof(float);
             }
-            avvolt /= sizeof(sampvolt)/sizeof(float);
+        } else {
+            avvolt = a2dVal;
         }
         cn->volt = avvolt;
         cn->volt_ts = ts;
@@ -295,18 +307,27 @@ static void do_sensors(time_t ts, collected_nmea *cn)
     // Alert about low voltage
     a2dNotice(voltChannel, cn->volt, 11.5, 12.5);
 
+    //ad2Tick = adcRead(crefChannel); // Read volt refrerence from current sensor
+    //crefVal = tick2volt(ad2Tick, tickcrVolt, 0); // Return voltage, no invert
+    crefVal = 2.486;    // Reference voltage measured by hand
+
     ad2Tick = adcRead(currChannel);
-    a2dVal = tick2current(ad2Tick); // Linearize this value and return current
+    a2dVal = tick2current(ad2Tick, tickcrVolt, crefVal, crShunt, cGain, 0)-cZero;   // Return current, no invert
 
     // Calculate an average in case of ADC drifts.
     if (a2dVal >= CURRLOWLEVEL) {
-        sampcurr[ccnt] = a2dVal;
-        if (++ccnt > sizeof(sampcurr)/sizeof(float)) {
-            ccnt = avcurr = 0;
-            for (int i=0; i < sizeof(sampcurr)/sizeof(float); i++) {
-                avcurr += sampcurr[i];
+        if (linearize) {
+            int i;
+            sampcurr[ccnt] = a2dVal;
+            if (++ccnt > sizeof(sampcurr)/sizeof(float)) {
+                ccnt =  0;
+                for (i=0; i < sizeof(sampcurr)/sizeof(float); i++) {
+                    avcurr += sampcurr[i];
+                }
+                avcurr /= sizeof(sampcurr)/sizeof(float);
             }
-            avcurr /= sizeof(sampcurr)/sizeof(float);
+        } else {
+            avcurr = a2dVal;
         }
         cn->curr = avcurr;
         cn->curr_ts = ts;
@@ -316,13 +337,17 @@ static void do_sensors(time_t ts, collected_nmea *cn)
     a2dVal *= ADCTICKSTEMP;
     // Calculate an average in case of ADC drifts.
     if (a2dVal >= TEMPLOWLEVEL) {
-        samptemp[tcnt] = a2dVal;
-        if (++tcnt > sizeof(samptemp)/sizeof(float)) {
-            tcnt = avtemp = 0;
-            for (int i=0; i < sizeof(samptemp)/sizeof(float); i++) {
-                avtemp += samptemp[i];
+        if (linearize) {
+            samptemp[tcnt] = a2dVal;
+            if (++tcnt > sizeof(samptemp)/sizeof(float)) {
+                tcnt = 0;
+                for (int i=0; i < sizeof(samptemp)/sizeof(float); i++) {
+                    avtemp += samptemp[i];
+                }
+                avtemp /= sizeof(samptemp)/sizeof(float);
             }
-            avtemp /= sizeof(samptemp)/sizeof(float);
+        } else {
+            avtemp = a2dVal;
         }
         cn->temp = avtemp;
         cn->temp_ts = ts;
@@ -1789,6 +1814,7 @@ int main(int argc ,char **argv)
     if (strcmp(iconf.adc_dev, "/dev/null")) {
         (void)adcInit(iconf.adc_dev, voltChannel);
         (void)adcInit(iconf.adc_dev, currChannel);
+        (void)adcInit(iconf.adc_dev, crefChannel); 
         (void)adcInit(iconf.adc_dev, tempChannel);
         (void)relayInit(4);      
     }

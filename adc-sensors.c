@@ -21,10 +21,9 @@
 #include <termios.h> 
 #include <unistd.h>
 #include <errno.h>
+#include <math.h>
 #include "wsocknmea.h"
 #ifdef DOADC
-#include "stables.h"
-
 
 #ifdef UK1104   // https://www.canakit.com/
 
@@ -415,46 +414,48 @@ int ioPinGet(int channel)
 #endif // UK1104
 
 /* API */
-float tick2volt(int tick)
+float tick2volt(int tick, float tickVolt, int invert)
 {
     float volt = 0.0;
-    size_t len = (sizeof(voltSensor)/sizeof(int))/2;
 
-    tick = ADCRESOLUTION-tick;   // Invert value
-    if (tick > voltSensor[1][0]) return volt;
-    // Compensate for nonlinearity in the sensor
-    for (size_t i = 1; i < len-1; i++) {
-        if (tick >= voltSensor[i][0]) {
-            volt = (voltSensor[i][1] + voltSensor[i-1][1] + voltSensor[i+1][1])/3;
-            volt +=  tick - voltSensor[i][0];
-            volt *= ADCTICKSVOLT;
-            break;
-        }
-    }
+    if (invert)
+        tick = ADCRESOLUTION-tick;   // Invert value
+
+    if (tickVolt == 0.0)
+        tickVolt = ADCTICKSVOLT;
+        
+    volt = tick * tickVolt;
+    //printf("%.2f, %d   \n", volt, tick ); fflush(stdout);
     
     return volt;
 }
 
 /* API */
-float tick2current(int tick)
+float tick2current(int tick, float tickVolt, float crefVal, float crShunt, float gain, int invert)
 {
+    float svolt = 0.0;
     float curr = 0.0;
-    size_t len = (sizeof(currSensor)/sizeof(int))/2;
 
-    tick = ADCRESOLUTION-tick;   // Invert value
+    if (tickVolt == 0.0)
+        tickVolt = ADCTICKSCURR;
 
-    if (tick > currSensor[1][0]) return curr;
+    svolt = tick * tickVolt;
 
-    // Compensate for nonlinearity in the sensor
-    for (size_t i = 1; i < len-1; i++) {
-        if (tick >= currSensor[i][0]) {
-            curr = (currSensor[i][1] + currSensor[i-1][1] + currSensor[i+1][1])/3;
-            curr +=  tick - currSensor[i][0];
-            curr *= ADCTICKSCURR;
-            break;
+    if (svolt > 0) {
+
+        svolt -= crefVal;
+
+        svolt /= gain;
+         
+        curr =  (svolt / crShunt);
+
+        if (invert) {
+            curr = curr > 0? 0 - fabs(curr) : fabs(curr);
         }
     }
-    
+
+    // printf("curr=%.2f, svolt=%.6f, ref=%.2f, shunt=%.3f, gain=%.1f, ticks=%d     \r", curr, svolt, crefVal, crShunt, gain, tick ); fflush(stdout);
+
     return curr;
 }
 

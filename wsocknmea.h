@@ -35,14 +35,15 @@ extern int relayStatus(void);
 enum adcChannels {
     voltChannel = 0,
     currChannel,
+    crefChannel,
     tempChannel = TPMCH,    // Reserved to return real temp as float value
 };
 
 extern int adcInit(char *device, int a2dChannel); // device exaple "//dev/ttyACM0" or "/dev/spidev0.0"
 extern int adcRead(int a2dChannel);
 extern void a2dNotice(int channel, float val, float low, float high);
-extern float tick2volt(int tick);
-extern float tick2current(int tick);
+extern float tick2volt(int tick, float tickVolt, int invert);
+extern float tick2current(int tick, float tickVolt, float crefVal, float crShunt, float gain, int invert);
 
 #ifdef UK1104
 
@@ -106,8 +107,6 @@ extern int ioPinGet(int channel);
 #define MSGPRG   "/usr/local/bin/a2dnotice"
 #define MSGVLOW  "%s \"Main battery bank at critical %.2f Volt\""
 #define MSGVHIGH "%s \"Main battery bank back at %.2f Volt\""
-
-typedef int linearizeSensor[100][2];
 
 #endif
 
