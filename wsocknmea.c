@@ -267,6 +267,7 @@ static void do_sensors(time_t ts, collected_nmea *cn)
     float a2dVal;
     float crefVal;
     int ad2Tick;
+    static int firstTurn;
     static int ccnt;
     static float avcurr;
     static float sampcurr[20];  // No of samples to collect
@@ -304,8 +305,11 @@ static void do_sensors(time_t ts, collected_nmea *cn)
         cn->volt_ts = ts;
     }
 
-    // Alert about low voltage
-    a2dNotice(voltChannel, cn->volt, 11.5, 12.5);
+    // Alert about low voltage/ENV
+    if (! firstTurn ) {
+        a2dNotice(voltChannel, cn->volt, 11.5, 12.5);
+        firstTurn = 1;
+    }
 
     //ad2Tick = adcRead(crefChannel); // Read volt refrerence from current sensor
     //crefVal = tick2volt(ad2Tick, tickcrVolt, 0); // Return voltage, no invert
@@ -1473,6 +1477,15 @@ static void *threadPnmea_run()
 
             sprintf(outbuf,"%s*%x\r\n", fifobuf, checksum);
             write(pnmeafd, outbuf, strlen(outbuf));
+#ifdef XDRTEST
+            sprintf(fifobuf, "$IIXDR,U,%.1f,V,VAH30", cnmea.volt);
+            i=1;
+            while(fifobuf[i] != '\0')
+                checksum = checksum ^ fifobuf[i++];
+
+            sprintf(outbuf,"%s*%x\r\n", fifobuf, checksum);
+            write(pnmeafd, outbuf, strlen(outbuf));
+#endif
         }
         prevmSts = ms_timestamp();
         sleep(1);
@@ -1974,19 +1987,22 @@ int main(int argc ,char **argv)
 
             if (!(is_vdm + is_vdo)) {
 
-                // Priority parsing order and logic:
-                // See http://freenmea.net/docs and other sources out there
+                // NMEA Version 2.23 - Priority parsing order and logic:
+                // See https://gpsd.gitlab.io/gpsd/NMEA.html and other sources out there
                 
                 // RMC - Recommended minimum specific GPS/Transit data
                 // RMC feed is assumed to be present at all time 
                 if (NMPARSE(nmeastr_p1, "RMC")) {
                     cnmea.rmc=atof(getf(7, nmeastr_p1));
-                    cnmea.rmc_ts = ts;
+                    if (cnmea.rmc > 1.0) { // Now use GPS heading else magnetic
+                        cnmea.hdm=atof(getf(8, nmeastr_p1));
+                        cnmea.hdm_ts = ts; 
+                    }                      
                     strcpy(cnmea.gll, getf(3, nmeastr_p1));
                     strcpy(cnmea.glo, getf(5, nmeastr_p1));
                     strcpy(cnmea.glns, getf(4, nmeastr_p1));
                     strcpy(cnmea.glne, getf(6, nmeastr_p1));
-                    cnmea.gll_ts = ts;           
+                    cnmea.gll_ts = cnmea.rmc_ts = ts;
                     continue;
                 }
 
@@ -2012,10 +2028,14 @@ int main(int argc ,char **argv)
                     }
                 }
 
-                // VHW - Water speed
+                // VHW - Water speed and magnetic heading
                 if(NMPARSE(nmeastr_p1, "VHW")) {
                     if ((cnmea.stw=atof(getf(5, nmeastr_p1))) != 0)
                         cnmea.stw_ts = ts;
+                   if (cnmea.rmc < 1.0) {
+                        cnmea.hdm=atof(getf(1, nmeastr_p1));
+                        cnmea.hdm_ts = ts;
+                    }
                     continue;
                 }
 
@@ -2024,14 +2044,7 @@ int main(int argc ,char **argv)
                     cnmea.stw_ts = ts;
                 }
 
-                if (ts - cnmea.hdm_ts > INVALID/2) { // If not from VHW
-
-                    // HDT - Heading - True
-                    if (NMPARSE(nmeastr_p1, "HDT")) {
-                        cnmea.hdm=atof(getf(1, nmeastr_p1));
-                        cnmea.hdm_ts = ts;
-                        continue;
-                    }
+                if (ts - cnmea.hdm_ts > INVALID/2) { // If not from VHW or RMC
 
                     // HDG - Heading - Deviation and Variation 
                     if (NMPARSE(nmeastr_p1, "HDG")) {
@@ -2039,8 +2052,15 @@ int main(int argc ,char **argv)
                         cnmea.hdm_ts = ts;
                         continue;
                     }
+
+                    // HDT - Heading - True (obsoleted)
+                    if (NMPARSE(nmeastr_p1, "HDT")) {
+                        cnmea.hdm=atof(getf(1, nmeastr_p1));
+                        cnmea.hdm_ts = ts;
+                        continue;
+                    }
                  
-                    // HDM Heading - Heading Magnetic
+                    // HDM Heading - Heading Magnetic (obsoleted)
                     if (NMPARSE(nmeastr_p1, "HDM")) {
                         cnmea.hdm=atof(getf(1, nmeastr_p1));
                         cnmea.hdm_ts = ts;
@@ -2089,7 +2109,7 @@ int main(int argc ,char **argv)
                     continue;
                 }
 
-                // VWR - Relative Wind Speed and Angle (obsolete)
+                // VWR - Relative Wind Speed and Angle (obsoleted)
                 if (ts - cnmea.vwr_ts > INVALID/2) { // If not from MWV
                     if (NMPARSE(nmeastr_p1, "VWR")) {
                         cnmea.vwra=atof(getf(1, nmeastr_p1));
