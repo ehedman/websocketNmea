@@ -10,8 +10,6 @@
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">     
         <meta name="description" content="hedmanshome.se Marine GlassCockpit">
         <meta name="author" content="Erland Hedman">
-        <meta http-equiv="Pragma" content="no-cache">
-        <meta http-equiv="Expires" content="-1">
         <link rel="icon" href="img/icon.ico">
         <link rel="stylesheet" type="text/css" href="inc/navi.css">
         <script src="inc/pako.js"></script>
@@ -64,16 +62,14 @@
     <body onload="init()">
     <div id="adc_main_div">
         <div id="adc_left_div">   
-            <iframe width="256" height="256" frameborder="0" border="0" cellspacing="0" scrolling=no src="in-8-volt.php" id="adc_left_fr">
-                <p>Your browser does not support iframes.</p>
-            </iframe>
+            <iframe width="256" height="256" scrolling=no src="in-8-volt.php" id="adc_left_fr"></iframe>
         </div>
         <div id=adc_r2_div>
             <div id="adc_right_div">       
-                <iframe  width="256" height="256" frameborder="0" border="0" cellspacing="0" scrolling=no src="in-9-curr.php" id="adc_right_fr"></iframe>
+                <iframe  width="256" height="256" scrolling=no src="in-9-curr.php" id="adc_right_fr"></iframe>
             </div>
              <div id="adc_center_div">       
-                <iframe  width="256" height="256" frameborder="0" border="0" cellspacing="0" scrolling=no src="in-10-temp.php" id="adc_center_fr"></iframe>
+                <iframe  width="256" height="256" scrolling=no src="in-10-temp.php" id="adc_center_fr"></iframe>
             </div>
         </div>
         <input id="next-butt" type="button" value="N" title="Click to shift instrument" onclick="nextinstrument();">

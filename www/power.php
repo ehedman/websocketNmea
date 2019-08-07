@@ -32,8 +32,6 @@
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
         <meta name="author" content="Erland Hedman">
         <meta name="license" content="GPL">
-        <meta http-equiv="Pragma" content="no-cache">
-        <meta http-equiv="Expires" content="-1">
         <link rel="icon" href="img/icon.ico">
         <script src="inc/jquery-2.1.1.min.js"></script>
         <script src="inc/pako.js"></script>

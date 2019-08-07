@@ -626,9 +626,7 @@ function dragElement(elmnt) {
     
     <div id="top_section">
         <div id="left_div">   
-            <iframe src="<?php echo $NULLPAGE; ?>" id="left_fr">
-                <p>Your browser does not support iframes.</p>
-            </iframe>
+            <iframe src="<?php echo $NULLPAGE; ?>" id="left_fr"></iframe>
         </div>
         <div id="right_div">       
             <iframe src="<?php echo $NULLPAGE; ?>" id="right_fr"></iframe>

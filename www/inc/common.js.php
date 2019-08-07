@@ -1,3 +1,6 @@
+<?php
+    header('Content-Type: text/javascript; charset=UTF-8');
+?>
 var socket;
 var retry = 0;
 var valid;
