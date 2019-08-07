@@ -20,6 +20,9 @@
     require  DOCROOT.'/inc/npanel-inc.php';
 
     $NULLPAGE = "http://".$_SERVER['HTTP_HOST'].dirname($_SERVER['PHP_SELF'])."/null.html";
+    header('Cache-Control: no-cache, no-store, must-revalidate');
+    header('Pragma: no-cache');
+    header('Expires: 0');
     
 ?>
 <!DOCTYPE html>
@@ -30,13 +33,11 @@
         <meta name="description" content="hedmanshome.se Marine GlassCockpit">
         <meta name="author" content="Erland Hedman">
         <meta name="license" content="GPL">
-        <meta http-equiv="Pragma" content="no-cache">
-        <meta http-equiv="Expires" content="-1">
         <link rel="icon" href="img/icon.ico">
         <link rel="stylesheet" type="text/css" href="inc/navi.css">
-        <script type="text/javascript" src="inc/jquery-2.1.1.min.js"></script>
-        <script type="text/javascript" src="inc/pako.js"></script>
-<?php if ($NOSAVE==1 ) {?>        <script type="text/javascript" src="inc/webtoolkit.md5.js"></script><?php } ?>
+        <script src="inc/jquery-2.1.1.min.js"></script>
+        <script  src="inc/pako.js"></script>
+<?php if ($NOSAVE==1 ) {?>        <script src="inc/webtoolkit.md5.js"></script><?php } ?>
         
 <?php if($NIGHT==1) { ?>
 
@@ -51,7 +52,7 @@ body:after {
         </style>
 <?php } ?>
         
-        <script type="text/javascript">
+        <script>
 
 var socket;
 var ut = 0;
@@ -360,6 +361,7 @@ $(document).ready(function()
         if (i >= frs.length) break;
         frs[i].src = instruments[i];
     }
+
     instrument_indx = i+1;
     
     window.onresize=check_overlap;
@@ -776,7 +778,7 @@ function dragElement(elmnt) {
             <tr>
                 <td class="contentBox">
                     <h2>Record NMEA to File</h2>
-                    <input type="text" title="Filename to record" id="record_file" maxlength="60"<?php echo $NOSAVE==1? " disabled":""; ?>></br>
+                    <input type="text" title="Filename to record" id="record_file" maxlength="60"<?php echo $NOSAVE==1? " disabled":""; ?>><br>
                           <select title="Duration" id="record_max">
                           <option value="1">1</option>
                           <option value="4">4</option>
@@ -862,8 +864,8 @@ function dragElement(elmnt) {
     </div>
     
     <div id="logpanel"></div>      
-    <script type="text/javascript">dragElement(document.getElementById("config"));</script>
-    <script type="text/javascript" src="inc/common.js.php"></script>
+    <script>dragElement(document.getElementById("config"));</script>
+    <script src="inc/common.js.php"></script>
        
     </body>
 </html>

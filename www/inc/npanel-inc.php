@@ -375,7 +375,7 @@ function print_netInterfaces()
     }
     ?>
     
-                    <script type="text/javascript">
+                    <script>
                     function showNIF()
                     {
                         var items=<?php echo $dev; ?>;
@@ -433,7 +433,7 @@ function print_serInterfaces()
     }
     ?>
     
-                    <script type="text/javascript">
+                    <script>
                     function showTTY()
                     {
                         var items=<?php echo $dev; ?>;

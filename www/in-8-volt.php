@@ -1,11 +1,16 @@
+<?php
+    header('Cache-Control: no-cache, no-store, must-revalidate');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+?>
 <!DOCTYPE html>
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
         <title>Volt</title>
-        <script type="text/javascript" src="inc/jquery-2.1.1.min.js"></script>
-        <script type="text/javascript" src="inc/jQueryRotate.js"></script>
-        <script type="text/javascript" src="inc/pako.js"></script>
+        <script src="inc/jquery-2.1.1.min.js"></script>
+        <script src="inc/jQueryRotate.js"></script>
+        <script src="inc/pako.js"></script>
     <style>
 
 html>body
@@ -58,7 +63,7 @@ html>body
 
     </style>
 
-<script type="text/javascript">
+<script>
 
 var pt = 0;
 var ut = 0;
@@ -124,6 +129,6 @@ function do_poll()
         </div>
         <div id="LEDpanel"></div>
         <div id="logpanel"></div>
-        <script type="text/javascript" src="inc/common.js.php"></script>
+        <script src="inc/common.js.php"></script>
     </body>
 </html>

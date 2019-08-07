@@ -1,4 +1,9 @@
 <?php
+    header('Cache-Control: no-cache, no-store, must-revalidate');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+?>
+<?php
     /*
      * power.php
      *
@@ -30,10 +35,10 @@
         <meta http-equiv="Pragma" content="no-cache">
         <meta http-equiv="Expires" content="-1">
         <link rel="icon" href="img/icon.ico">
-        <script type="text/javascript" src="inc/jquery-2.1.1.min.js"></script>
-        <script type="text/javascript" src="inc/pako.js"></script>
-        <script type="text/javascript" src="inc/Chart.bundle.js"></script>
-        <script type="text/javascript" src="inc/utils.js"></script>
+        <script src="inc/jquery-2.1.1.min.js"></script>
+        <script src="inc/pako.js"></script>
+        <script src="inc/Chart.bundle.js"></script>
+        <script src="inc/utils.js"></script>
     <style>
     canvas{
         -moz-user-select: none;
@@ -264,6 +269,6 @@
             });
 
         </script>
-        <script type="text/javascript" src="inc/common.js.php"></script>
+        <script src="inc/common.js.php"></script>
     </body>
 </html>

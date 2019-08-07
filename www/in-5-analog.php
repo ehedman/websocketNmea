@@ -1,3 +1,8 @@
+<?php
+    header('Cache-Control: no-cache, no-store, must-revalidate');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+?>
 <!DOCTYPE html>
 <html lang="en">
     <head>
@@ -9,8 +14,8 @@
         <meta http-equiv="Expires" content="-1">
         <link rel="icon" href="img/icon.ico">
         <link rel="stylesheet" type="text/css" href="inc/navi.css">
-        <script type="text/javascript" src="inc/pako.js"></script>
-        <script type="text/javascript" src="inc/common.js.php"></script>
+        <script src="inc/pako.js"></script>
+        <script src="inc/common.js.php"></script>
 
         <script>
             function openInNewTab(url) {

@@ -1,11 +1,16 @@
+<?php
+    header('Cache-Control: no-cache, no-store, must-revalidate');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+?>
 <!DOCTYPE html>
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
         <title>Sumlog</title>
-        <script type="text/javascript" src="inc/jquery-2.1.1.min.js"></script>
-        <script type="text/javascript" src="inc/jQueryRotate.js"></script> 
-        <script type="text/javascript" src="inc/pako.js"></script>
+        <script src="inc/jquery-2.1.1.min.js"></script>
+        <script src="inc/jQueryRotate.js"></script> 
+        <script src="inc/pako.js"></script>
     <style>
 
 html>body
@@ -76,7 +81,7 @@ html>body
 
     </style>
        
-    <script type="text/javascript">
+    <script>
        
 function resize()	// Set font relative to window width.
 {
@@ -167,6 +172,6 @@ function do_poll()
             <div id="SOGpanel">&nbsp;</div>
         </div>
         <div id="logpanel"></div>
-        <script type="text/javascript" src="inc/common.js.php"></script>
+        <script src="inc/common.js.php"></script>
     </body>
 </html>
