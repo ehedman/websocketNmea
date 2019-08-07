@@ -28,7 +28,7 @@
             } catch(PDOException $e) {}
         }
         if (strlen($key)) { ?>
-        <script async defer src="https://maps.googleapis.com/maps/api/js?key=<?php echo $key; ?>&callback=initMap" type="text/javascript"></script><?php } ?>
+        <script async defer src="https://maps.googleapis.com/maps/api/js?key=<?php echo trim($key); ?>&callback=initMap" type="text/javascript"></script><?php } ?>
 
 
         <style>
