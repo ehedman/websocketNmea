@@ -48,10 +48,11 @@ body:after {
   top: 0; bottom: 0; left: 0; right: 0; 
   background: hsla(180,0%,10%,0.80);
   pointer-events: none;
+  z-index: 20;
 }
         </style>
 <?php } ?>
-        
+
         <script>
 
 var socket;
@@ -754,9 +755,9 @@ function dragElement(elmnt) {
             <tr>
                 <td class="contentBox">
                     <h2>Replay NMEA from File</h2>
-                    <label title="Select existing file">File:&nbsp;&nbsp;<?php print_nmea_recordings(); ?></label>
-                    <label title="New File:">
-                        New:&nbsp;<input style="max-width:80%" name="uploaded_file" type="file" accept="text/plain"></label>
+                    <label title="Select an existing NMEA file">File:&nbsp;&nbsp;<?php print_nmea_recordings(); ?></label>New:
+                    <label for="files" title="Upload a new NMEA file" class="fileLabel">&nbsp;&nbsp;File
+                        <input style="max-width:4%;visibility:hidden" id="files" name="uploaded_file" type="file" accept="text/plain"></label>
                     <label title="Sentences per second">Rate:&nbsp;<select name="nmea_rate">
                           <option value="2">2</option>
                           <option value="4">4</option>
@@ -769,7 +770,7 @@ function dragElement(elmnt) {
                           <option value="48">48</option>
                         </select>
                     </label>
-                    <input style="position:relative;left:30%;" type="submit" title="Play this file" value="Play"<?php echo $NOSAVE==1? " disabled":""; ?> id="Play" onclick="submit_file();">
+                    <input style="position:relative;left:4%;" type="submit" title="Play this file" value="Play"<?php echo $NOSAVE==1? " disabled":""; ?> id="Play" onclick="submit_file();">
                     
                 </td>
             </tr>

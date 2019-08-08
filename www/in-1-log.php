@@ -4,7 +4,7 @@
     header('Expires: 0');
 ?>
 <!DOCTYPE html>
-<html>
+<html lang="en">
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
         <title>Sumlog</title>
@@ -16,7 +16,7 @@
 html>body
 {
     font-family: Tahoma, Helvetica, Geneva, Arial, sans-serif;
-	font-size: 0.9em;
+    font-size: 0.9em;
     margin: 0 0 0 0;
     width: 100%;
     min-width: 256px;

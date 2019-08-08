@@ -4,7 +4,7 @@
     header('Expires: 0');
 ?>
 <!DOCTYPE html>
-<html>
+<html lang="en">
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
         <title>Temp</title>
@@ -22,6 +22,7 @@ html>body
     margin-left:auto;
     margin-right:auto;
 }
+
 #instrument
 {
     max-height: 250px;
@@ -60,7 +61,6 @@ html>body
     top: 94px;
     left: 22%;
 }
-
     </style>
 
 <script>

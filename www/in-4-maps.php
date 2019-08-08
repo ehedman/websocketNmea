@@ -4,7 +4,7 @@
     header('Expires: 0');
 ?>
 <!DOCTYPE html>
-<html>
+<html lang="en">
     <head>
         <title>Google Maps</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">

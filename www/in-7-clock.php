@@ -4,7 +4,7 @@
     header('Expires: 0');
 ?>
 <!DOCTYPE html>
-<html>
+<html lang="en">
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
         <title>Clock</title>
@@ -73,7 +73,7 @@ html>body
 #logpanel
 {
     position:relative;
-    bottom: 10;
+    bottom: 10px;
     left: 20%;
     font-size: 1.7em;
 }
@@ -155,7 +155,7 @@ function do_poll()
         <div id="main">
             <div id="instrument"><img src="img/needle1.png" alt="" id="minutes"></div>
             <img src="img/needle-black.png" id="seconds" title="Click to shift instrument" onclick="nextinstrument();">
-            <img src="img/needle.png" id="hours" onclick="nextinstrument();">
+            <img src="img/needle.png" alt="" id="hours" onclick="nextinstrument();">
         </div>
         <div id="logpanel"></div>
         <script src="inc/common.js.php"></script>

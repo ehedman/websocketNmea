@@ -300,6 +300,23 @@ h2 {
     border-spacing: 0; 
 }
 
+.fileLabel
+{
+    border-style: outset;
+    border-width: 0px 1px 1px 0px;
+    padding: 2px 2px;
+    text-decoration: none;
+    background-color: #EFEFEF;
+}
+
+input[type=button], input[type=submit], input[type=reset]
+{
+  border: 2px solid gray;
+  padding: 2px 14px;
+  text-decoration: none;
+  border-style: outset;
+}
+
 @-moz-document url-prefix() {
     input[type="text"], [type="password"] {
       margin-bottom: 4px;

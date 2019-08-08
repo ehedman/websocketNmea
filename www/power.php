@@ -1,9 +1,4 @@
 <?php
-    header('Cache-Control: no-cache, no-store, must-revalidate');
-    header('Pragma: no-cache');
-    header('Expires: 0');
-?>
-<?php
     /*
      * power.php
      *
@@ -22,10 +17,14 @@
     define('MAXFILESIZE', "10000000");
 
     require  DOCROOT.'/inc/npanel-inc.php';
+
+    header('Cache-Control: no-cache, no-store, must-revalidate');
+    header('Pragma: no-cache');
+    header('Expires: 0');
     
 ?>
 <!DOCTYPE html>
-<html>
+<html lang="en">
     <head>
         <title>Power Chart at <?php echo gethostname(); ?></title>
         <meta name="description" content="hedmanshome.se Marine GlassCockpit">
