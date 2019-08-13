@@ -1323,7 +1323,8 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                 }
                 
                 default:
-                    printlog("Unknown command request: %d", req);
+                    if(debug)
+                        printlog("Unknown command request: %d", req);
                     break;
            }
 
