@@ -5,7 +5,6 @@ endif
 
 install-configs:
 	@sed 's/www-USER/$(WO)/g' lighttpd.conf | sed 's/www-GROUP/$(WG)/g' | sed "s|www-BASE|$(TOP)|g" >/tmp/lighttpd.conf
-	sudo install -m 0644 -g root -o root php-fastcgi.conf -D /usr/local/etc/php-fastcgi.conf
 	@if [ -x /usr/sbin/lighttpd ]; then \
 		echo "INSTALLED LIGHTTPD ABOUT TO BE REPLACED"; \
 		sudo apt-get remove lighttpd; \
