@@ -1,4 +1,4 @@
-all: kplex lighttpd1.4-lighttpd-1.4.33 libwebsockets aisparser sendemail
+all: kplex lighttpd1.4-lighttpd-1.4.54 libwebsockets aisparser sendemail
 
 kplex:
 	git clone https://github.com/stripydog/kplex.git
@@ -12,22 +12,16 @@ sendemail:
 	git clone  https://github.com/mogaal/sendemail.git
 
 libwebsockets:
-	git clone -b v2.1-stable https://github.com/warmcat/libwebsockets.git
+	git clone -b v3.1-stable https://github.com/warmcat/libwebsockets.git
 	mkdir libwebsockets/build
 	cd libwebsockets/build && cmake ..;make
 
-lighttpd1.4-lighttpd-1.4.33: mod_websocket
-	wget https://github.com/lighttpd/lighttpd1.4/archive/lighttpd-1.4.33.tar.gz
-	tar xof lighttpd-1.4.33.tar.gz
-	cd mod_websocket;  ./configure --with-lighttpd=../lighttpd1.4-lighttpd-1.4.33; make install; cd ..
-	cd lighttpd1.4-lighttpd-1.4.33 && autoreconf -fis;  ./configure --with-websocket=all; make;
+lighttpd1.4-lighttpd-1.4.54:
+	wget https://github.com/lighttpd/lighttpd1.4/archive/lighttpd-1.4.54.tar.gz
+	tar xof lighttpd-1.4.54.tar.gz
+	cd lighttpd1.4-lighttpd-1.4.54 && ./autogen.sh; ./configure; make
 	
-mod_websocket:
-	git clone https://github.com/nori0428/mod_websocket.git
-	patch  -p0  < ./configs/mod_websocket.patch
-	cd mod_websocket && ./bootstrap; 
-
-install: lighttpd1.4-lighttpd-1.4.33 kplex libwebsockets aisparser
+install: lighttpd1.4-lighttpd-1.4.54 kplex libwebsockets aisparser
 	@if [ -x /usr/sbin/lighttpd ]; then \
 		echo "INSTALLED LIGHTTPD ABOUT TO BE REPLACED"; \
 		sudo apt-get remove lighttpd; \
@@ -36,14 +30,16 @@ install: lighttpd1.4-lighttpd-1.4.33 kplex libwebsockets aisparser
 		fi \
 	fi
 	cd kplex && sudo make BINDIR=/usr/local/bin install
-	cd lighttpd1.4-lighttpd-1.4.33 && sudo make install
+	cd lighttpd1.4-lighttpd-1.4.54 && sudo make install
 	sudo install sendemail/sendEmail -m 755 -o root -g root /usr/local/bin
-	sudo install libwebsockets/lib/libwebsockets.h -m 0664 -o root -g root /usr/local/include
+	sudo mkdir -p  /usr/local/include/libwebsockets
+	sudo install libwebsockets/build/include/libwebsockets.h -m 0664 -o root -g root /usr/local/include
 	sudo install libwebsockets/build/lws_config.h -m 0664 -o root -g root /usr/local/include
 	sudo install libwebsockets/build/lib/libwebsockets.a -m 0644 -g root -o root -D /usr/local/lib
 	sudo rm -f /usr/local/lib/libwebsockets.so.*
 	sudo install libwebsockets/build/lib/libwebsockets.so.* -m 0755 -g root -o root -D /usr/local/lib
-	cd  /usr/local/lib && sudo ln -fs libwebsockets.so.* libwebsockets.so
+	sudo install libwebsockets/build/include/libwebsockets/*.h -m 0664 -o root -g root /usr/local/include/libwebsockets
+	cd  /usr/local/lib && sudo ln -fs libwebsockets.so.* libwebsockets.so; cd -
 	sudo install aisparser/c/so/libais.so.1.* -m 0755 -g root -o root -D /usr/local/lib
 	cd /usr/local/lib && sudo ln -fs libais.so.1.* libais.so.1
 	cd /usr/local/lib && sudo ln -fs libais.so.1 libais.so
@@ -55,6 +51,6 @@ install: lighttpd1.4-lighttpd-1.4.33 kplex libwebsockets aisparser
 install-configs:
 	cd configs &&  make TOP=$(TOP) WO=$(WO) WG=$(WG) install-configs
 clean:
-	rm -rf kplex lighttpd1.4-lighttpd-1.4.33 mod_websocket libwebsockets aisparser sendemail
-	rm -f lighttpd-1.4.33.tar.gz
+	rm -rf kplex lighttpd1.4-lighttpd-1.4.54 libwebsockets aisparser sendemail
+	rm -f lighttpd-1.4.54.tar.gz
 
