@@ -13,7 +13,12 @@ get_netifs()
 
 get_ipaddr()
 {
-    a=$(ip address show $1 | grep -v secondary | grep "inet " | awk -F'[/]' '{ print $1 }' | awk  '{ print $2 }')
+    if [ -z "$1" ]; then
+        echo -n "127.0.0.1"
+        return
+    fi
+
+    a=$(ip address show $1 2> /dev/null | grep -v secondary | grep "inet " | awk -F'[/]' '{ print $1 }' | awk  '{ print $2 }')
     if [ -z "$a" ]; then
         echo -n "127.0.0.1"
     else
@@ -23,7 +28,7 @@ get_ipaddr()
 
 get_broadcast_addr()
 {
-    a=$(ip address show $1 | grep $2 | awk '{ print $4 }')
+    a=$(ip address show $1 2> /dev/null | grep -m1 255 | awk '{ print $4 }')
     if [ -z "$a"  ]; then
         get_ipaddr $1
     else
@@ -33,11 +38,14 @@ get_broadcast_addr()
 
 check_local_ipaddr()
 {
+    if [ -z "$1" ]; then exit 1; fi
+
     if [ -n "$(ip addr show | grep -w $1)" ] || [ -n "$(arp -n | grep -w $1)" ]; then
         exit 0
     else
         exit 1
     fi
+
 }
 
 get_nrecordings()
