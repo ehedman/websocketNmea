@@ -12,6 +12,7 @@
         <script src="inc/jquery-2.1.1.min.js"></script>
         <script src="inc/pako.js"></script>
         <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&language=us"></script>
+        <script src="inc/common.js.php"></script>  
 <?php
         define('DOCROOT', dirname(__FILE__));
         define('NAVIDBPATH', DOCROOT.'/inc/navi.db');
@@ -325,7 +326,6 @@ google.maps.event.addDomListener(window, 'load', initialize);
             <div id="googlemaps"></div>
         </div>        
         <div id="logpanel"></div>
-        <script src="inc/common.js.php"></script>  
     </body>
 </html>
 

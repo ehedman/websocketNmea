@@ -11,6 +11,7 @@
         <script src="inc/jquery-2.1.1.min.js"></script>
         <script src="inc/jQueryRotate.js"></script>
         <script src="inc/pako.js"></script>
+        <script src="inc/common.js.php"></script>
     <style>
 
 html>body
@@ -158,7 +159,6 @@ function do_poll()
             <img src="img/needle.png" alt="" id="hours" onclick="nextinstrument();">
         </div>
         <div id="logpanel"></div>
-        <script src="inc/common.js.php"></script>
     </body>
     
 </html>

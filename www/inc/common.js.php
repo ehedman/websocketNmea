@@ -45,21 +45,31 @@ var Cmd = {
 function init()
 {
     var host = "ws://<?php echo preg_split("/:/", $_SERVER['HTTP_HOST'])[0]; ?>:"+port; // SET THIS TO YOUR SERVER
-    connection = true;
 
     try {
+        connection = false;
         window.WebSocket = window.WebSocket || window.MozWebSocket;
 
         socket = new WebSocket(host,'nmea-parser-protocol');
         socket.binaryType = 'arraybuffer';
-        printlog('WebSocket - status '+socket.readyState);
+        printlog('WebSocket - status: '+socket.readyState)
 
         socket.onopen = function () {
-            printlog("Open: OK");
+            printlog("Open: OK. Subproto: " +socket.protocol);
+            connection = true;
         };
 
-        socket.onerror = function () {
-            printlog("Socket: Error");
+        socket.onerror = function (evt) {
+            printlog("Socket: Error: "  +JSON.stringify(evt, null, 4));
+            socket.close();
+            connection = false;
+        };
+
+        socket.onclose = function (evt) {
+            if (evt.wasClean)
+                printlog("Socket: Connection closed cleanly");
+            else
+                printlog("Socket: Connection died: " +JSON.stringify(evt, null, 4));
             connection = false;
         };
 

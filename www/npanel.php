@@ -23,7 +23,12 @@
     header('Cache-Control: no-cache, no-store, must-revalidate');
     header('Pragma: no-cache');
     header('Expires: 0');
-    
+
+    $u_agent = "";
+    if (preg_match('/Safari/i', $_SERVER['HTTP_USER_AGENT']))
+    {
+        $u_agent = "Safari";
+    }
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -37,6 +42,7 @@
         <link rel="stylesheet" type="text/css" href="inc/navi.css">
         <script src="inc/jquery-2.1.1.min.js"></script>
         <script  src="inc/pako.js"></script>
+        <script src="inc/common.js.php"></script>
 <?php if ($NOSAVE==1 ) {?>        <script src="inc/webtoolkit.md5.js"></script><?php } ?>
         
 <?php if($NIGHT==1) { ?>
@@ -620,7 +626,11 @@ function dragElement(elmnt) {
             <option value="Day">Day</option>
         </select>
         <input title="Settings" type="button" onclick="do_config();" value="Settings">
+        <?php if ($u_agent != "Safari") { ?>
+
         <input title="Fullscreen/F11" type="button" value="Fullscreen" onclick="full_screen()">
+
+        <?php } ?>
     </div>
     
     <div id="status"></div>
@@ -864,7 +874,6 @@ function dragElement(elmnt) {
     
     <div id="logpanel"></div>      
     <script>dragElement(document.getElementById("config"));</script>
-    <script src="inc/common.js.php"></script>
        
     </body>
 </html>

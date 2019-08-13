@@ -11,6 +11,7 @@
         <script src="inc/jquery-2.1.1.min.js"></script> 
         <script src="inc/jQueryRotate.js"></script>
         <script src="inc/pako.js"></script>
+        <script src="inc/common.js.php"></script>
     <style>
 
 html>body
@@ -37,18 +38,8 @@ html>body
 
 #needle
 {
-
-/* ifdef safari
-     width: 70%;
-     //border: 1px solid black;
-    position:relative;
-    top: 15%;
-    left: 0%;
-    margin: 15%;
-*/
     width: 80%;
     margin: 10%;
-
 }
 
 #main
@@ -162,6 +153,5 @@ function do_poll()
             <div id="instrument"><img src="img/crose.png" alt="" id="needle" onclick="nextinstrument();"></div>
         </div>
         <div id="logpanel"></div>
-        <script src="inc/common.js.php"></script>
     </body>  
 </html>

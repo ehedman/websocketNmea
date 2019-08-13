@@ -36,6 +36,7 @@
         <script src="inc/pako.js"></script>
         <script src="inc/Chart.bundle.js"></script>
         <script src="inc/utils.js"></script>
+        <script src="inc/common.js.php"></script>
     <style>
     canvas{
         -moz-user-select: none;
@@ -266,6 +267,5 @@
             });
 
         </script>
-        <script src="inc/common.js.php"></script>
     </body>
 </html>

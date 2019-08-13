@@ -10,6 +10,7 @@
         <title>WaterMaker</title>
         <script src="inc/jquery-2.1.1.min.js"></script>
         <script src="inc/pako.js"></script>
+        <script src="inc/common.js.php"></script>
         
     <style>
 
@@ -191,6 +192,5 @@ function do_poll()
             <div><img src="img/wm.png" title="Click to shift instrument" alt="watermaker" id="instrument" onclick="nextinstrument();"></div>
         </div>
         <div id="logpanel"></div>
-        <script src="inc/common.js.php"></script>
     </body>  
 </html>
