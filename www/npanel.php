@@ -865,7 +865,7 @@ function dragElement(elmnt) {
     <tr>
         <td colspan="2" style="text-align: left;"><div id="msg"></div></td>
         <td style="text-align: right">
-            <a title="Go to GitHub" href="https://github.com/ehedman/websocketNmea/tree/<?php echo $revision; ?>" target="_blank">About</a>
+            <a title="Go to GitHub" href="https://github.com/ehedman/websocketNmea/tree/master" target="_blank">About</a>
         </td>
     </tr>
     </table> 
