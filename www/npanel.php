@@ -24,10 +24,18 @@
     header('Pragma: no-cache');
     header('Expires: 0');
 
-    $u_agent = "";
-    if (preg_match('/Safari/i', $_SERVER['HTTP_USER_AGENT']))
+    $hu_Agent = $_SERVER['HTTP_USER_AGENT'];
+
+    $u_Agent = "";
+    if (preg_match('/\(iP/i', $hu_Agent) && preg_match('/Safari/i', $hu_Agent))
     {
-        $u_agent = "Safari";
+        $u_Agent = "Safari";
+    }
+
+    $u_IsPad = "";
+    if (preg_match('/Android/i', $hu_Agent) || preg_match('/OS X/i', $hu_Agent))
+    {
+        $u_IsPad = "_pad";
     }
 ?>
 <!DOCTYPE html>
@@ -317,6 +325,7 @@ function full_screen() {
             document.msExitFullscreen();
         }
     }
+
 }
 
 function do_background(obj)
@@ -360,8 +369,8 @@ $(document).ready(function()
     var i = 0;
     var frs = [ document.getElementById("left_fr"),
                 document.getElementById("right_fr"),
-                document.getElementById("right_fr_b"),
-                document.getElementById("left_fr_b"),
+                document.getElementById("right_fr_b<?php echo $u_IsPad; ?>"),
+                document.getElementById("left_fr_b<?php echo $u_IsPad; ?>"),
                 document.getElementById("center_fr")];
                 
     for (i=0; i < maxi; i++) {
@@ -626,15 +635,14 @@ function dragElement(elmnt) {
             <option value="Day">Day</option>
         </select>
         <input title="Settings" type="button" onclick="do_config();" value="Settings">
-        <?php if ($u_agent != "Safari") { ?>
+        <?php if ($u_Agent != "Safari") { ?>
 
         <input title="Fullscreen/F11" type="button" value="Fullscreen" onclick="full_screen()">
 
         <?php } ?>
     </div>
     
-    <div id="status"></div>
-    
+    <div id="status"></div>  
     <div id="top_section">
         <div id="left_div">   
             <iframe src="<?php echo $NULLPAGE; ?>" id="left_fr"></iframe>
@@ -642,22 +650,22 @@ function dragElement(elmnt) {
         <div id="right_div">       
             <iframe src="<?php echo $NULLPAGE; ?>" id="right_fr"></iframe>
         </div>     
-         <div id="center_div">       
+         <div id="center_div"<?php if ($u_Agent == "Safari") echo 'style="width:100%";';?>>       
             <iframe src="<?php echo $NULLPAGE; ?>" id="center_fr"></iframe>
         </div>
     </div>
         
-    <div id="bottom_section"> 
+    <div id="bottom_section">
         <div id="show_bottom">    
             <div id="left_div_b">
-                <iframe src="<?php echo $NULLPAGE; ?>" id="left_fr_b"></iframe> 
+                <iframe src="<?php echo $NULLPAGE; ?>" id="left_fr_b<?php echo $u_IsPad; ?>"></iframe> 
             </div>
             <div id="right_div_b">       
-                <iframe src="<?php echo $NULLPAGE; ?>" id="right_fr_b"></iframe>
+                <iframe src="<?php echo $NULLPAGE; ?>" id="right_fr_b<?php echo $u_IsPad; ?>"></iframe>
             </div>          
         </div>  
     </div>
-                                          
+                                         
     <div id="config"> <!-- Configuration Page -->
     <form name="form" id="form" method="post" action="<?php echo $_SERVER['SCRIPT_NAME']; ?>" onsubmit="return done_config(1);">
     <input name="POST_ACTION" value="OK" type="hidden">
@@ -674,7 +682,7 @@ function dragElement(elmnt) {
             <td style="text-align:center;" colspan="3"><h1><?php echo $aisname ?> Settings</h1></td>
         </tr>
     <tr>
-        <td style="width:33%;"> <!-- Left Column -->
+        <td style="width:40%;"> <!-- Left Column -->
         <table>
             <tr>
                 <td class="contentBox">

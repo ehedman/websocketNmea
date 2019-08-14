@@ -30,6 +30,8 @@
             padding:0;
             width: 100%;
             overflow: hidden;
+            border-radius:50%;
+            -moz-border-radius:50%;
         }
         #next-butt
         {

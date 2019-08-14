@@ -110,14 +110,16 @@ function resize()	// Set font relative to window width.
 }
 
 $(document).ready(function() {
+/*
     var userAgent = navigator.userAgent.toLowerCase();
     if (userAgent.match(/android/) !=null && userAgent.match(/firefox/) != null) {
         $("#LEDpanel1").css("top", "24%");
         $("#LEDpanel2").css("top", "44%"); 
         $("#LEDpanel3").css("top", "60%"); 
     } 
+*/
     window.onresize=resize;
-	resize();
+    resize();
 });
 
 var pt = 0;
