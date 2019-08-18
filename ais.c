@@ -17,8 +17,8 @@
 #include <sqlite3.h>
 #include "wsocknmea.h"
 
-#define MAX_INACTIVE    300      // Aging vessel signals hidden after # seconds
-#define MAX_LIVE        600     // .. removed after # seconds
+#define MAX_INACTIVE    120      // Aging vessel signals hidden after # seconds
+#define MAX_LIVE        300     // .. removed after # seconds
 
 static int first = 1;
 
@@ -103,8 +103,13 @@ int addShip(int msgid, long userid, double lat_dd, double long_ddd, int trueh, d
         (void)sprintf(sql, "SELECT userid FROM ais WHERE userid = %ld", userid);
 
         if (sqlite3_prepare_v2(conn, sql, -1, &res, &tail) == SQLITE_OK && sqlite3_step(res) == SQLITE_ROW) {
-            (void)sprintf(sql, "UPDATE ais SET msgid = '%d', userid = %ld, lat_dd = %0.6f, long_ddd = %0.6f, sog = %0.1f, trueh = %d, ts = %ld WHERE userid = %ld", \
-            msgid, userid, lat_dd, long_ddd, sog, trueh, time(NULL), userid);
+            if (trueh) {
+                (void)sprintf(sql, "UPDATE ais SET msgid = '%d', userid = %ld, lat_dd = %0.6f, long_ddd = %0.6f, sog = %0.1f, trueh = %d, ts = %ld WHERE userid = %ld", \
+                msgid, userid, lat_dd, long_ddd, sog, trueh, time(NULL), userid);
+            } else {
+                (void)sprintf(sql, "UPDATE ais SET msgid = '%d', userid = %ld, lat_dd = %0.6f, long_ddd = %0.6f, sog = %0.1f, ts = %ld WHERE userid = %ld", \
+                msgid, userid, lat_dd, long_ddd, sog, time(NULL), userid);
+            }
 
             if (sqlite3_prepare_v2(conn, sql, -1, &res1, &tail) != SQLITE_OK)
                 printlog("sqlite3 update: %s", (char*)sqlite3_errmsg(conn));

@@ -1860,13 +1860,13 @@ int main(int argc ,char **argv)
         int ais_rval;
         long  userid = 0;
         int trueh = 0;
+        int cog = 0;
         int is_vdo = 0;
         int is_vdm = 0;
         static int got_vdo;
         char *callsign = NULL;
         char *aisname = NULL;
         static int r_limit;
-        static int cog;
 
         // AIS message structures
         aismsg_1  msg_1;
@@ -2163,7 +2163,8 @@ int main(int argc ,char **argv)
                    if ( parse_ais_1( &ais, &msg_1 ) == 0 ) {
                         if ((userid = msg_1.userid)) {
                             pos2ddd( msg_1.latitude, msg_1.longitude, &lat_dd, &long_ddd );
-                            trueh = msg_1.true;
+                            if (msg_1.true != 511)
+                                trueh = msg_1.true;
                             sog =  msg_1.sog;
                             cog = msg_1.cog;
                         }
@@ -2174,7 +2175,6 @@ int main(int argc ,char **argv)
                    if ( parse_ais_2( &ais, &msg_2 ) == 0 ) {
                         if ((userid = msg_2.userid)) {
                             pos2ddd( msg_2.latitude, msg_2.longitude, &lat_dd, &long_ddd );
-                            trueh = msg_2.true;
                             sog =  msg_2.sog;
                             cog = msg_2.cog;
                         }
@@ -2214,7 +2214,6 @@ int main(int argc ,char **argv)
                    if ( parse_ais_18( &ais, &msg_18 ) == 0 ) {
                         if((userid =  msg_18.userid)) {
                             pos2ddd( msg_18.latitude, msg_18.longitude, &lat_dd, &long_ddd );
-                            trueh = msg_18.true;
                             sog =  msg_18.sog;
                             if (!my_userid && is_vdo)
                                 my_userid = aisconf.my_userid = userid; // Our userid (if the transceiver is on)
@@ -2226,7 +2225,6 @@ int main(int argc ,char **argv)
                    if ( parse_ais_19( &ais, &msg_19 ) == 0 ) {
                         if((userid = msg_19.userid)) {
                             pos2ddd( msg_19.latitude, msg_19.longitude, &lat_dd, &long_ddd );
-                            trueh = msg_19.true;
                             sog =  msg_19.sog;
                             aisname = msg_19.name;
                         }
@@ -2271,8 +2269,12 @@ int main(int argc ,char **argv)
                     continue; break;
 
             }
+
             if (!userid)
                 continue;
+
+             if (!trueh && cog/10)
+                trueh = cog/10;
 
             if (debug) {
                 if (strlen(p0b)) {
@@ -2285,14 +2287,13 @@ int main(int argc ,char **argv)
                 printlog( "USER ID      : %ld", userid );
                 printlog( "POSITION     : %0.6f %0.6f", fabs(lat_dd), fabs(long_ddd) );
                 printlog( "TRUE HEADING : %ld", trueh );
+                printlog( "COG HEADING  : %ld", cog/10 );
                 printlog( "SOG          : %0.1f", sog/10 );
             }
 
             if (userid != aisconf.my_userid) {
                 sog = sog == 1023? 0 : sog;
-                if (trueh == 511) {
-                    trueh = cog >= 3600? 360: cog/10; 
-                }
+
                 // Add ship to the SQL RAM database
                 (void)addShip(ais.msgid, userid, fabs(lat_dd), fabs(long_ddd), trueh, sog/10, aisname, aisconf.my_buddy);
                 aisconf.my_buddy = 0;

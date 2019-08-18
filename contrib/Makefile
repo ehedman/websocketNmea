@@ -41,8 +41,8 @@ install: lighttpd1.4-lighttpd-1.4.54 kplex libwebsockets aisparser
 	sudo install libwebsockets/build/include/libwebsockets/*.h -m 0664 -o root -g root /usr/local/include/libwebsockets
 	cd  /usr/local/lib && sudo ln -fs libwebsockets.so.* libwebsockets.so; cd -
 	sudo install aisparser/c/so/libais.so.1.* -m 0755 -g root -o root -D /usr/local/lib
-	cd /usr/local/lib && sudo ln -fs libais.so.1.* libais.so.1
-	cd /usr/local/lib && sudo ln -fs libais.so.1 libais.so
+	sudo ln -fs /usr/local/lib/libais.so.1.* /usr/local/lib/libais.so.1
+	sudo ln -fs /usr/local/lib/libais.so.1.* /usr/local/lib/libais.so
 	sudo install aisparser/c/src/portable.h -m 0664 -o root -g root /usr/local/include
 	sudo install aisparser/c/src/nmea.h -m 0664 -o root -g root /usr/local/include
 	sudo install aisparser/c/src/sixbit.h -m 0664 -o root -g root /usr/local/include
