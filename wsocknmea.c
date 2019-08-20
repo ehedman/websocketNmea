@@ -1609,6 +1609,43 @@ static void *t_fileFeed()
     pthread_exit(&rval);
 }
 
+/**
+* returns the true wind speed given boat speed, apparent wind speed and apparent wind direction in degrees
+**/
+double trueWindSpeed(double boatSpeed, double apparentWindSpeed, double apparentWindDirection) {
+  // convert degres to radians
+  double apparentWindDirectionRadian = apparentWindDirection * (M_PI/180);
+
+  return pow(pow(apparentWindSpeed*cos(apparentWindDirectionRadian) - boatSpeed,2) + (pow(apparentWindSpeed*sin(apparentWindDirectionRadian),2)), 0.5);
+}
+
+
+/**
+* returns the true wind direction given boat speed, apparent wind speed and apparent wind direction in degrees
+**/
+double trueWindDirection(double boatSpeed, double apparentWindSpeed, double apparentWindDirection) {
+
+  int convert180 = 0;
+  // formula below works with values < 180
+  if (apparentWindDirection > 180) {
+    apparentWindDirection = 360 - apparentWindDirection;
+    convert180 = 1;
+  }
+
+  // convert degres to radians
+  double apparentWindDirectionRadian = apparentWindDirection * (M_PI/180);
+
+  double twdRadians = (90 * (M_PI/180)) - atan((apparentWindSpeed*cos(apparentWindDirectionRadian) - boatSpeed) / (apparentWindSpeed*sin(apparentWindDirectionRadian)));
+
+  // convert radians back to degrees
+  double twdDegrees = twdRadians*(180/M_PI);
+  if (convert180) {
+    twdDegrees = 360 - twdDegrees;
+  }
+
+  return twdDegrees;
+}
+
 void usage(char *prg)
 {
     fprintf(stderr, "Usage: %s [ -a nmea-mux ip-address ] [ -p port ] [-w websocket port ]\n [ -s 1/2/3 ] [ -i nic ] [ -n don't fork kplex ] [ -b background ]\n [ -v version ] [ -f file ] [ -r rate ] [ -u UID ] [ -g GID ] [ -d debug ]\n", prg);
@@ -2106,7 +2143,11 @@ int main(int argc ,char **argv)
                         cnmea.vwta=atof(getf(1, nmeastr_p1));
                         cnmea.vwts=atof(getf(3, nmeastr_p1))/1.94; // kn 2 m/s;
                         cnmea.vwt_ts = ts;
-                    }
+                    } else if (ts - cnmea.stw_ts < INVALID && cnmea.stw > 0.9) {
+                            cnmea.vwta=trueWindDirection(cnmea.stw, cnmea.vwrs,  cnmea.vwra);
+                            cnmea.vwts=trueWindSpeed(cnmea.stw, cnmea.vwrs, cnmea.vwra);
+                            cnmea.vwt_ts = ts;
+                    }              
                     continue;
                 }
 
@@ -2117,6 +2158,11 @@ int main(int argc ,char **argv)
                         cnmea.vwrs=atof(getf(3, nmeastr_p1))/1.94; // kn 2 m/s
                         cnmea.vwrd=strncmp(getf(2, nmeastr_p1),"R",1)==0? 0:1;
                         cnmea.vwr_ts = ts;
+                        if (ts - cnmea.stw_ts < INVALID && cnmea.stw > 0.9) {
+                            cnmea.vwta=trueWindDirection(cnmea.stw, cnmea.vwrs,  cnmea.vwra);
+                            cnmea.vwts=trueWindSpeed(cnmea.stw, cnmea.vwrs, cnmea.vwra);
+                            cnmea.vwt_ts = ts;
+                        }
                         continue;
                     }
                 }

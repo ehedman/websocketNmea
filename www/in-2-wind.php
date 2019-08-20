@@ -17,7 +17,7 @@
 html>body
 {
     font-family: Tahoma, Helvetica, Geneva, Arial, sans-serif;
-	font-size: 0.9em;
+    font-size: 0.9em;
     margin: 0 0 0 0;
     width: 100%;
     min-width: 256px;
@@ -36,7 +36,7 @@ html>body
     background-repeat:no-repeat;
 }
 
-#needle
+#needle_a
 {
     position:relative;
     top: 25%;
@@ -45,7 +45,7 @@ html>body
     margin: 25%;
 }
 
-#needle1
+#needle_t
 {
     position:absolute;
     top: 0%;
@@ -139,7 +139,8 @@ var offset = 131;
 var debug = false;
 var connection = true;
 
-var rotate = 0;
+var rotate_a = 0;
+var rotate_t = 0;
 
 function do_update()
 {        
@@ -156,8 +157,8 @@ function do_update()
 function do_poll()
 {
     if (target == "Exp" || connection == false) {
-        document.getElementById("needle").style.visibility="hidden"; 
-        document.getElementById("needle1").style.visibility="hidden"; 
+        document.getElementById("needle_a").style.visibility="hidden"; 
+        document.getElementById("needle_t").style.visibility="hidden"; 
         document.getElementById("LEDpanel").innerHTML=" -- -- ";
         document.getElementById("ANGpanel").innerHTML="&nbsp;";
         document.getElementById("TSPpanel").innerHTML="&nbsp;";
@@ -172,26 +173,36 @@ function do_poll()
     var tangle = round_number(val.tangle,0);
     document.getElementById("ANGpanel").innerHTML=angle+"°";
     document.getElementById("LEDpanel").innerHTML=val.speed;
+
     if (val.dir == 1) angle = 360 - angle; 
+    if (val.dir == 1) tangle = 360 - tangle; 
     
-    document.getElementById("needle").style.visibility="visible";
+    document.getElementById("needle_a").style.visibility="visible";
     if (tangle)
-        document.getElementById("needle1").style.visibility="visible";
+        document.getElementById("needle_t").style.visibility="visible";
     else
-        document.getElementById("needle1").style.visibility="hidden";
+        document.getElementById("needle_t").style.visibility="hidden";
 
     if (val.tspeed > 0)
         document.getElementById("TSPpanel").innerHTML="TRUE: "+val.tspeed;
     else
         document.getElementById("TSPpanel").innerHTML="&nbsp;";
 
-    var aR = rotate % 360;
-    if ( aR < 0 ) { aR += 360; }
-    if ( aR < 180 && (angle > (aR + 180)) ) { rotate -= 360; }
-    if ( aR >= 180 && (angle <= (aR - 180)) ) { rotate += 360; }
-    rotate += (angle - aR);
+    var aR_a = rotate_a % 360;
+    if ( aR_a < 0 ) { aR_a += 360; }
+    if ( aR_a < 180 && (angle > (aR_a + 180)) ) { rotate_a -= 360; }
+    if ( aR_a >= 180 && (angle <= (aR_a - 180)) ) { rotate_a += 360; }
+    rotate_a += (angle - aR_a);
     
-    $("#needle").rotate({animateTo:rotate+offset,duration:4000,easing: $.easing.easeInQutSine});
+    $("#needle_a").rotate({animateTo:rotate_a+offset,duration:4000,easing: $.easing.easeInQutSine});
+
+    var aR_t = rotate_t % 360;
+    if ( aR_t < 0 ) { aR_t += 360; }
+    if ( aR_t < 180 && (tangle > (aR_t + 180)) ) { rotate_t -= 360; }
+    if ( aR_t >= 180 && (tangle <= (aR_t - 180)) ) { rotate_t += 360; }
+    rotate_t += (tangle - aR_t);
+
+    $("#needle_t").rotate({animateTo:rotate_t+offset,duration:4000,easing: $.easing.easeInQutSine});
 
 }
     </script>
@@ -202,8 +213,8 @@ function do_poll()
         <div id="main">
             <div id="LEDpanel" title="Click to shift instrument" onclick="nextinstrument();"></div>
             <div id="instrument">
-                <img src="img/needle1.png" alt="" id="needle">
-                <img src="img/needle-black.png" alt="" id="needle1">
+                <img src="img/needle1.png" alt="" id="needle_a">
+                <img src="img/needle-black.png" alt="" id="needle_t">
             </div>
             <div id="TSPpanel"></div>
             <div id="ANGpanel">&nbsp;</div>
