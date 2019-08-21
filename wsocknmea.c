@@ -2187,7 +2187,7 @@ int main(int argc ,char **argv)
                             pos2ddd( msg_3.latitude, msg_3.longitude, &lat_dd, &long_ddd );
                             trueh = msg_3.true;
                             sog =  msg_3.sog;
-                            cog = msg_2.cog;
+                            cog = msg_3.cog;
                         }
                     }
                     break;
@@ -2197,26 +2197,28 @@ int main(int argc ,char **argv)
                         if ((userid = msg_4.userid)) {
                             pos2ddd( msg_4.latitude, msg_4.longitude, &lat_dd, &long_ddd );
                             aisname = "BASE STATION";
-
                         }
                     }
                     break;
 
                 case 5: // Message 5: Ship static and voyage related data  
                    if ( parse_ais_5( &ais, &msg_5 ) == 0 ) {
-                        if ((userid = msg_5.userid))                                 
+                        if ((userid = msg_5.userid)) {
                             aisname = msg_5.name;
+                        }
                     }
                     break;
 
 
                 case 18: // Message 18 - Class B Position Report 
                    if ( parse_ais_18( &ais, &msg_18 ) == 0 ) {
-                        if((userid =  msg_18.userid)) {
+                        if((userid = msg_18.userid)) {
                             pos2ddd( msg_18.latitude, msg_18.longitude, &lat_dd, &long_ddd );
-                            sog =  msg_18.sog;
-                            if (!my_userid && is_vdo)
+                            sog = msg_18.sog;
+                            cog = msg_18.cog;
+                            if (!my_userid && is_vdo) {
                                 my_userid = aisconf.my_userid = userid; // Our userid (if the transceiver is on)
+                            }
                         }
                     }
                     break;
@@ -2233,8 +2235,9 @@ int main(int argc ,char **argv)
 
                 case 21: // Message 21 - Aids To Navigation Report 
                    if ( parse_ais_21( &ais, &msg_21 ) == 0 ) { 
-                        if((userid = msg_21.userid))                         
+                        if((userid = msg_21.userid)) {
                             aisname = msg_21.name;
+                        }
                     }
                     break;
 
