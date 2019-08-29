@@ -77,7 +77,7 @@ CFLAGS+= -Wall -g -std=gnu99 -pedantic  -D_REENTRANT
 CFLAGS+= -DUID=$(UID) -DGID=$(GID) -I$(INCDIR) -DUPLOADPATH=\"$(UPLOADPATH)\"
 CFLAGS+= -DNAVIDBPATH=\"$(NAVIDBPATH)\" -DKPCONFPATH=\"$(KPCONFPATH)\"
 
-LDFLAGS=-L$(LIBDIR) -lwebsockets -lsqlite3 -lais -lpthread -lrt -lz -Wl,-rpath=$(LIBDIR)
+LDFLAGS=-L$(LIBDIR) -lwebsockets -lsqlite3 -lais -lpthread -lrt -lz -lm -Wl,-rpath=$(LIBDIR)
 
 all: $(BIN)
 
