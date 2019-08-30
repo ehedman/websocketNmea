@@ -1022,6 +1022,47 @@ static float dms2dd(float coordinates, const char *val)
    return c;
 }
 
+// returns the true wind speed given boat speed, apparent wind speed and apparent wind direction in degrees
+// https://github.com/drasgardian/truewind
+double trueWindSpeed(double boatSpeed, double apparentWindSpeed, double apparentWindDirection)
+{
+    // convert degres to radians
+    double apparentWindDirectionRadian = apparentWindDirection * (M_PI/180);
+
+    return pow(pow(apparentWindSpeed*cos(apparentWindDirectionRadian) - boatSpeed,2) + (pow(apparentWindSpeed*sin(apparentWindDirectionRadian),2)), 0.5);
+}
+
+// returns the true wind direction given boat speed, apparent wind speed and apparent wind direction in degrees
+// https://github.com/drasgardian/truewind
+double trueWindDirection(double boatSpeed, double apparentWindSpeed, double apparentWindDirection)
+{
+
+    int convert180 = 0;
+    double twdRadians;
+    double apparentWindDirectionRadian;
+    double twdDegrees;
+
+    // formula below works with values < 180
+    if (apparentWindDirection > 180) {
+        apparentWindDirection = 360 - apparentWindDirection;
+        convert180 = 1;
+    }
+
+    // convert degres to radians
+    apparentWindDirectionRadian = apparentWindDirection * (M_PI/180);
+
+    twdRadians = (90 * (M_PI/180)) - atan((apparentWindSpeed*cos(apparentWindDirectionRadian) - boatSpeed) / (apparentWindSpeed*sin(apparentWindDirectionRadian)));
+
+    // convert radians back to degrees
+    twdDegrees = twdRadians*(180/M_PI);
+    if (convert180) {
+        twdDegrees = 360 - twdDegrees;
+    }
+
+    return twdDegrees;
+}
+
+
 #define windowBits 15
 #define GZIP_ENCODING 16
 
@@ -1607,43 +1648,6 @@ static void *t_fileFeed()
 
     printlog("Stopping File input services");
     pthread_exit(&rval);
-}
-
-/**
-* returns the true wind speed given boat speed, apparent wind speed and apparent wind direction in degrees
-**/
-double trueWindSpeed(double boatSpeed, double apparentWindSpeed, double apparentWindDirection) {
-  // convert degres to radians
-  double apparentWindDirectionRadian = apparentWindDirection * (M_PI/180);
-
-  return pow(pow(apparentWindSpeed*cos(apparentWindDirectionRadian) - boatSpeed,2) + (pow(apparentWindSpeed*sin(apparentWindDirectionRadian),2)), 0.5);
-}
-
-
-/**
-* returns the true wind direction given boat speed, apparent wind speed and apparent wind direction in degrees
-**/
-double trueWindDirection(double boatSpeed, double apparentWindSpeed, double apparentWindDirection) {
-
-  int convert180 = 0;
-  // formula below works with values < 180
-  if (apparentWindDirection > 180) {
-    apparentWindDirection = 360 - apparentWindDirection;
-    convert180 = 1;
-  }
-
-  // convert degres to radians
-  double apparentWindDirectionRadian = apparentWindDirection * (M_PI/180);
-
-  double twdRadians = (90 * (M_PI/180)) - atan((apparentWindSpeed*cos(apparentWindDirectionRadian) - boatSpeed) / (apparentWindSpeed*sin(apparentWindDirectionRadian)));
-
-  // convert radians back to degrees
-  double twdDegrees = twdRadians*(180/M_PI);
-  if (convert180) {
-    twdDegrees = 360 - twdDegrees;
-  }
-
-  return twdDegrees;
 }
 
 void usage(char *prg)
