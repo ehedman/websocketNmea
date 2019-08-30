@@ -83,8 +83,8 @@ html>body
 #TSPpanel
 {
     position:absolute;
-    top: 76%;
-    left: 38%;
+    top: 77%;
+    left: 41%;
     font-size: 1.4em;
     font-weight: bold;
 }

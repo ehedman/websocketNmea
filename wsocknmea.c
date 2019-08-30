@@ -2143,7 +2143,8 @@ int main(int argc ,char **argv)
                             cnmea.vwra = 360 - cnmea.vwra;
                         } else cnmea.vwrd = 0;
                         cnmea.vwr_ts = ts;
-                    } else if (strncmp(getf(2, nmeastr_p1),"T",1) + strncmp(getf(4, nmeastr_p1),"N",1) == 0) {
+                    }  
+                    if (strncmp(getf(2, nmeastr_p1),"T",1) + strncmp(getf(4, nmeastr_p1),"N",1) == 0) {
                         cnmea.vwta=atof(getf(1, nmeastr_p1));
                         cnmea.vwts=atof(getf(3, nmeastr_p1))/1.94; // kn 2 m/s;
                         cnmea.vwt_ts = ts;
