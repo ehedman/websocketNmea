@@ -178,7 +178,8 @@ function do_poll()
     if (val.dir == 1) tangle = 360 - tangle; 
     
     document.getElementById("needle_a").style.visibility="visible";
-    if (tangle)
+
+    if (val.tspeed > 0)
         document.getElementById("needle_t").style.visibility="visible";
     else
         document.getElementById("needle_t").style.visibility="hidden";
