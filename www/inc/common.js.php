@@ -32,6 +32,7 @@ var Cmd = {
     SensorCurr          : "201",
     SensorTemp          : "202",
     SensorRelay         : "203",
+    tdtStatus           : "205",
     AisTrxStatus        : "206",
     WaterMakerData      : "210",
     ServerPing          : "900",
@@ -90,7 +91,6 @@ function init()
         printlog(ex);
         connection = false; 
     }
-
     ut = setInterval(function () {do_update();}, update);  
 }
 

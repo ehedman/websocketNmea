@@ -20,9 +20,9 @@
     require  DOCROOT.'/inc/npanel-inc.php';
 
     $NULLPAGE = "http://".$_SERVER['HTTP_HOST'].dirname($_SERVER['PHP_SELF'])."/null.html";
-    header('Cache-Control: no-cache, no-store, must-revalidate');
-    header('Pragma: no-cache');
-    header('Expires: 0');
+//    header('Cache-Control: no-cache, no-store, must-revalidate');
+//    header('Pragma: no-cache');
+//    header('Expires: 0');
 
     $hu_Agent = $_SERVER['HTTP_USER_AGENT'];
 
@@ -79,6 +79,7 @@ var debug = false;
 var connection = true;
 var underConfig = false;
 var aisping = 1;
+var tdtping = 1;
 var relayping = 1;
 var pollitem = 0;
 
@@ -142,6 +143,17 @@ function do_poll()
             } else {        
                 document.getElementById("trx-status-div").style.display = "inline-block";
                 document.getElementById("trx-status").checked = val.aisTxSts == 1? true : false;
+            }
+        }
+
+        if (--tdtping == 0) {
+            tdtping++;
+
+            if (val.tdtSts == -1) {
+                 document.getElementById("tdt-status-div").style.display = "none";
+            } else {        
+                document.getElementById("tdt-status-div").style.display = "inline-block";
+                document.getElementById("tdt-status-1").checked = val.tdtSts == 1? true : false;
             }
         }
 
@@ -219,6 +231,13 @@ function doAis(cb)
     send(Cmd.AisTrxStatus + "-" + status);
 }
 
+function doTdt(cb)
+{
+    var status = cb.checked == true? 1:0;
+    tdtping = 5;
+    send(Cmd.tdtStatus + "-" + status);
+}
+
 function dosavenmea()
 {
 
@@ -286,6 +305,7 @@ function docheckpw(seq)
     document.getElementById("record_file").disabled = status;
     document.getElementById("Save").disabled = status;
     document.getElementById("trx-status").disabled = status;
+    document.getElementById("tdt-status-1").disabled = status;
     document.getElementById("ais-use-cb").disabled = status;
     document.getElementById("relayAction").disabled = status;  
     document.getElementById("dosavePw").disabled = status;   
@@ -834,6 +854,14 @@ function dragElement(elmnt) {
         
         <td style="width:33%;"> <!-- Right Column -->
         <table>
+            <tr>
+                <td class="contentBox">
+                    <h2>Telldus Outlet Settings</h2>
+                    <div id="tdt-status-div" style="display: inline-block;">
+                        Outlet-1<input type="checkbox"<?php echo $NOSAVE==1? " disabled":""; ?> id="tdt-status-1" title="Send settings now" onchange="doTdt(this)">
+                    </div>
+                </td>
+            </tr>
             <tr>
                 <td class="contentBox">
                     <h2>NMEA Multiplexer I/O</h2>

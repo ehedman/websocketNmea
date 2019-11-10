@@ -94,6 +94,8 @@
 
 #define NMPARSE(str, nsent) !strncmp(nsent, &str[3], strlen(nsent))
 
+#define TDTOOLSTS   "/tmp/tdtool.sts"   // Telldus status file
+
 // Request codes from virtual instruments
 enum requests {
     SpeedOverGround     = 100,
@@ -109,6 +111,7 @@ enum requests {
     SensorCurr          = 201,
     SensorTemp          = 202,
     SensorRelay         = 203,
+    tdtStatus           = 205,
     AisTrxStatus        = 206,
     WaterMakerData      = 210,
     ServerPing          = 900,
@@ -127,6 +130,7 @@ static pid_t pidKplex = 0;
 static int kplexStatus = 0;
 static int pNmeaStatus = 1;
 static int sigExit = 0;
+static int tellStickLock = 0;
 static useconds_t lineRate = 1;
 static int fileFeed = 0;
 static struct sockaddr_in peer_sa;
@@ -455,6 +459,8 @@ static void exit_clean(int sig)
     if (backGround) {
         closelog();
     }
+
+    (void)unlink(TDTOOLSTS);
 
     exit(EXIT_SUCCESS);
 }
@@ -959,6 +965,69 @@ static void saveNmea(void)
     iconf.fdn_stream = fd;
 }
 
+// Manage TellStick smart outlets on and off
+static void tdToolSet(int status, int dev)
+{
+    char buf[100];
+
+    sprintf(buf, "tdtool --%s %d > /dev/null", status ==1? "on":"off", dev);
+    
+    (void)system(buf);
+}
+
+// Get status for a TellStick device
+static int tdToolGet(int dev)
+{
+    char buf[100];
+    char str[100];
+    int rval = 0;
+    static int curStat;
+    FILE *pipe;
+
+    if (tellStickLock) {
+        return curStat;
+    }
+
+    memset(str, 0, sizeof(str));
+
+    sprintf(buf, "awk -F= '/id=%d/ {print $NF}' %s 2>/dev/null", dev, TDTOOLSTS);
+
+    if ((pipe = popen(buf, "r")) != NULL) {
+        if ((fgets(str, sizeof(str), pipe)) != NULL) {
+            if (strncmp("ON", str, 2) == 0) {
+                curStat = rval = 1;
+            } else {
+                curStat = rval = 0;
+            }
+        }
+        pclose(pipe);
+    }
+
+    return rval;
+}
+
+// Poll status for TellStick devices
+static void *t_tellStick()
+{
+    char buf[100];
+    static int rval = 0;
+
+    printlog("Starting tellStick services");
+
+    sprintf(buf, "tdtool --list-device > %s 2>/dev/null", TDTOOLSTS);
+
+    while (!sigExit)
+    {
+        tellStickLock = 1;
+        (void)system(buf);
+        tellStickLock = 0;
+        sleep(6);
+    }
+
+    printlog("Stopping tellStick services");
+    pthread_exit(&rval);
+}
+
 // SRT proprietary AIS commands
 static void aisSet(int status)
 {
@@ -1301,8 +1370,8 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                         }
                     }
 
-                    sprintf(value, "{'relaySts':'%d','aisTxSts':'%d','nmRec':'%s','nmPlay':'%s','Authen':'%d'}-%d",
-                        relayStatus(), cnmea.txs, iconf.fdn_outf, fileFeed==1? basename(iconf.fdn_inf):"", auttmo, req);
+                    sprintf(value, "{'relaySts':'%d','tdtSts':'%d','aisTxSts':'%d','nmRec':'%s','nmPlay':'%s','Authen':'%d'}-%d",
+                        relayStatus(), tdToolGet(1), cnmea.txs, iconf.fdn_outf, fileFeed==1? basename(iconf.fdn_inf):"", auttmo, req);
 
                     break;
                 }
@@ -1330,6 +1399,14 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                     sprintf(value, "{'aisSet':'%d'}-%d", 0, req);
                     if (args != NULL && strlen(args)) {
                         aisSet(atoi(args));
+                    }
+                    break;
+                }
+
+                case tdtStatus: {
+                    sprintf(value, "{'tdtSet':'%d'}-%d", 0, req);
+                    if (args != NULL && strlen(args)) {
+                        tdToolSet(atoi(args),1);
                     }
                     break;
                 }
@@ -1671,6 +1748,7 @@ int main(int argc ,char **argv)
     pid_t pid;
     pthread_attr_t attr;  
     pthread_t t1;
+    pthread_t t2;
     struct sigaction action;
     struct lws_context_creation_info info;
     const char *cert_path = NULL;
@@ -1826,6 +1904,12 @@ int main(int argc ,char **argv)
         fileFeed = 1;
         pthread_create(&t1, &attr, t_fileFeed, NULL);         
     }
+
+    // Thread for the tellStick status service
+    pthread_create(&t2, &attr, t_tellStick, NULL); 
+    if (!t2) {
+        printlog("Failed to start tellStick thread");
+    }        
 
     // Fifo to deliver NMEA $P messages
     if (access( FIFOPNMEA, F_OK ) == -1) {
