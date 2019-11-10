@@ -20,20 +20,21 @@ Sucessfully activated the wsocknmea daemon will serve the individual instruments
 
 Currently there are twelve virtual instrument working:
 
-    Log           : SOW, SOG
-    Wind          : Real, Relative and speed
-    Depth         : With low water warning and water temp
-    Compass       : With heading
-    Goggle Map    : With current satellite view and AIS radar view
-    Clock         : The vessels time
-    GPS           : Lo, Lat and Heading
-    WaterMaker:   : Conductivity, temp, volume (separate project)
-    Volt meter    : From ADC
-    Current meter : From ADC
-    Temp meter    : From ADC (Directly in C/F from UK1104)
-    Power Chart   : From ADC Live electrical power charting
+    Log            : SOW, SOG
+    Wind           : Real, Relative and speed
+    Depth          : With low water warning and water temp
+    Compass        : With heading
+    Goggle Map     : With current satellite view and AIS radar view
+    Clock          : The vessels time
+    GPS            : Lo, Lat and Heading
+    WaterMaker:    : Conductivity, temp, volume (separate project)
+    Volt meter     : From ADC
+    Current meter  : From ADC
+    Temp meter     : From ADC (Directly in C/F from UK1104)
+    Power Chart    : From ADC Live electrical power charting
   I/O Control:
-    Relay ON/OFF  : From ADC (UK1104 only)
+    Relay ON/OFF   : From ADC (UK1104 only)
+    Telldus ON/OFF : Telldus Smart Home wireless outlet on/off
 
 ### Tested runtime environment
 
