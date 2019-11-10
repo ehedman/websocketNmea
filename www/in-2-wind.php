@@ -83,8 +83,8 @@ html>body
 #TSPpanel
 {
     position:absolute;
-    top: 77%;
-    left: 41%;
+    top: 76%;
+    left: 38%;
     font-size: 1.4em;
     font-weight: bold;
 }
@@ -178,8 +178,7 @@ function do_poll()
     if (val.dir == 1) tangle = 360 - tangle; 
     
     document.getElementById("needle_a").style.visibility="visible";
-
-    if (val.tspeed > 0)
+    if (tangle)
         document.getElementById("needle_t").style.visibility="visible";
     else
         document.getElementById("needle_t").style.visibility="hidden";
