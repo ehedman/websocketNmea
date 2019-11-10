@@ -33,8 +33,8 @@ Currently there are twelve virtual instrument working:
     Temp meter     : From ADC (Directly in C/F from UK1104)
     Power Chart    : From ADC Live electrical power charting
   I/O Control:
-    Relay ON/OFF   : From ADC (UK1104 only)
-    Telldus ON/OFF : Telldus Smart Home wireless outlet on/off
+- Relay ON/OFF   : From ADC (UK1104 only)
+- Telldus ON/OFF : Telldus Smart Home wireless outlet on/off
 
 ### Tested runtime environment
 
