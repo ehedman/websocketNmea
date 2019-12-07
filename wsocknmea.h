@@ -25,6 +25,9 @@ extern int relayStatus(void);
 //#define MT1800              // Instrument support for ENWA Watermaker 
 //#define MCP3208             // Analog input valtage, current .... etc.
 //#define UK1104              // CanaKit 4-Channel USB Relay Board with 6-Channel A/D Interface
+//#define TELLSTICK           // Tellstick Duo smart home devices
+
+#define TDTOOLSTS   "/tmp/tdtool.sts"   // Telldus status file
 
 #if defined (MCP3208) || defined (UK1104)
 #define DOADC
@@ -44,6 +47,10 @@ extern int adcRead(int a2dChannel);
 extern void a2dNotice(int channel, float val, float low, float high);
 extern float tick2volt(int tick, float tickVolt, int invert);
 extern float tick2current(int tick, float tickVolt, float crefVal, float crShunt, float gain, int invert);
+
+extern void tdToolSet(int status);
+extern unsigned int tdToolGet(void);
+extern void *t_tellStick(void *arg);
 
 #ifdef UK1104
 

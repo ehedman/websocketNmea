@@ -23,6 +23,115 @@
 #include <errno.h>
 #include <math.h>
 #include "wsocknmea.h"
+
+#ifdef TELLSTICK
+
+static int tellStickLock = 0;
+static int tdToolError = 0;
+
+// Manage TellStick smart outlets on and off
+void tdToolSet(int status)
+{
+    char buf[100];
+    int i, iter, ret;
+
+    for (i=1, iter=0; i<3; i<<=1, iter++)
+    {
+        if (status & i) {
+            (void)sprintf(buf, "tdtool --on %d > /dev/null 2>&1", iter+1);
+        } else {
+            (void)sprintf(buf, "tdtool --off %d > /dev/null 2>&1", iter+1);
+        }
+
+        ret = system(buf);
+        if (WEXITSTATUS(ret) != 0) {
+            printlog("Failed to execute %s", buf);
+            tdToolError = 5;
+            break;
+        }
+    }
+}
+
+// Get status for TellStick device(s)
+unsigned int tdToolGet(void)
+{
+    char buf[100];
+    char status[20];
+    unsigned int rval = 0;
+    static unsigned int curStat;
+    int bit = 0;
+    FILE *pipe;
+
+    if (tdToolError) {
+        tdToolError--;
+        return -1;
+    }
+
+    if (tellStickLock) {
+        return curStat;
+    }
+
+    (void)sprintf(buf, "awk -F'\\t|=' '{print $4 " " $NF}' %s 2>/dev/null", TDTOOLSTS);
+
+    if ((pipe = popen(buf, "r")) != NULL) {
+        while ((fgets(buf, sizeof(buf), pipe)) != NULL) {
+
+            (void)sscanf(buf, "%d %s", &bit, status);
+
+            if (strncmp("ON", status, 2) == 0) {
+                rval |= 1 << (bit-1);
+            }
+        }
+        (void)pclose(pipe);
+        curStat = rval;
+    }
+
+    return rval;
+}
+
+// Poll status for TellStick devices
+void *t_tellStick(void *arg)
+{
+    char buf[100];
+    static int rval = 0;
+    int *doRun = arg;
+
+    printlog("Starting tellStick services");
+
+    sprintf(buf, "tdtool --list-device > %s 2>/dev/null", TDTOOLSTS);
+
+    while(*doRun)
+    {
+        tellStickLock = 1;
+        (void)system(buf);
+        tellStickLock = 0;
+        sleep(6);
+    }
+
+    printlog("Stopping tellStick services");
+    pthread_exit(&rval);
+}
+
+#else
+
+void tdToolSet(int status)
+{
+    return;
+}
+
+unsigned int tdToolGet(void)
+{
+    return -1;
+}
+
+void *t_tellStick(void *arg)
+{
+    static int rval = 0;
+    pthread_exit(&rval);
+}
+
+#endif 
+
 #ifdef DOADC
 
 #ifdef UK1104   // https://www.canakit.com/

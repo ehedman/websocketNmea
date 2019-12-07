@@ -124,6 +124,12 @@ function setRelayStatus(mask)
     document.getElementById("relay4").checked = (8 & mask); 
 }
 
+function setTdtStatus(mask)
+{
+    document.getElementById("tdt-status-1").checked = (1 & mask);
+    document.getElementById("tdt-status-2").checked = (2 & mask);
+}
+
 function do_poll()
 {
     var val = JSON.parse(target);
@@ -151,9 +157,9 @@ function do_poll()
 
             if (val.tdtSts == -1) {
                  document.getElementById("tdt-status-div").style.display = "none";
-            } else {        
+            } else {
                 document.getElementById("tdt-status-div").style.display = "inline-block";
-                document.getElementById("tdt-status-1").checked = val.tdtSts == 1? true : false;
+                setTdtStatus(val.tdtSts);
             }
         }
 
@@ -224,18 +230,26 @@ function dorelay()
     send(Cmd.SensorRelay + "-" + rlbits);
 }
 
+
+function doTdt()
+{
+    var tdbits = 0;
+    if (document.getElementById("tdt-status-1").checked == true) {
+        tdbits |= (1 << 0);
+    }
+    if (document.getElementById("tdt-status-2").checked == true) {
+        tdbits |= (1 << 1);
+    }
+
+    tdtping = 5;
+    send(Cmd.tdtStatus + "-" + tdbits);
+}
+
 function doAis(cb)
 {
     var status = cb.checked == true? 1:0;
     aisping = 5;
     send(Cmd.AisTrxStatus + "-" + status);
-}
-
-function doTdt(cb)
-{
-    var status = cb.checked == true? 1:0;
-    tdtping = 5;
-    send(Cmd.tdtStatus + "-" + status);
 }
 
 function dosavenmea()
@@ -306,6 +320,7 @@ function docheckpw(seq)
     document.getElementById("Save").disabled = status;
     document.getElementById("trx-status").disabled = status;
     document.getElementById("tdt-status-1").disabled = status;
+    document.getElementById("tdt-status-2").disabled = status;
     document.getElementById("ais-use-cb").disabled = status;
     document.getElementById("relayAction").disabled = status;  
     document.getElementById("dosavePw").disabled = status;   
@@ -858,7 +873,8 @@ function dragElement(elmnt) {
                 <td class="contentBox">
                     <h2>Telldus Outlet Settings</h2>
                     <div id="tdt-status-div" style="display: inline-block;">
-                        Outlet-1<input type="checkbox"<?php echo $NOSAVE==1? " disabled":""; ?> id="tdt-status-1" title="Send settings now" onchange="doTdt(this)">
+                        Outlet-1<input type="checkbox"<?php echo $NOSAVE==1? " disabled":""; ?> id="tdt-status-1" title="Send settings now" onchange="doTdt()">
+                        Outlet-2<input type="checkbox"<?php echo $NOSAVE==1? " disabled":""; ?> id="tdt-status-2" title="Send settings now" onchange="doTdt()">
                     </div>
                 </td>
             </tr>
