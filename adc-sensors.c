@@ -22,9 +22,11 @@
 #include <unistd.h>
 #include <errno.h>
 #include <math.h>
+#include <signal.h>
 #include "wsocknmea.h"
 
 #ifdef TELLSTICK
+#define TDTERROR    "/tmp/td-error.stat"
 
 static int tellStickLock = 0;
 static int tdToolError = 0;
@@ -43,11 +45,18 @@ void tdToolSet(int status)
             (void)sprintf(buf, "tdtool --off %d > /dev/null 2>&1", iter+1);
         }
 
-        ret = system(buf);
-        if (WEXITSTATUS(ret) != 0) {
-            printlog("Failed to execute %s", buf);
-            tdToolError = 5;
-            break;
+        if (fork() == 0)
+        {
+            signal(SIGCHLD, SIG_DFL);
+            signal(SIGHUP, SIG_DFL);
+
+            ret = system(buf);
+
+            if (WEXITSTATUS(ret) != 0) {           
+                close(open (TDTERROR, O_RDWR|O_CREAT));
+                printlog("Failed to execute %s", buf);
+            }
+            exit(0);
         }
     }
 }
@@ -60,9 +69,16 @@ unsigned int tdToolGet(void)
     unsigned int rval = 0;
     static unsigned int curStat;
     int bit = 0;
+    struct stat sb;
     FILE *pipe;
 
-    if (tdToolError) {
+    if (!stat(TDTERROR, &sb)) {
+        tdToolError = 5;
+        unlink(TDTERROR);
+        return -1;
+    }
+
+    if (tdToolError > 0) {
         tdToolError--;
         return -1;
     }
@@ -102,10 +118,15 @@ void *t_tellStick(void *arg)
 
     while(*doRun)
     {
-        tellStickLock = 1;
-        (void)system(buf);
-        tellStickLock = 0;
-        sleep(6);
+        for (int i = 0; i < 12; i++)
+        {
+            if (!i) {
+                tellStickLock = 1;
+                (void)system(buf);
+                tellStickLock = 0;
+            }
+            usleep(500000);
+        }
     }
 
     printlog("Stopping tellStick services");

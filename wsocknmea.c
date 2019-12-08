@@ -422,6 +422,8 @@ static void exit_clean(int sig)
         kill (pidKplex, SIGINT);
         pidKplex = 0;
     }
+
+    sleep(2);
     
     if(muxFd > 0)
        close(muxFd);
@@ -459,8 +461,6 @@ static void exit_clean(int sig)
     if (backGround) {
         closelog();
     }
-
-
 
     exit(EXIT_SUCCESS);
 }
