@@ -126,8 +126,23 @@ function setRelayStatus(mask)
 
 function setTdtStatus(mask)
 {
-    document.getElementById("tdt-status-1").checked = (1 & mask);
-    document.getElementById("tdt-status-2").checked = (2 & mask);
+ 
+    var err = (mask & (1 << 5)) === 0 ? 0 : 1;
+
+    if (err)
+    {      
+        if ((1 & mask)) {
+            document.getElementById("tdt-status-1-label").style.color = "red";
+        }
+        if ((2 & mask)) {
+            document.getElementById("tdt-status-2-label").style.color = "red";
+        }
+    } else {
+        document.getElementById("tdt-status-1-label").style.color = "black";
+        document.getElementById("tdt-status-2-label").style.color = "black";
+        document.getElementById("tdt-status-1").checked = (1 & mask);
+        document.getElementById("tdt-status-2").checked = (2 & mask);
+    }
 }
 
 function do_poll()
@@ -156,9 +171,8 @@ function do_poll()
             tdtping++;
 
             if (val.tdtSts == -1) {
-                 document.getElementById("tdt-status-div").style.display = "none";
+                document.getElementById("tdt-status-tr").style.display = "none";
             } else {
-                document.getElementById("tdt-status-div").style.display = "inline-block";
                 setTdtStatus(val.tdtSts);
             }
         }
@@ -869,13 +883,13 @@ function dragElement(elmnt) {
         
         <td style="width:33%;"> <!-- Right Column -->
         <table>
-            <tr>
+            <tr id="tdt-status-tr">
                 <td class="contentBox">
-                    <h2>Telldus Outlet Settings</h2>
-                    <div id="tdt-status-div" style="display: inline-block;">
-                        Outlet-1<input type="checkbox"<?php echo $NOSAVE==1? " disabled":""; ?> id="tdt-status-1" title="Send settings now" onchange="doTdt()">
-                        Outlet-2<input type="checkbox"<?php echo $NOSAVE==1? " disabled":""; ?> id="tdt-status-2" title="Send settings now" onchange="doTdt()">
-                    </div>
+                    <h2>Tellstick Outlet Settings</h2>
+                    <label id="tdt-status-1-label" for="tdt-status-1">Outlet-1</label>
+                    <input type="checkbox"<?php echo $NOSAVE==1? " disabled":""; ?> id="tdt-status-1" title="Send settings now" onchange="doTdt()">
+                    <label id="tdt-status-2-label" for="tdt-status-2">Outlet-2</label>
+                    <input type="checkbox"<?php echo $NOSAVE==1? " disabled":""; ?> id="tdt-status-2" title="Send settings now" onchange="doTdt()">
                 </td>
             </tr>
             <tr>

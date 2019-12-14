@@ -36,13 +36,19 @@ void tdToolSet(int status)
 {
     char buf[100];
     int i, iter, ret;
+    int fd;
+    struct stat sb;
 
-    for (i=1, iter=0; i<3; i<<=1, iter++)
+     if (!stat(TDTERROR, &sb)) {
+        return;
+    }
+
+    for (i=1, iter=1; i<3; i<<=1, iter++)
     {
         if (status & i) {
-            (void)sprintf(buf, "tdtool --on %d > /dev/null 2>&1", iter+1);
+            (void)sprintf(buf, "tdtool --on %d > /dev/null 2>&1", iter);
         } else {
-            (void)sprintf(buf, "tdtool --off %d > /dev/null 2>&1", iter+1);
+            (void)sprintf(buf, "tdtool --off %d > /dev/null 2>&1", iter);
         }
 
         if (fork() == 0)
@@ -52,9 +58,13 @@ void tdToolSet(int status)
 
             ret = system(buf);
 
-            if (WEXITSTATUS(ret) != 0) {           
-                close(open (TDTERROR, O_RDWR|O_CREAT));
-                printlog("Failed to execute %s", buf);
+            if (WEXITSTATUS(ret) != 0) {
+                printlog("Failed to execute '%s'", buf);          
+                if ((fd=open (TDTERROR, O_RDWR|O_CREAT|O_APPEND)) >0) {
+                    sprintf(buf, "%d\n", iter);
+                    write(fd, buf, strlen(buf));
+                    close(fd);
+                }  
             }
             exit(0);
         }
@@ -66,31 +76,36 @@ unsigned int tdToolGet(void)
 {
     char buf[100];
     char status[20];
-    unsigned int rval = 0;
+    static unsigned int rval;
     static unsigned int curStat;
     int bit = 0;
-    struct stat sb;
-    FILE *pipe;
+    FILE *fd;
 
-    if (!stat(TDTERROR, &sb)) {
-        tdToolError = 5;
+    if ((fd = fopen(TDTERROR, "r")) != NULL) {
+        rval = 0;
+         while ((fgets(buf, sizeof(buf), fd)) != NULL) {
+            rval |= 1 << (atoi(buf)-1); 
+        }
+        rval |= 1 << 5;     // Error bit
+        fclose(fd);
         unlink(TDTERROR);
-        return -1;
+        tdToolError = 2;
+        return rval;
     }
 
     if (tdToolError > 0) {
         tdToolError--;
-        return -1;
+        return rval;
     }
 
     if (tellStickLock) {
         return curStat;
     }
 
-    (void)sprintf(buf, "awk -F'\\t|=' '{print $4 " " $NF}' %s 2>/dev/null", TDTOOLSTS);
+    rval = 0;
 
-    if ((pipe = popen(buf, "r")) != NULL) {
-        while ((fgets(buf, sizeof(buf), pipe)) != NULL) {
+    if ((fd = fopen(TDTOOLSTS, "r")) != NULL) {
+        while ((fgets(buf, sizeof(buf), fd)) != NULL) {
 
             (void)sscanf(buf, "%d %s", &bit, status);
 
@@ -98,7 +113,8 @@ unsigned int tdToolGet(void)
                 rval |= 1 << (bit-1);
             }
         }
-        (void)pclose(pipe);
+
+        fclose(fd);
         curStat = rval;
     }
 
@@ -114,7 +130,7 @@ void *t_tellStick(void *arg)
 
     printlog("Starting tellStick services");
 
-    sprintf(buf, "tdtool --list-device > %s 2>/dev/null", TDTOOLSTS);
+    sprintf(buf, "tdtool --list-device 2>/dev/null | awk -F'\\t|=' '{print $4 \" \" $NF}' > %s", TDTOOLSTS);
 
     while(*doRun)
     {
