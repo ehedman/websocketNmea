@@ -18,6 +18,7 @@ PKGS += libpcre3 libpcre3-dev
 PKGS += libbz2-dev
 PKGS += libz-dev
 PKGS += libev-dev
+PKGS += jshon
 ifeq "$(shell apt-cache search php7| grep cgi)" ""
 PKGS += php5-cgi php5-sqlite*
 else

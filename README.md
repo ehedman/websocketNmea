@@ -1,5 +1,5 @@
 # websocketNmea
-README Aug-2019
+README June 2020
 
 The wsocknmea application package is a marine glass cockpit solution that features electronic marine instrument displays, typically used on private sailing yachts.
 The look and feel of the visualized instruments tries to mimic the look of real physical instrumnts and will by design avoid a digital look.
@@ -34,7 +34,7 @@ Currently there are twelve virtual instrument working:
     Power Chart    : From ADC Live electrical power charting
   I/O Control:
 - Relay ON/OFF   : From ADC (UK1104 only)
-- Telldus ON/OFF : Telldus Smart Home wireless outlet on/off
+- SmartPlug ON/OFF : Tp-link KASA Smart Home WiFi outlet on/off
 
 ### Tested runtime environment
 

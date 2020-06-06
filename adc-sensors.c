@@ -23,32 +23,48 @@
 #include <errno.h>
 #include <math.h>
 #include <signal.h>
+#include <netdb.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
 #include "wsocknmea.h"
 
-#ifdef TELLSTICK
-#define TDTERROR    "/tmp/td-error.stat"
+#ifdef SMARTPLUGDEV
+#define SMARTPLUGERROR      "/tmp/smartplug-error.stat"
 
-static int tellStickLock = 0;
-static int tdToolError = 0;
+#define SMARTPLUGPOLLCMD    "echo %d \"$(hs100 %s info | jshon -e system -e get_sysinfo -e relay_state)\" >> %s"
+#define SMARTPLUGONCMD      "hs100 %s on > /dev/null 2>&1"
+#define SMARTPLUGOFFCMD     "hs100 %s off > /dev/null 2>&1"
+#define SMARTPLUGHOSTNAME   "HS100-%d"
 
-// Manage TellStick smart outlets on and off
-void tdToolSet(int status)
+static int smartplugLock = 0;
+static int smartplugError = 0;
+
+// Manage smartplugs on and off
+void smartplugSet(int status)
 {
-    char buf[100];
+    char cmd[100];
+    char hsdev[40];
+    struct hostent *hp;
+
     int i, iter, ret;
     int fd;
     struct stat sb;
 
-     if (!stat(TDTERROR, &sb)) {
+     if (!stat(SMARTPLUGERROR, &sb)) {
         return;
     }
 
     for (i=1, iter=1; i<3; i<<=1, iter++)
     {
+        sprintf(hsdev, SMARTPLUGHOSTNAME, iter);
+        if ((hp = gethostbyname(hsdev)) == NULL) continue;
+
         if (status & i) {
-            (void)sprintf(buf, "tdtool --on %d > /dev/null 2>&1", iter);
+            (void)sprintf(cmd, SMARTPLUGONCMD, inet_ntoa( *( struct in_addr*)( hp -> h_addr_list[0])));
         } else {
-            (void)sprintf(buf, "tdtool --off %d > /dev/null 2>&1", iter);
+            (void)sprintf(cmd, SMARTPLUGOFFCMD, inet_ntoa( *( struct in_addr*)( hp -> h_addr_list[0])));
         }
 
         if (fork() == 0)
@@ -56,13 +72,13 @@ void tdToolSet(int status)
             signal(SIGCHLD, SIG_DFL);
             signal(SIGHUP, SIG_DFL);
 
-            ret = system(buf);
+            ret = system(cmd);
 
             if (WEXITSTATUS(ret) != 0) {
-                printlog("Failed to execute '%s'", buf);          
-                if ((fd=open (TDTERROR, O_RDWR|O_CREAT|O_APPEND)) >0) {
-                    sprintf(buf, "%d\n", iter);
-                    write(fd, buf, strlen(buf));
+                printlog("Failed to execute '%s'", cmd);          
+                if ((fd=open (SMARTPLUGERROR, O_RDWR|O_CREAT|O_APPEND)) >0) {
+                    sprintf(cmd, "%d\n", iter);
+                    write(fd, cmd, strlen(cmd));
                     close(fd);
                 }  
             }
@@ -71,8 +87,8 @@ void tdToolSet(int status)
     }
 }
 
-// Get status for TellStick device(s)
-unsigned int tdToolGet(void)
+// Get status smartplug device(s)
+unsigned int smartplugGet(void)
 {
     char buf[100];
     char status[20];
@@ -81,35 +97,35 @@ unsigned int tdToolGet(void)
     int bit = 0;
     FILE *fd;
 
-    if ((fd = fopen(TDTERROR, "r")) != NULL) {
+    if ((fd = fopen(SMARTPLUGERROR, "r")) != NULL) {
         rval = 0;
          while ((fgets(buf, sizeof(buf), fd)) != NULL) {
             rval |= 1 << (atoi(buf)-1); 
         }
         rval |= 1 << 5;     // Error bit
         fclose(fd);
-        unlink(TDTERROR);
-        tdToolError = 2;
+        unlink(SMARTPLUGERROR);
+        smartplugError = 2;
         return rval;
     }
 
-    if (tdToolError > 0) {
-        tdToolError--;
+    if (smartplugError > 0) {
+        smartplugError--;
         return rval;
     }
 
-    if (tellStickLock) {
+    if (smartplugLock) {
         return curStat;
     }
 
     rval = 0;
 
-    if ((fd = fopen(TDTOOLSTS, "r")) != NULL) {
+    if ((fd = fopen(SMARTPLUGSTS, "r")) != NULL) {
         while ((fgets(buf, sizeof(buf), fd)) != NULL) {
 
             (void)sscanf(buf, "%d %s", &bit, status);
 
-            if (strncmp("ON", status, 2) == 0) {
+            if (strncmp("1", status, 2) == 0) {
                 rval |= 1 << (bit-1);
             }
         }
@@ -121,47 +137,52 @@ unsigned int tdToolGet(void)
     return rval;
 }
 
-// Poll status for TellStick devices
-void *t_tellStick(void *arg)
+// Poll status smartplug devices
+void *t_smartplug(void *arg)
 {
-    char buf[100];
+    char cmd[200];
+    char hsdev[40];
     static int rval = 0;
     int *doRun = arg;
+    struct hostent *hp;
 
-    printlog("Starting tellStick services");
-
-    sprintf(buf, "tdtool --list-device 2>/dev/null | awk -F'\\t|=' '{print $4 \" \" $NF}' > %s", TDTOOLSTS);
+    printlog("Starting smartplug services");
 
     while(*doRun)
     {
-        for (int i = 0; i < 12; i++)
+        for (int i = 1; i < 3; i++)
         {
-            if (!i) {
-                tellStickLock = 1;
-                (void)system(buf);
-                tellStickLock = 0;
-            }
-            usleep(500000);
+            smartplugLock = 1;
+            if (i == 1) unlink(SMARTPLUGSTS);
+
+            sprintf(hsdev, SMARTPLUGHOSTNAME, i);
+            if ((hp = gethostbyname(hsdev)) == NULL) continue;      
+            
+            sprintf(cmd, SMARTPLUGPOLLCMD, i, inet_ntoa( *( struct in_addr*)( hp -> h_addr_list[0])), SMARTPLUGSTS);
+
+            (void)system(cmd);
         }
+        smartplugLock = 0;
+        sleep(2);
     }
 
-    printlog("Stopping tellStick services");
+    printlog("Stopping smartplug services");
     pthread_exit(&rval);
 }
 
 #else
 
-void tdToolSet(int status)
+void smartplugSet(int status)
 {
     return;
 }
 
-unsigned int tdToolGet(void)
+unsigned int smartplugGet(void)
 {
     return -1;
 }
 
-void *t_tellStick(void *arg)
+void *t_smartplug(void *arg)
 {
     static int rval = 0;
     pthread_exit(&rval);

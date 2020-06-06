@@ -885,7 +885,7 @@ function dragElement(elmnt) {
         <table>
             <tr id="tdt-status-tr">
                 <td class="contentBox">
-                    <h2>Tellstick Outlet Settings</h2>
+                    <h2>SmartPlug Settings</h2>
                     <label id="tdt-status-1-label" for="tdt-status-1">Outlet-1</label>
                     <input type="checkbox"<?php echo $NOSAVE==1? " disabled":""; ?> id="tdt-status-1" title="Send settings now" onchange="doTdt()">
                     <label id="tdt-status-2-label" for="tdt-status-2">Outlet-2</label>

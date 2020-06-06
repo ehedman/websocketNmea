@@ -128,7 +128,7 @@ static pid_t pidKplex = 0;
 static int kplexStatus = 0;
 static int pNmeaStatus = 1;
 static int sigExit = 0;
-static int tellstickRun = 1;
+static int smartplugRun = 1;
 static useconds_t lineRate = 1;
 static int fileFeed = 0;
 static struct sockaddr_in peer_sa;
@@ -407,7 +407,7 @@ static void exit_clean(int sig)
     char argstr[100];
     
     pNmeaStatus = 0;
-    tellstickRun = 0;
+    smartplugRun = 0;
 
     sleep(1);
  
@@ -456,7 +456,7 @@ static void exit_clean(int sig)
         }
     }
     (void)unlink(WSREBOOT);
-    (void)unlink(TDTOOLSTS);
+    (void)unlink(SMARTPLUGSTS);
 
     if (backGround) {
         closelog();
@@ -1308,7 +1308,7 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                     }
 
                     sprintf(value, "{'relaySts':'%d','tdtSts':'%d','aisTxSts':'%d','nmRec':'%s','nmPlay':'%s','Authen':'%d'}-%d",
-                        relayStatus(), tdToolGet(), cnmea.txs, iconf.fdn_outf, fileFeed==1? basename(iconf.fdn_inf):"", auttmo, req);
+                        relayStatus(), smartplugGet(), cnmea.txs, iconf.fdn_outf, fileFeed==1? basename(iconf.fdn_inf):"", auttmo, req);
 
                     break;
                 }
@@ -1343,7 +1343,7 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                 case tdtStatus: {
                     sprintf(value, "{'tdtSet':'%d'}-%d", 0, req);
                     if (args != NULL && strlen(args)) {
-                        tdToolSet(atoi(args));
+                        smartplugSet(atoi(args));
                     }
                     break;
                 }
@@ -1842,10 +1842,10 @@ int main(int argc ,char **argv)
         pthread_create(&t1, &attr, t_fileFeed, NULL);         
     }
 
-    // Thread for the tellStick status service
-    pthread_create(&t2, &attr, t_tellStick, &tellstickRun); 
+    // Thread for the smartplug status service
+    pthread_create(&t2, &attr, t_smartplug, &smartplugRun); 
     if (!t2) {
-        printlog("Failed to start tellStick thread");
+        printlog("Failed to start smartplug thread");
     }        
 
     // Fifo to deliver NMEA $P messages
