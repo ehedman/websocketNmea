@@ -281,7 +281,7 @@ static void do_sensors(time_t ts, collected_nmea *cn)
     static float avvolt;
     const float tickVolt = 0.01356;     // Volt / tick according to external electrical circuits
     const float tickcrVolt = 0.004882;   // 10-bit adc over 5V for current messurement
-    const float crShunt = 0.001;        // Current shunt (ohm) according to external electrical circuits
+    const float crShunt = 0.00017;        // Current shunt (ohm) according to external electrical circuits
     const float cGain = 50;             // Current sense amplifier gain for LT1999-50
     const float cZero = 0.1;            // Sense lines in short-circuit should read 0
     const int linearize = 0;            // No extra compesation needed
@@ -292,8 +292,8 @@ static void do_sensors(time_t ts, collected_nmea *cn)
     // Calculate an average in case of ADC drifts.
     if (a2dVal >= VOLTLOWLEVEL) {
         if (linearize) {
-            sampvolt[vcnt] = a2dVal;
-            if (++vcnt > sizeof(sampvolt)/sizeof(float)) {
+            sampvolt[vcnt++] = a2dVal;
+            if (vcnt >= sizeof(sampvolt)/sizeof(float)) {
                 vcnt = 0;
                 for (int i=0; i < sizeof(sampvolt)/sizeof(float); i++) {
                     avvolt += sampvolt[i];
@@ -324,8 +324,8 @@ static void do_sensors(time_t ts, collected_nmea *cn)
     if (a2dVal >= CURRLOWLEVEL) {
         if (linearize) {
             int i;
-            sampcurr[ccnt] = a2dVal;
-            if (++ccnt > sizeof(sampcurr)/sizeof(float)) {
+            sampcurr[ccnt++] = a2dVal;
+            if (ccnt >= sizeof(sampcurr)/sizeof(float)) {
                 ccnt =  0;
                 for (i=0; i < sizeof(sampcurr)/sizeof(float); i++) {
                     avcurr += sampcurr[i];
@@ -344,8 +344,8 @@ static void do_sensors(time_t ts, collected_nmea *cn)
     // Calculate an average in case of ADC drifts.
     if (a2dVal >= TEMPLOWLEVEL) {
         if (linearize) {
-            samptemp[tcnt] = a2dVal;
-            if (++tcnt > sizeof(samptemp)/sizeof(float)) {
+            samptemp[tcnt++] = a2dVal;
+            if (tcnt >= sizeof(samptemp)/sizeof(float)) {
                 tcnt = 0;
                 for (int i=0; i < sizeof(samptemp)/sizeof(float); i++) {
                     avtemp += samptemp[i];
@@ -2170,8 +2170,8 @@ int main(int argc ,char **argv)
                         cnmea.vwts=atof(getf(3, nmeastr_p1))/1.94; // kn 2 m/s;
                         cnmea.vwt_ts = ts;
                     } else if (ts - cnmea.stw_ts < INVALID && cnmea.stw > 0.9) {
-                            cnmea.vwta=trueWindDirection(cnmea.stw, cnmea.vwrs,  cnmea.vwra);
-                            cnmea.vwts=trueWindSpeed(cnmea.stw, cnmea.vwrs, cnmea.vwra);
+                            cnmea.vwta=trueWindDirection(cnmea.rmc, cnmea.vwrs,  cnmea.vwra);
+                            cnmea.vwts=trueWindSpeed(cnmea.rmc, cnmea.vwrs, cnmea.vwra);
                             cnmea.vwt_ts = ts;
                     }              
                     continue;
@@ -2185,8 +2185,8 @@ int main(int argc ,char **argv)
                         cnmea.vwrd=strncmp(getf(2, nmeastr_p1),"R",1)==0? 0:1;
                         cnmea.vwr_ts = ts;
                         if (ts - cnmea.stw_ts < INVALID && cnmea.stw > 0.9) {
-                            cnmea.vwta=trueWindDirection(cnmea.stw, cnmea.vwrs,  cnmea.vwra);
-                            cnmea.vwts=trueWindSpeed(cnmea.stw, cnmea.vwrs, cnmea.vwra);
+                            cnmea.vwta=trueWindDirection(cnmea.rmc, cnmea.vwrs,  cnmea.vwra);
+                            cnmea.vwts=trueWindSpeed(cnmea.rmc, cnmea.vwrs, cnmea.vwra);
                             cnmea.vwt_ts = ts;
                         }
                         continue;
