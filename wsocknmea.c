@@ -272,7 +272,7 @@ static void do_sensors(time_t ts, collected_nmea *cn)
     static int firstTurn;
     static int ccnt;
     static float avcurr;
-    static float sampcurr[20];  // No of samples to collect
+    static float sampcurr[200];  // No of samples to collect
     static int tcnt;
     static float avtemp;
     static float samptemp[20];
@@ -281,7 +281,7 @@ static void do_sensors(time_t ts, collected_nmea *cn)
     static float avvolt;
     const float tickVolt = 0.01356;     // Volt / tick according to external electrical circuits
     const float tickcrVolt = 0.004882;   // 10-bit adc over 5V for current messurement
-    const float crShunt = 0.00017;        // Current shunt (ohm) according to external electrical circuits
+    const float crShunt = 0.00025;        // Current shunt (ohm) according to external electrical circuits
     const float cGain = 50;             // Current sense amplifier gain for LT1999-50
     const float cZero = 0.1;            // Sense lines in short-circuit should read 0
     const int linearize = 0;            // No extra compesation needed
