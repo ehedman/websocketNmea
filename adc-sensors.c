@@ -24,6 +24,7 @@
 #include <math.h>
 #include <signal.h>
 #include <netdb.h>
+#include <sqlite3.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -209,6 +210,7 @@ struct adData
 };
 
 static struct adData adChannel[IOMAX];
+static time_t relayTimeout[4];
 
 static int runThread = ON;
 
@@ -463,7 +465,6 @@ int adcRead(int a2dChannel)
     return adChannel[a2dChannel].curVal;
 }
 
-
 /* API */
 int relayStatus(void)
 {
@@ -472,8 +473,15 @@ int relayStatus(void)
 
     for (i=1, iter=0; i<15; i<<=1, iter++)
     {
-        if (adChannel[iter+RELCHA].status == CHAisREADY && adChannel[iter+RELCHA].mode == ON)
+        if (adChannel[iter+RELCHA].status == CHAisREADY && adChannel[iter+RELCHA].mode == ON) {
             result |= i;
+
+            if (relayTimeout[iter] > 0 && time(NULL) >= relayTimeout[iter]) {
+                printlog("UK1104: Relay-%d expired", iter+1);
+                relayTimeout[iter] = 0;
+                adChannel[iter+RELCHA].mode = OFF;
+            }
+        }
     }
  
     return result;  // A bitmask
@@ -485,6 +493,19 @@ void relaySet(int channels) // A bitmask
 {
     int i, iter;
 
+    sqlite3 *conn;
+    sqlite3_stmt *res;
+    const char *tail;
+    char cmd[60];
+    int rval;
+    int tmo = 0;
+
+   (void)sqlite3_open_v2(NAVIDBPATH, &conn, SQLITE_OPEN_READONLY, 0);
+    if (conn == NULL) {
+        printlog("Failed to open database %s to handle relay timeouts: ", (char*)sqlite3_errmsg(conn));
+        return;
+    }
+
     for (i=1, iter=0; i<15; i<<=1, iter++)
     {
         if (adChannel[iter+RELCHA].status == CHAisNOTUSED)
@@ -492,10 +513,28 @@ void relaySet(int channels) // A bitmask
 
         if (channels & i) {
             adChannel[iter+RELCHA].mode = ON;
+
+            sprintf(cmd, "select relay%dtmo from devadcrelay", iter+1);
+            rval = sqlite3_prepare_v2(conn, cmd, -1, &res, &tail);        
+            if (rval == SQLITE_OK && sqlite3_step(res) == SQLITE_ROW) {
+                    tmo = sqlite3_column_int(res, 0);
+                    sqlite3_finalize(res); 
+            } else {
+                printlog("UK1104: Timeout of %d minutes FAILED on Relay-%d", tmo, iter+1);
+                tmo = relayTimeout[iter] = 0;
+            }
+
+            if (tmo > 0) {
+                printlog("UK1104: Timeout of %d minutes set on Relay-%d", tmo, iter+1);
+                relayTimeout[iter] = time(NULL)+tmo*60;
+            }
+
         } else {
             adChannel[iter+RELCHA].mode = OFF;
         }
     }
+
+    (void)sqlite3_close(conn);
 }
 
 /* API */

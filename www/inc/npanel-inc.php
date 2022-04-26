@@ -63,6 +63,9 @@
         $sql="UPDATE `devadc` SET `device`='".$_POST['a2dserial']."',`relay1txt`='".$_POST['relay1txt']."',`relay2txt`='".$_POST['relay2txt']."',`relay3txt`='".$_POST['relay3txt']."',`relay4txt`='".$_POST['relay4txt']."' WHERE `Id`=1";
         $DBH->exec($sql);
 
+        $sql="UPDATE `devadcrelay` SET `relay1tmo`='".$_POST['relay1tmo']."',`relay2tmo`='".$_POST['relay2tmo']."',`relay3tmo`='".$_POST['relay3tmo']."',`relay4tmo`='".$_POST['relay4tmo']."' WHERE `Id`=1";
+        $DBH->exec($sql);
+
         $sql="UPDATE `ais` SET `aisname`='".strtoupper($_POST['aisname'])."', `aiscallsign`='".strtoupper($_POST['aiscallsign'])."', `aisid`='".$_POST['aisid']."', `aisuse`='".$_POST['aisuse']."' WHERE `Id`=1";
         $DBH->exec($sql);
 
@@ -173,6 +176,14 @@
         $a2dreltxt2=$row['relay2txt'];
         $a2dreltxt3=$row['relay3txt'];
         $a2dreltxt4=$row['relay4txt'];
+
+        $stmt = $DBH->prepare("SELECT relay1tmo,relay2tmo,relay3tmo,relay4tmo FROM devadcrelay LIMIT 1");
+        $stmt->execute(); 
+        $row = $stmt->fetch();
+        $a2drel1tmo=$row['relay1tmo'];
+        $a2drel2tmo=$row['relay2tmo'];
+        $a2drel3tmo=$row['relay3tmo'];
+        $a2drel4tmo=$row['relay4tmo'];
 
         $stmt = $DBH->prepare('SELECT name, baud, dir, use FROM ttys ORDER BY Id');
         $stmt->execute(); 

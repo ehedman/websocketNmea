@@ -411,7 +411,7 @@ static void exit_clean(int sig)
 
     sleep(1);
  
-#if 0  
+#if 0
     if (threadKplex) {
         if (pthread_self() != threadKplex)
             pthread_cancel(threadKplex);
@@ -719,6 +719,13 @@ static int configure(int kpf)
                     sprintf(buf, "INSERT INTO devadc (device) VALUES ('%s')", "/dev/null");
                     sqlite3_prepare_v2(conn, buf, -1, &res, &tail);
                     sqlite3_step(res);
+
+                    sqlite3_prepare_v2(conn, "CREATE TABLE devadcrelay(Id INTEGER PRIMARY KEY, relay1tmo INTEGER, relay2tmo INTEGER, relay3tmo INTEGER, relay4tmo INTEGER)", -1, &res, &tail);
+                    sqlite3_step(res);
+
+                    sqlite3_prepare_v2(conn, "INSERT INTO devadcrelay (relay1tmo,relay2tmo,relay3tmo,relay4tmo) VALUES (0,0,0,0)", -1, &res, &tail);
+                    sqlite3_step(res);
+                
 #ifdef REV
                     sprintf(buf, "INSERT INTO rev (rev) VALUES ('%s')", REV);
 #else
