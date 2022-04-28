@@ -866,13 +866,17 @@ function dragElement(elmnt) {
                     <input type="text" name="a2dserial" title="UK1104 Data Acquisition Module" id="a2dserial" maxlength="20" value="<?php echo $a2dserial ?>"><br>
                     <div id="relayContent">
                         Relay-1<input type="checkbox" id="relay1" onclick="relayping = 5;" title="Relay 1 ON/OFF">
-                        <input type="text" title="Description" name ="relay1txt" id="relay1txt" size="9" value="<?php echo $a2dreltxt1 ?>"><input type="text" title="time-out min" name ="relay1tmo" id="relay1tmo" size="2" value="<?php echo $a2drel1tmo ?>"<br>
+                        <input type="text" title="Description" name="relay1txt" id="relay1txt" size="9" value="<?php echo $a2dreltxt1 ?>">
+                        <input type="text" title="time-out min" name="relay1tmo" id="relay1tmo" size="2" value="<?php echo $a2drel1tmo ?>"><br>
                         Relay-2<input type="checkbox" id="relay2" onclick="relayping = 5;" title="Relay 2 ON/OFF">
-                        <input type="text" title="Description" name ="relay2txt" id="relay2txt" size="9" value="<?php echo $a2dreltxt2 ?>"><input type="text" title="time-out min" name ="relay2tmo" id="relay2tmo" size="2" value="<?php echo $a2drel2tmo ?>"<br>
+                        <input type="text" title="Description" name="relay2txt" id="relay2txt" size="9" value="<?php echo $a2dreltxt2 ?>">
+                        <input type="text" title="time-out min" name="relay2tmo" id="relay2tmo" size="2" value="<?php echo $a2drel2tmo ?>"><br>
                         Relay-3<input type="checkbox" id="relay3" onclick="relayping = 5;" title="Relay 3 ON/OFF">
-                        <input type="text" title="Description" name ="relay3txt" id="relay3txt" size="9" value="<?php echo $a2dreltxt3 ?>"><input type="text" title="time-out min" name ="relay3tmo" id="relay3tmo" size="2" value="<?php echo $a2drel3tmo ?>"<br>
+                        <input type="text" title="Description" name="relay3txt" id="relay3txt" size="9" value="<?php echo $a2dreltxt3 ?>">
+                        <input type="text" title="time-out min" name="relay3tmo" id="relay3tmo" size="2" value="<?php echo $a2drel3tmo ?>"><br>
                         Relay-4<input type="checkbox" id="relay4" onclick="relayping = 5;" title="Relay 4 ON/OFF">
-                        <input type="text" title="Description" name ="relay4txt" id="relay4txt" size="9" value="<?php echo $a2dreltxt4 ?>"><input type="text" title="time-out min" name ="relay4tmo" id="relay4tmo" size="2" value="<?php echo $a2drel4tmo ?>"<br>
+                        <input type="text" title="Description" name="relay4txt" id="relay4txt" size="9" value="<?php echo $a2dreltxt4 ?>">
+                        <input type="text" title="time-out min" name="relay4tmo" id="relay4tmo" size="2" value="<?php echo $a2drel4tmo ?>"><br>
                         <input type="button"<?php echo $NOSAVE==1? " disabled":""; ?> id="relayAction" value="Send settings" title="Send settings now" onclick="dorelay()">
                     </div>
                 </td>
