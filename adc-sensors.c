@@ -483,7 +483,12 @@ int relayStatus(void)
             }
         }
     }
- 
+
+    if (result < 0 || result > 15) {
+        printlog("Corrupted channel bitmask for relayStatus(%d)", result);
+        return 0;
+    }
+
     return result;  // A bitmask
 }
 
@@ -499,6 +504,11 @@ void relaySet(int channels) // A bitmask
     char cmd[60];
     int rval;
     int tmo = 0;
+
+    if (channels < 1 || channels > 15) {
+        printlog("Corrupted channel bitmask for relaySet(%d)", channels);
+        return;
+    }
 
    (void)sqlite3_open_v2(NAVIDBPATH, &conn, SQLITE_OPEN_READONLY, 0);
     if (conn == NULL) {
@@ -524,9 +534,11 @@ void relaySet(int channels) // A bitmask
                 tmo = relayTimeout[iter] = 0;
             }
 
-            if (tmo > 0) {
+            if (tmo > 0 && relayTimeout[iter] == 0) {
                 printlog("UK1104: Timeout of %d minutes set on Relay-%d", tmo, iter+1);
                 relayTimeout[iter] = time(NULL)+tmo*60;
+            } else {
+                relayTimeout[iter] = 0;
             }
 
         } else {

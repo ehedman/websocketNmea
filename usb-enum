@@ -1,5 +1,5 @@
 #!/bin/bash
-# /etc/default/enum-usb
+# /etc/default/usb-enum
 # Helper script to find marine USB devices
 #
 
