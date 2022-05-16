@@ -34,7 +34,7 @@
 #ifdef SMARTPLUGDEV
 #define SMARTPLUGERROR      "/tmp/smartplug-error.stat"
 
-#define SMARTPLUGPOLLCMD    "echo %d \"$(hs100 %s info | jshon -e system -e get_sysinfo -e relay_state)\" >> %s"
+#define SMARTPLUGPOLLCMD    "hs100poll.sh %s %i %s"
 #define SMARTPLUGONCMD      "hs100 %s on > /dev/null 2>&1"
 #define SMARTPLUGOFFCMD     "hs100 %s off > /dev/null 2>&1"
 #define SMARTPLUGHOSTNAME   "HS100-%d"
@@ -157,10 +157,9 @@ void *t_smartplug(void *arg)
             if (i == 1) unlink(SMARTPLUGSTS);
 
             sprintf(hsdev, SMARTPLUGHOSTNAME, i);
-            if ((hp = gethostbyname(hsdev)) == NULL) continue;      
-            
-            sprintf(cmd, SMARTPLUGPOLLCMD, i, inet_ntoa( *( struct in_addr*)( hp -> h_addr_list[0])), SMARTPLUGSTS);
+            if ((hp = gethostbyname(hsdev)) == NULL) continue;
 
+            sprintf(cmd, SMARTPLUGPOLLCMD, inet_ntoa( *( struct in_addr*)( hp -> h_addr_list[0])), i, SMARTPLUGSTS);
             (void)system(cmd);
         }
         smartplugLock = 0;
