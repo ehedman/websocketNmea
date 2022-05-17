@@ -17,8 +17,8 @@
 #include <sqlite3.h>
 #include "wsocknmea.h"
 
-#define MAX_INACTIVE    120      // Aging vessel signals hidden after # seconds
-#define MAX_LIVE        300     // .. removed after # seconds
+#define MAX_INACTIVE    240      // Aging vessel signals hidden after # seconds
+#define MAX_LIVE        360     // .. removed after # seconds
 
 static int first = 1;
 
@@ -268,15 +268,10 @@ struct aisShip_struct *getShips(int maxSize)
             memset(jptr, 0, len+1);
 
             (void)strncpy(jptr, json, len);
-
-            if (ptr->next == NULL) {                
-                ptr->js = jptr;
-                ptr->next = ptr;
-            } else {
-                ptr->next = (struct aisShip_struct*)malloc(sizeof(struct aisShip_struct));
-                ptr->next->js = jptr;
-                ptr = ptr->next;
-            }
+ 
+            ptr->js = jptr;
+            ptr->next = (struct aisShip_struct*)malloc(sizeof(struct aisShip_struct));
+            ptr = ptr->next;
         }          
     }
 
