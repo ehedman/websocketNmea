@@ -171,6 +171,7 @@ function do_poll()
     
     var angle = round_number(val.angle,0);
     var tangle = round_number(val.tangle,0);
+    var tangle_v = tangle;
     document.getElementById("ANGpanel").innerHTML=angle+"°";
     document.getElementById("LEDpanel").innerHTML=val.speed;
 
@@ -178,7 +179,7 @@ function do_poll()
     if (val.dir == 1) tangle = 360 - tangle; 
     
     document.getElementById("needle_a").style.visibility="visible";
-    if (tangle)
+    if (tangle_v)
         document.getElementById("needle_t").style.visibility="visible";
     else
         document.getElementById("needle_t").style.visibility="hidden";
