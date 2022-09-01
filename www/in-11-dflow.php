@@ -131,7 +131,7 @@ var msg = "";
 var msg1 = "";
 const amonth = 2628288;
 
-var debug = true;
+var debug = false;
 var connection = true;
 
 function do_update()
