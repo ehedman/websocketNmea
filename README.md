@@ -27,7 +27,7 @@ Currently there are twelve virtual instrument working:
     Goggle Map     : With current satellite view and AIS radar view
     Clock          : The vessels time
     GPS            : Lo, Lat and Heading
-    WaterMaker:    : Conductivity, temp, volume (separate project)
+    Water Flow:    : Water tank status and Filter status (separate project)
     Volt meter     : From ADC
     Current meter  : From ADC
     Temp meter     : From ADC (Directly in C/F from UK1104)

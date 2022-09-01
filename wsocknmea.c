@@ -49,7 +49,7 @@
 // Configuration
 #define NMEAPORT 10110          // Port 10110 is designated by IANA for "NMEA-0183 Navigational Data"
 #define NMEAADDR "127.0.0.1"    // localhost for TCP for UDP use 239.194.4.4 for a multicast address
-#define WSPORT 443              // Port for the websocket protocol (to be allowed by firewall)
+#define WSPORT 8080             // Port for the websocket protocol (to be allowed by firewall)
 #ifndef KPCONFPATH
 #define KPCONFPATH  "/etc/default/kplex.conf"   // KPlex configuration file writable for webserver
 #endif
@@ -111,7 +111,7 @@ enum requests {
     SensorRelay         = 203,
     tdtStatus           = 205,
     AisTrxStatus        = 206,
-    WaterMakerData      = 210,
+    WaterTankData       = 210,
     ServerPing          = 900,
     TimeOfDAy           = 901,
     SaveNMEAstream      = 904,
@@ -125,6 +125,9 @@ static int backGround = 0;
 static int muxFd = 0;
 static pthread_t threadKplex = 0;
 static pid_t pidKplex = 0;
+#ifdef DIGIFLOW
+static pid_t pidDigiflow = 0;
+#endif
 static int kplexStatus = 0;
 static int pNmeaStatus = 1;
 static int sigExit = 0;
@@ -140,13 +143,6 @@ static char *programName;
 static int unusedInt __attribute__((unused));   // To make -Wall shut up
 static FILE * unusedFd __attribute__((unused));
 
-#ifdef MT1800
-#define WMMULTIADDR "224.0.0.1" // Join control unit
-#define WMPORT 49152
-static int wmsockFd;
-static struct sockaddr_in wmpeer_sa;
-#endif
-
 typedef struct {
     // Static configs from GUI sql db
     int     map_zoom;           // Google Map Zoom factor;
@@ -155,6 +151,7 @@ typedef struct {
     float   depth_transp;       // Depth of transponer
     char    adc_dev[40];        // ADC in /dev
     char    ais_dev[40];        // AIS in /dev
+    float   shuntR;             // Current shunt resistance
     char    fdn_outf[120];      // NMEA stream output file name
     FILE    *fdn_stream;        // Save NMEA stream file
     time_t  fdn_starttime;      // Start time for recording
@@ -213,16 +210,11 @@ typedef struct {
     float   kWhn;       // Kilowatt hour - consumed
     time_t  upTime;     // Server's uptime
     time_t  startTime;  // Server's starttime
-#ifdef MT1800
-    float   cond;       // Condictivity from Watermaker
-    time_t  cond_ts;    // Conductivity Timestamp
-    float   ctemp;      // Water temperature from Watermaker
-    time_t  ctemp_ts;   // Temperature Timestamp
-    int     cwqvalue;   // Water quality
-    int     cflowh;     // Flow / Hour
-    int     cflowt;     // Flow tot
-    int     cflowp;     // Preset volume
-    int     crunsts;    // MT-1800 run state
+#ifdef DIGIFLOW
+    float   tvol;       // Total consumed volume
+    float   tank;       // Tank Volume
+    time_t  tank_ts;    // tank Timestamp
+    time_t  fdate;      // Filter date
 #endif
 } collected_nmea;
 
@@ -258,11 +250,6 @@ void printlog(char *format, ...)
 
 static void do_sensors(time_t ts, collected_nmea *cn)
 {
-#ifdef MT1800
-    int cnt;
-    char msgbuf[100];
-    socklen_t wmsl = sizeof(wmpeer_sa);
-#endif
 
 #ifdef DOADC
 
@@ -281,9 +268,9 @@ static void do_sensors(time_t ts, collected_nmea *cn)
     static float avvolt;
     const float tickVolt = 0.01356;     // Volt / tick according to external electrical circuits
     const float tickcrVolt = 0.004882;   // 10-bit adc over 5V for current messurement
-    const float crShunt = 0.00025;        // Current shunt (ohm) according to external electrical circuits
+    float crShunt = iconf.shuntR;       // Current shunt (ohm) according to external electrical circuits
     const float cGain = 50;             // Current sense amplifier gain for LT1999-50
-    const float cZero = 0.1;            // Sense lines in short-circuit should read 0
+    const float cZero = 1.6;            // Sense lines in short-circuit should read 0
     const int linearize = 0;            // No extra compesation needed
 
     ad2Tick = adcRead(voltChannel);
@@ -322,7 +309,7 @@ static void do_sensors(time_t ts, collected_nmea *cn)
 
     // Calculate an average in case of ADC drifts.
     if (a2dVal >= CURRLOWLEVEL) {
-        if (linearize) {
+        if (linearize+1) {
             int i;
             sampcurr[ccnt++] = a2dVal;
             if (ccnt >= sizeof(sampcurr)/sizeof(float)) {
@@ -369,15 +356,52 @@ static void do_sensors(time_t ts, collected_nmea *cn)
     cn->temp_ts = ts;
 #endif
 
-#ifdef MT1800
-    // Get data from the watermaker's external control box
-    memset(msgbuf, 0, sizeof(msgbuf));
-    if ((cnt=recvfrom(wmsockFd, msgbuf, sizeof(msgbuf), 0, (struct sockaddr *) &wmpeer_sa, &wmsl)) >0) {
-        //printf( "Got '%s' as multicasted message. Lenght = %d\n", msgbuf, cnt );
-        sscanf(msgbuf, "%f %f %d %d %d %d %d", &cn->cond, &cn->ctemp, &cn->cwqvalue, &cn->cflowh, &cn->cflowt, &cn->cflowp, &cn->crunsts);
-        cn->cond_ts = cn->ctemp_ts =  ts;
+#ifdef DIGIFLOW
+    // dpendent on https://github.com/ehedman/flowSensor
+
+    static FILE *tankFd;
+    static int doTankRead;
+    int tankIndx = 0;
+    char tBuff[40];
+    static int tryTankFd;
+    struct stat statbuf;
+
+    if (doTankRead++ >= 2000) { // Not to hurry with this
+
+        if (tankFd == NULL && tryTankFd == 0) {
+            system("digiflow.sh /tmp/digiflow.txt &");
+            sleep(3);
+            FILE *tmpFd = fopen("/tmp/digiflow.pid", "r");
+            if (tmpFd != NULL) {
+                if (fgets(tBuff, sizeof(tBuff), tmpFd) != NULL) {
+                    pidDigiflow = atol(tBuff);
+                    fclose(tmpFd);
+                    if (pidDigiflow)
+                        tankFd = fopen("/tmp/digiflow.txt", "r");
+                }
+            }
+            tryTankFd = 1;
+        }
+
+        if (tankFd != NULL) {
+            if (freopen("/tmp/digiflow.txt","r",tankFd) != NULL) {
+                if (fstat(fileno(tankFd), &statbuf) == 0 && statbuf.st_size != 0) {
+                    while( fgets(tBuff, sizeof(tBuff), tankFd) != NULL) {
+                        switch(tankIndx++) {
+                            case 0: cnmea.fdate = atol(tBuff); break;
+                            case 1: cnmea.tvol =  atof(tBuff); break;
+                            case 2: cnmea.tank =  atof(tBuff); cnmea.tank_ts = ts; break;
+                            default: break;
+                        }
+                    }
+                }
+            }
+            tankIndx = doTankRead = 0;
+        }
     }
-#endif
+       
+#endif /* DIGIFLOW */
+
 }
 
 static void parse(char *line, char **argv)
@@ -427,14 +451,16 @@ static void exit_clean(int sig)
     
     if(muxFd > 0)
        close(muxFd);
-
-#ifdef MT1800
-    if (wmsockFd >0)
-        close(wmsockFd);
-#endif
-  
+ 
     if (ws_context != NULL) 
-        lws_context_destroy(ws_context);  
+        lws_context_destroy(ws_context);
+
+#ifdef  DIGIFLOW
+    if (pidDigiflow) {
+        kill (pidDigiflow, SIGTERM);
+        pidDigiflow = 0;
+    }
+#endif
 
     if (sig == SIGSTOP) {
         if ((fd = open(WSREBOOT, O_RDONLY)) >0) {
@@ -577,48 +603,6 @@ static int nmea_sock_open(int kplex_fork)
     return 0;
 }
 
-#ifdef MT1800
-// Open the watermaker socket
-static void wm_sock_open()
-{
-    struct ip_mreq mreq;
-    u_int yes = 1;  
- 
-    // create datagram socket
-    if ( (wmsockFd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) > 0) {
-
-        // allow multiple sockets to use the same PORT number
-        if (setsockopt(wmsockFd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) < 0) {
-            printlog("Failed to set REUSEADDR on WM-socket %s", strerror(errno));
-            close(wmsockFd);
-            wmsockFd=0;
-        }
-
-        // fill in host sockaddr_in
-        memset(&wmpeer_sa, 0, sizeof(struct sockaddr_in));
-        wmpeer_sa.sin_family = AF_INET;
-        wmpeer_sa.sin_addr.s_addr = inet_addr(WMMULTIADDR);
-        wmpeer_sa.sin_port = htons(WMPORT);
-
-        // bind to receive address
-        if (wmsockFd>0 && bind(wmsockFd, (struct sockaddr *) &wmpeer_sa, sizeof(wmpeer_sa)) < 0) {
-           printlog("Failed to bind to WM-socket: %s", strerror(errno));
-           close(wmsockFd);
-           wmsockFd=0;
-        }
-
-        // use setsockopt() to request that the kernel join a multicast group
-        mreq.imr_multiaddr.s_addr = inet_addr(WMMULTIADDR);
-        mreq.imr_interface.s_addr = htonl(INADDR_ANY);
-        if (wmsockFd>0 && setsockopt(wmsockFd, IPPROTO_IP,IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0) {
-           printlog("Failed to set socket options on WM-socket: %s", strerror(errno));
-           close(wmsockFd);
-           wmsockFd=0;
-        }
-    }
-}
-#endif
-
 // The configuration database is maintained from the WEB GUI settings dialogue.
 static int configure(int kpf)
 {
@@ -635,6 +619,7 @@ static int configure(int kpf)
     iconf.map_updt = 6;
     iconf.depth_vwrn = 4;
     iconf.client_ip[0] = '\0';
+    iconf.shuntR = 0.00015;
 
     // If kplex.conf and/or a config database file is missing, create templates so that
     // we keep the system going. The user has then to create his own profile from the web gui.
@@ -713,10 +698,10 @@ static int configure(int kpf)
                     sqlite3_prepare_v2(conn, "CREATE TABLE abuddies (Id INTEGER PRIMARY KEY, userid BIGINT)", -1, &res, &tail);
                     sqlite3_step(res);
 
-                    sqlite3_prepare_v2(conn, "CREATE TABLE devadc(Id INTEGER PRIMARY KEY, device TEXT, relay1txt TEXT, relay2txt TEXT, relay3txt TEXT, relay4txt TEXT)", -1, &res, &tail);
+                    sqlite3_prepare_v2(conn, "CREATE TABLE devadc(Id INTEGER PRIMARY KEY, device TEXT, relay1txt TEXT, relay2txt TEXT, relay3txt TEXT, relay4txt TEXT, shuntR REAL)", -1, &res, &tail);
                     sqlite3_step(res);
                     
-                    sprintf(buf, "INSERT INTO devadc (device) VALUES ('%s')", "/dev/null");
+                    sprintf(buf, "INSERT INTO devadc (device,shuntR) VALUES ('%s',%f)", "/dev/null", iconf.shuntR);
                     sqlite3_prepare_v2(conn, buf, -1, &res, &tail);
                     sqlite3_step(res);
 
@@ -805,9 +790,10 @@ static int configure(int kpf)
     }
 
     // ADC device
-    rval = sqlite3_prepare_v2(conn, "select device from devadc", -1, &res, &tail);        
+    rval = sqlite3_prepare_v2(conn, "select device,shuntR from devadc", -1, &res, &tail);        
     if (rval == SQLITE_OK && sqlite3_step(res) == SQLITE_ROW) {
             (void)strcpy(iconf.adc_dev, (char*)sqlite3_column_text(res, 0));
+            iconf.shuntR = sqlite3_column_double(res, 1);
     }
 
     // AIS
@@ -1328,14 +1314,14 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                     break;
                 }
 
-#ifdef MT1800
-                case WaterMakerData: {
-                    if (ct - cnmea.cond_ts > INVALID*10)
+#ifdef DIGIFLOW
+                case WaterTankData: {
+                    if (ct - cnmea.tank_ts > INVALID*10)
                         sprintf(value, "Exp-%d", req);
                     else
                         sprintf(value,
-                            "{'condu':'%.1f','temp':'%.1f','quality':'%d','flowh':'%d','flowt':'%d','pvol':'%d','runs':'%d'}-%d", \
-                            cnmea.cond, cnmea.ctemp, cnmea.cwqvalue, cnmea.cflowh, cnmea.cflowt, cnmea.cflowp, cnmea.crunsts,req);
+                            "{'tvol':'%.0f','tank':'%.0f','fdate':'%lu','date':'%lu'}-%d",
+                                cnmea.tvol, cnmea.tank, cnmea.fdate, time(NULL), req);
                     break;
                 }
 #endif
@@ -1887,11 +1873,6 @@ int main(int argc ,char **argv)
         } else
             pthread_setschedparam(threadPnmea, SCHED_FIFO, &parm);
     }
-   
-
-#ifdef MT1800
-    wm_sock_open();
-#endif
 
 #ifdef DOADC
     if (strcmp(iconf.adc_dev, "/dev/null")) {

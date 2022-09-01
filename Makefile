@@ -99,6 +99,7 @@ distclean:
 install: $(BIN)
 	sudo install -m 0755 -g root -o root $(BIN) -D $(DEST)/$(BIN)
 	sudo install -m 755 -g root -o root hs100poll.sh -D $(DEST)/hs100poll.sh
+	sudo install -m 755 -g root -o root digiflow.sh -D $(DEST)/digiflow.sh
 	@if [ ! -e $(DEST)/a2dnotice ]; then \
 		sudo install -m 755 -g root -o root a2dnotice -D $(DEST)/a2dnotice; \
 	fi

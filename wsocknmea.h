@@ -22,7 +22,7 @@ extern void relayInit(int nchannels);
 extern void relaySet(int channels);
 extern int relayStatus(void);
 
-//#define MT1800              // Instrument support for ENWA Watermaker 
+//#define DIGIFLOW            // Instrument support water tank meter
 //#define MCP3208             // Analog input valtage, current .... etc.
 //#define UK1104              // CanaKit 4-Channel USB Relay Board with 6-Channel A/D Interface
 //#define SMARTPLUGDEV        // Smartplug home devices
