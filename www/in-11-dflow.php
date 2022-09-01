@@ -91,6 +91,15 @@ html>body
     min-width: 55%;
 }
 
+#DHome
+{
+    position:absolute;
+    top: 82%;
+    left: 44%;
+    font-size: 1.8em;
+	letter-spacing: 2px;
+}
+
     </style>
        
     <script>
@@ -218,6 +227,7 @@ function do_poll()
     </head>
     <body onload="init()">
         <div id="main">
+            <div id="DHome"><a href="http://<?php echo gethostbyname('digiflow'); ?>/index.html" target="_blank">visit</a></div>
             <div id="LEDpanel1"></div>
             <div id="LEDpanel2"></div>
             <div id="LEDpanel3"></div>
