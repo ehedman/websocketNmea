@@ -17,7 +17,7 @@
 html>body
 {
     font-family: Tahoma, Helvetica, Geneva, Arial, sans-serif;
-	font-size: 0.9em;
+    font-size: 0.9em;
     margin: 0 0 0 0;
     width: 100%;
     min-width: 256px;
@@ -52,10 +52,11 @@ html>body
     left: 35%;
     font-weight: bold;
     font-size: 4.8em;
-	letter-spacing: 2px;
+    letter-spacing: 2px;
     text-align: center;
     width: 30%;
 }
+
 #LEDpanel2
 {
     position:absolute;
@@ -63,10 +64,11 @@ html>body
     left: 23%;
     font-weight: bold;
     font-size: 4.8em;
-	letter-spacing: 2px;
+    letter-spacing: 2px;
     text-align: center;
     min-width: 55%;
 }
+
 #LEDpanel3
 {
     position:absolute;
@@ -74,7 +76,7 @@ html>body
     left: 23%;
     font-weight: bold;
     font-size: 1.8em;
-	letter-spacing: 2px;
+    letter-spacing: 2px;
     text-align: center;
     min-width: 55%;
 }
@@ -86,7 +88,7 @@ html>body
     left: 23%;
     font-weight: bold;
     font-size: 1.8em;
-	letter-spacing: 2px;
+    letter-spacing: 2px;
     text-align: center;
     min-width: 55%;
 }
@@ -97,7 +99,7 @@ html>body
     top: 82%;
     left: 44%;
     font-size: 1.8em;
-	letter-spacing: 2px;
+    letter-spacing: 2px;
 }
 
     </style>
@@ -112,8 +114,8 @@ function resize()	// Set font relative to window width.
     W=W<256?256:W;
     W=W>512?512:W;
     
-	P =  Math.floor (f_Factor*(2.5*W/96));
-	document.body.style.fontSize=P + 'px';
+    P =  Math.floor (f_Factor*(2.5*W/96));
+    document.body.style.fontSize=P + 'px';
 }
 
 $(document).ready(function() {
@@ -133,25 +135,36 @@ var pt = 0;
 var ut = 0;
 
 var target = 0;
-var ticks = 4000;
-var update = 4000;
+var ticks = 3000;
+var update = 3000;
 var valid = "";
 var msg = "";
 var msg1 = "";
+var turn = 0;
 const amonth = 2628288;
 
 var debug = false;
 var connection = true;
 
+function mouseOver()
+{
+    turn = 0;
+}
+
 function do_update()
 {
     if (connection) {
+        // This instrumnet is on demand only at load time or a mouse over event
+        if (turn++ > 2) {
+            return;
+        }
         send("210");
         if (pt == 0)           
             pt = setInterval(function () {do_poll();}, ticks);
     } else {
         window.clearInterval(ut);
         reconnect();
+        turn = 0;
     }
 }
 
@@ -226,7 +239,7 @@ function do_poll()
 
     </head>
     <body onload="init()">
-        <div id="main">
+        <div id="main" onmouseover="mouseOver()">
             <div id="DHome"><a href="http://<?php echo gethostbyname('digiflow'); ?>/index.html" target="_blank">visit</a></div>
             <div id="LEDpanel1"></div>
             <div id="LEDpanel2"></div>

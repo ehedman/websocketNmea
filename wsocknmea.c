@@ -125,9 +125,6 @@ static int backGround = 0;
 static int muxFd = 0;
 static pthread_t threadKplex = 0;
 static pid_t pidKplex = 0;
-#ifdef DIGIFLOW
-static pid_t pidDigiflow = 0;
-#endif
 static int kplexStatus = 0;
 static int pNmeaStatus = 1;
 static int sigExit = 0;
@@ -213,7 +210,6 @@ typedef struct {
 #ifdef DIGIFLOW
     float   tvol;       // Total consumed volume
     float   tank;       // Tank Volume
-    time_t  tank_ts;    // tank Timestamp
     time_t  fdate;      // Filter date
 #endif
 } collected_nmea;
@@ -247,6 +243,41 @@ void printlog(char *format, ...)
     va_end(args);
     errno = ern;
 }
+
+#ifdef DIGIFLOW
+static int doDigiflow()
+{
+    // dpendent on https://github.com/ehedman/flowSensor
+
+    FILE *tankFd;
+    int tankIndx = 0;
+    char tBuff[40];
+    struct stat statbuf;
+    int rval = 0;
+
+    system("digiflow.sh /tmp/digiflow.txt");
+
+    if ((tankFd = fopen("/tmp/digiflow.txt","r")) != NULL) {
+        if (fstat(fileno(tankFd), &statbuf) == 0 && statbuf.st_size != 0) {
+            while( fgets(tBuff, sizeof(tBuff), tankFd) != NULL) {
+                switch(tankIndx++) {
+                    case 0: cnmea.fdate = atol(tBuff); break;
+                    case 1: cnmea.tvol =  atof(tBuff); break;
+                    case 2: cnmea.tank =  atof(tBuff);
+                            rval = 0; 
+                            break;
+                    default: rval = 1; break;
+                }
+            }
+        }
+        fclose(tankFd);
+        unlink("/tmp/digiflow.txt");
+    }
+
+    return rval;
+}  
+#endif /* DIGIFLOW */
+
 
 static void do_sensors(time_t ts, collected_nmea *cn)
 {
@@ -356,52 +387,6 @@ static void do_sensors(time_t ts, collected_nmea *cn)
     cn->temp_ts = ts;
 #endif
 
-#ifdef DIGIFLOW
-    // dpendent on https://github.com/ehedman/flowSensor
-
-    static FILE *tankFd;
-    static int doTankRead;
-    int tankIndx = 0;
-    char tBuff[40];
-    static int tryTankFd;
-    struct stat statbuf;
-
-    if (doTankRead++ >= 2000) { // Not to hurry with this
-
-        if (tankFd == NULL && tryTankFd == 0) {
-            system("digiflow.sh /tmp/digiflow.txt &");
-            sleep(3);
-            FILE *tmpFd = fopen("/tmp/digiflow.pid", "r");
-            if (tmpFd != NULL) {
-                if (fgets(tBuff, sizeof(tBuff), tmpFd) != NULL) {
-                    pidDigiflow = atol(tBuff);
-                    fclose(tmpFd);
-                    if (pidDigiflow)
-                        tankFd = fopen("/tmp/digiflow.txt", "r");
-                }
-            }
-            tryTankFd = 1;
-        }
-
-        if (tankFd != NULL) {
-            if (freopen("/tmp/digiflow.txt","r",tankFd) != NULL) {
-                if (fstat(fileno(tankFd), &statbuf) == 0 && statbuf.st_size != 0) {
-                    while( fgets(tBuff, sizeof(tBuff), tankFd) != NULL) {
-                        switch(tankIndx++) {
-                            case 0: cnmea.fdate = atol(tBuff); break;
-                            case 1: cnmea.tvol =  atof(tBuff); break;
-                            case 2: cnmea.tank =  atof(tBuff); cnmea.tank_ts = ts; break;
-                            default: break;
-                        }
-                    }
-                }
-            }
-            tankIndx = doTankRead = 0;
-        }
-    }
-       
-#endif /* DIGIFLOW */
-
 }
 
 static void parse(char *line, char **argv)
@@ -454,13 +439,6 @@ static void exit_clean(int sig)
  
     if (ws_context != NULL) 
         lws_context_destroy(ws_context);
-
-#ifdef  DIGIFLOW
-    if (pidDigiflow) {
-        kill (pidDigiflow, SIGTERM);
-        pidDigiflow = 0;
-    }
-#endif
 
     if (sig == SIGSTOP) {
         if ((fd = open(WSREBOOT, O_RDONLY)) >0) {
@@ -1316,12 +1294,11 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
 
 #ifdef DIGIFLOW
                 case WaterTankData: {
-                    if (ct - cnmea.tank_ts > INVALID*10)
-                        sprintf(value, "Exp-%d", req);
-                    else
-                        sprintf(value,
-                            "{'tvol':'%.0f','tank':'%.0f','fdate':'%lu','date':'%lu'}-%d",
-                                cnmea.tvol, cnmea.tank, cnmea.fdate, time(NULL), req);
+                        if (!doDigiflow()) {    // Only on demand from instrument
+                            sprintf(value,
+                                "{'tvol':'%.0f','tank':'%.0f','fdate':'%lu','date':'%lu'}-%d",
+                                    cnmea.tvol, cnmea.tank, cnmea.fdate, time(NULL), req);
+                        } else sprintf(value, "Exp-%d", req);
                     break;
                 }
 #endif
