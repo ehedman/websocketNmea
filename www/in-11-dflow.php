@@ -2,6 +2,23 @@
     header('Cache-Control: no-cache, no-store, must-revalidate');
     header('Pragma: no-cache');
     header('Expires: 0');
+
+function net_match($network, $ip) {
+    // determines if a network in the form of 192.168.17.1/16 or
+    // 127.0.0.1/255.255.255.255 or 10.0.0.1 matches a given ip
+    $ip_arr = explode('/', $network);
+    $network_long = ip2long($ip_arr[0]);
+
+    $x = ip2long($ip_arr[1]);
+    $mask =  long2ip($x) == $ip_arr[1] ? $x : 0xffffffff << (32 - $ip_arr[1]);
+    $ip_long = ip2long($ip);
+
+    return ($ip_long & $mask) == ($network_long & $mask);
+}
+
+// Do not show link if from outside the local network
+$doLink=net_match($_SERVER['SERVER_ADDR']."/16", $_SERVER['REMOTE_ADDR']);
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -240,8 +257,9 @@ function do_poll()
     </head>
     <body onload="init()">
         <div id="main" onmouseover="mouseOver()">
-            <div id="DHome"><a href="http://<?php echo gethostbyname('digiflow'); ?>/index.html" target="_blank">visit</a></div>
-            <div id="LEDpanel1"></div>
+            <?php if ($doLink == true) { ?><div id="DHome"><a href="http://<?php
+                echo gethostbyname('digiflow'); ?>/index.html" title="DigiFLow home page" target="_blank">visit</a></div>
+            <?php } ?><div id="LEDpanel1"></div>
             <div id="LEDpanel2"></div>
             <div id="LEDpanel3"></div>
             <div id="LEDpanel4"></div>

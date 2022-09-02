@@ -253,7 +253,7 @@ static int doDigiflow()
     int tankIndx = 0;
     char tBuff[40];
     struct stat statbuf;
-    int rval = 0;
+    int rval = 1;
 
     system("digiflow.sh /tmp/digiflow.txt");
 
