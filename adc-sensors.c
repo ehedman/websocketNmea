@@ -474,10 +474,8 @@ int relayStatus(void)
     {
         if (adChannel[iter+RELCHA].status == CHAisREADY && adChannel[iter+RELCHA].mode == ON) {
             result |= i;
-
             if (relayTimeout[iter] > 0 && time(NULL) >= relayTimeout[iter]) {
                 printlog("UK1104: Relay-%d expired", iter+1);
-                relayTimeout[iter] = 0;
                 adChannel[iter+RELCHA].mode = OFF;
             }
         }
@@ -504,7 +502,7 @@ void relaySet(int channels) // A bitmask
     int rval;
     int tmo = 0;
 
-    if (channels < 1 || channels > 15) {
+    if (channels < 0 || channels > 15) {
         printlog("Corrupted channel bitmask for relaySet(%d)", channels);
         return;
     }
@@ -533,11 +531,9 @@ void relaySet(int channels) // A bitmask
                 tmo = relayTimeout[iter] = 0;
             }
 
-            if (tmo > 0 && relayTimeout[iter] == 0) {
+            if (tmo > 0 && relayTimeout[iter] < time(NULL)) {
                 printlog("UK1104: Timeout of %d minutes set on Relay-%d", tmo, iter+1);
                 relayTimeout[iter] = time(NULL)+tmo*60;
-            } else {
-                relayTimeout[iter] = 0;
             }
 
         } else {
