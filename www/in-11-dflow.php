@@ -236,7 +236,7 @@ function do_poll()
     var lp2 = document.getElementById("LEDpanel2");
 
     lp1.innerHTML=round_number(val.tank,0);
-    lp2.innerHTML=round_number(val.tvol,0);
+    lp2.innerHTML=round_number(val.tank,0) - round_number(val.tvol,0);
     
     lp3 = document.getElementById("LEDpanel3");
     lp4 = document.getElementById("LEDpanel4");
@@ -248,8 +248,7 @@ function do_poll()
     var totv = parseInt(val.tvol, 10);
     var tnkv = parseInt(val.tank, 10);
     var vleft = Math.round(((tnkv-totv)/tnkv)*100);
-    lp1.title = "Volume left " + vleft + "%";
-    lp2.title = "Volume left " + vleft + "%";
+    lp1.title = lp2.title = "Volume left " + vleft + "%, " + round_number(val.tvol,0) + " litres consumed";
 
 }
     </script>
