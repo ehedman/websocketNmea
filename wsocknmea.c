@@ -211,6 +211,7 @@ typedef struct {
     float   tvol;       // Total consumed volume
     float   tank;       // Tank Volume
     time_t  fdate;      // Filter date
+    int     tds;        // TDS value
 #endif
 } collected_nmea;
 
@@ -263,7 +264,8 @@ static int doDigiflow()
                 switch(tankIndx++) {
                     case 0: cnmea.fdate = atol(tBuff); break;
                     case 1: cnmea.tvol =  atof(tBuff); break;
-                    case 2: cnmea.tank =  atof(tBuff);
+                    case 2: cnmea.tank =  atof(tBuff); break;
+                    case 3: cnmea.tds  =  atoi(tBuff);
                             rval = 0; 
                             break;
                     default: rval = 1; break;
@@ -1296,8 +1298,8 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                 case WaterTankData: {
                         if (!doDigiflow()) {    // Only on demand from instrument
                             sprintf(value,
-                                "{'tvol':'%.0f','tank':'%.0f','fdate':'%lu','date':'%lu'}-%d",
-                                    cnmea.tvol, cnmea.tank, cnmea.fdate, time(NULL), req);
+                                "{'tvol':'%.0f','tank':'%.0f','fdate':'%lu','tds':'%d','date':'%lu'}-%d",
+                                    cnmea.tvol, cnmea.tank, cnmea.fdate, cnmea.tds, time(NULL), req);
                         } else sprintf(value, "Exp-%d", req);
                     break;
                 }

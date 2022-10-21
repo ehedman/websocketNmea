@@ -248,7 +248,9 @@ function do_poll()
     var totv = parseInt(val.tvol, 10);
     var tnkv = parseInt(val.tank, 10);
     var vleft = Math.round(((tnkv-totv)/tnkv)*100);
-    lp1.title = lp2.title = "Volume left " + vleft + "%, " + round_number(val.tvol,0) + " litres consumed";
+    var tds = parseInt(val.tds, 10);
+    lp1.title = "Volume left " + vleft + "%, " + round_number(val.tvol,0) + " litres consumed";
+    lp2.title = "Water quality TDS " + tds + "ppm";
 
 }
     </script>

@@ -10,6 +10,7 @@ if [ -z "${dataFile}" ]; then
 fi
 
 wget --timeout=2 -t1 --quiet -O - 'http://digiflow/ssi.shtml' | grep -E 'totv|tnkv|fage' | grep -oP 'value="\K[^"]+' > "${tmpf}"
+wget --timeout=2 -t1 --quiet -O - 'http://digiflow/ssi_xml.shtml' | grep -A1 -m1  tds | awk 'FNR==2{print $1}' >> "${tmpf}"
 
 rval="${PIPESTATUS[0]}"
 
