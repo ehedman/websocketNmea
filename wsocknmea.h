@@ -5,8 +5,6 @@
 #define NAVIDBPATH  "/etc/default/navi.db"      // Configuration database writable for webserver
 #endif
 
-int ignored __attribute__((unused));
-
 extern void printlog(char *format, ...);
 
 struct aisShip_struct
