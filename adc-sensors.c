@@ -31,6 +31,8 @@
 
 #include "wsocknmea.h"
 
+static int ignored __attribute__((unused));
+
 #ifdef SMARTPLUGDEV
 #define SMARTPLUGERROR      "/tmp/smartplug-error.stat"
 

@@ -4,7 +4,7 @@
 var socket;
 var retry = 0;
 var valid;
-var port = 443;
+var port = 8080;
 
 if (typeof debug == 'undefined') {
     debug = false;
