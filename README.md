@@ -54,7 +54,7 @@ To access your vessel as an IOT (to remotely acess all instruemnts and remote re
 Check my firewall GUI interface at https://github.com/ehedman/headwall.
 
 ### Se also
-[Yacht speedometer](https://github.com/ehedman/sdlSpeedometer)
+[Yacht speedometer](https://github.com/ehedman/sdlSpeedometer)<br>
 [Yacht water flow sensor and TDS meter](https://github.com/ehedman/flowSensor)
 
 ### Screenshots
