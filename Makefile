@@ -6,26 +6,19 @@ MAKE = make
 SUBDIRS = www
 
 # Package dependencies
-PKGS += g++
+PKGS += libc6-dev
 PKGS += git
+PKGS += g++
 PKGS += cmake
 PKGS += unzip
-PKGS += automake
-PKGS += autoconf
-PKGS += libtool
-PKGS += pkg-config
-PKGS += libpcre3 libpcre3-dev
-PKGS += libbz2-dev
-PKGS += libz-dev
-PKGS += libev-dev
-PKGS += jshon
-ifeq "$(shell apt-cache search php7| grep cgi)" ""
-PKGS += php5-cgi php5-sqlite*
-else
-PKGS += php7.*-cgi php7.*-sqlite3
-endif
+PKGS += php-cgi php-sqlite3
 PKGS += libsqlite3-dev sqlite3
-PKGS += libssl-dev
+PKGS += lighttpd
+
+$(eval value=$(shell apt list -a libwebsockets-dev 2>/dev/null |awk  '{ printf "%s", $$(2);  }' | cut -d. -f1))
+ifeq ($(shell expr $(value) \>= 3), 1)
+PKGS += libwebsockets-dev
+endif
 
 # Source files to be compiled
 SRCS = wsocknmea.c adc-sensors.c ais.c
@@ -33,7 +26,7 @@ HDRS = wsocknmea.h
 BIN = wsocknmea
 
 # Where to install web pages
-WWWTOP?=/var/www
+WWWTOP?=/var/www/html
 
 # The web-server's runtime user and group belongings
 WO = www-data
@@ -60,7 +53,7 @@ UPLOADPATH = $(WWWTOP)/upload
 # Where to install binaries
 DEST=/usr/local/bin
 
-# Where to find websockets lib
+# Where to find libais.so
 LIBDIR=/usr/local/lib
                                                                                                       
 # Extra includes
@@ -98,8 +91,6 @@ distclean:
 
 install: $(BIN)
 	sudo install -m 0755 -g root -o root $(BIN) -D $(DEST)/$(BIN)
-	sudo install -m 755 -g root -o root hs100poll.sh -D $(DEST)/hs100poll.sh
-	sudo install -m 755 -g root -o root digiflow.sh -D $(DEST)/digiflow.sh
 	@if [ ! -e $(DEST)/a2dnotice ]; then \
 		sudo install -m 755 -g root -o root a2dnotice -D $(DEST)/a2dnotice; \
 	fi
