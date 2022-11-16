@@ -27,7 +27,7 @@ Currently there are twelve virtual instrument working:
     Goggle Map     : With current satellite view and AIS radar view
     Clock          : The vessels time
     GPS            : Lo, Lat and Heading
-    Water Flow:    : Water tank status and Filter status (from separate project @ https://github.com/ehedman/flowSensor)
+    Water Flow:    : Water tank status and Filter status
     Volt meter     : From ADC
     Current meter  : From ADC
     Temp meter     : From ADC (Directly in C/F from UK1104)
@@ -50,18 +50,19 @@ For a more comprehensive I/O Solution use the UK1104 driver instead. See https:/
 I have a Raymarine E97 Network Multifunction Display that feeds kplex with NMEA-183 through a serial line with wind, speed, water temp, gps etc.
 Also included in my set-up is the OpenCPN chart plotter that connects to the kplex traffic on the local WiFi on the yacht.
 Obviously the yacht has to be connected to the internet for the Google Map view.
-To access your vessel as an IOT (to remotely acess all instruemnts and remote relay control) I recommend to define ip-table rules with "shorewall" (http://shorewall.org/) in order to establish your device as an firewall with virtual host rules to open ports 80 and 8080 to the internet.
+To access your vessel as an IOT (to remotely acess all instruemnts and remote relay control) I recommend to define ip-table rules with "shorewall" (https://shorewall.org/) in order to establish your device as an firewall with virtual host rules to open ports 80 and 8080 to the internet.
 Check my firewall GUI interface at https://github.com/ehedman/headwall.
 
 ### Se also
-[Marine sdlSpeedometer](https://github.com/ehedman/sdlSpeedometer)
+[Yacht speedometer](https://github.com/ehedman/sdlSpeedometer)
+[Yacht water flow sensor and TDS meter](https://github.com/ehedman/flowSensor)
 
 ### Screenshots
 
 Running in Firefox on a Galaxy Note 10.1:
 
-<img src="http://hedmanshome.se/wso-00.png" width=100%></br>
-<img src="http://hedmanshome.se/wso-29.png" width=100%></br>
-<img src="http://hedmanshome.se/wso-52.png" width=100%></br>
-<img src="http://hedmanshome.se/wso-56.png" width=100%></br>
-<img src="http://hedmanshome.se/wso-31.png" width=100%>
+<img src="https://hedmanshome.se/wso-00.png" width=100%></br>
+<img src="https://hedmanshome.se/wso-29.png" width=100%></br>
+<img src="https://hedmanshome.se/wso-52.png" width=100%></br>
+<img src="https://hedmanshome.se/wso-56.png" width=100%></br>
+<img src="https://hedmanshome.se/wso-31.png" width=100%>
