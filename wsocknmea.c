@@ -1650,7 +1650,6 @@ int main(int argc ,char **argv)
     char nmeastr_p1[512];
     char nmeastr_p2[512];
     ais_state ais;
-    int opts = 0;
     int c;
     int kplex_fork = 1;
     int detachstate;
@@ -1660,8 +1659,6 @@ int main(int argc ,char **argv)
     pthread_t t2;
     struct sigaction action;
     struct lws_context_creation_info info;
-    const char *cert_path = NULL;
-    const char *key_path = NULL;
     pthread_t threadPnmea = 0;
 
     programName = basename(argv[0]);
@@ -1767,7 +1764,7 @@ int main(int argc ,char **argv)
         debug = 0; // don't flood the syslog
         setlogmask (LOG_UPTO (LOG_NOTICE));
         lws_set_log_level(LLL_ERR | LLL_WARN, lwsl_emit_syslog);
-    } else lws_set_log_level(LLL_ERR | LLL_WARN | LLL_NOTICE | LLL_INFO | LLL_CLIENT, NULL);
+    } else lws_set_log_level(LLL_ERR | LLL_WARN, NULL);
     
    // Register signal handler
     memset(&action, 0, sizeof(action));
@@ -1789,13 +1786,10 @@ int main(int argc ,char **argv)
     memset(&info, 0, sizeof info);
     info.port = wsport;
     info.iface = NULL;
-    info.protocols = protocols; 
-    info.ssl_cert_filepath = cert_path;
-    info.ssl_private_key_filepath = key_path;  
+    info.protocols = protocols;  
     info.gid = -1;
     info.uid = -1;
     info.max_http_header_data = 1024;
-    info.options = opts;
 
     if ((ws_context = lws_create_context(&info)) == NULL) {
        printlog("libwebsocket init failed");
