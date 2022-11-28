@@ -1,7 +1,7 @@
 /*
  * wsocknmea.c
  *
- *  Copyright (C) 2013-2019 by Erland Hedman <erland@hedmanshome.se>
+ *  Copyright (C) 2013-2023 by Erland Hedman <erland@hedmanshome.se>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -208,9 +208,10 @@ typedef struct {
     time_t  upTime;     // Server's uptime
     time_t  startTime;  // Server's starttime
 #ifdef DIGIFLOW
-    float   tvol;       // Total consumed volume
-    float   tank;       // Tank Volume
     time_t  fdate;      // Filter date
+    float   tvol;       // Total consumed volume
+    float   gvol;       // Grand total consumed volume
+    float   tank;       // Tank Volume
     int     tds;        // TDS value
 #endif
 } collected_nmea;
@@ -264,8 +265,9 @@ static int doDigiflow()
                 switch(tankIndx++) {
                     case 0: cnmea.fdate = atol(tBuff); break;
                     case 1: cnmea.tvol =  atof(tBuff); break;
-                    case 2: cnmea.tank =  atof(tBuff); break;
-                    case 3: cnmea.tds  =  atoi(tBuff);
+                    case 2: cnmea.gvol =  atof(tBuff); break;
+                    case 3: cnmea.tank =  atof(tBuff); break;
+                    case 4: cnmea.tds  =  atoi(tBuff);
                             rval = 0; 
                             break;
                     default: rval = 1; break;
@@ -279,7 +281,6 @@ static int doDigiflow()
     return rval;
 }  
 #endif /* DIGIFLOW */
-
 
 static void do_sensors(time_t ts, collected_nmea *cn)
 {
@@ -1498,7 +1499,8 @@ static void *threadPnmea_run()
             }
 
             // Format: GPENV,volt,bank,current,bank,temp,where,kWhp,kWhn,startTimr*cs
-            sprintf(fifobuf, "$GPENV,%.1f,1,%.1f,1,%.1f,1,%.3f,%.3f,%lu", cnmea.volt, cnmea.curr, cnmea.temp, cnmea.kWhp, cnmea.kWhn, cnmea.startTime);
+            sprintf(fifobuf, "$GPENV,%.1f,1,%.1f,1,%.1f,1,%.3f,%.3f,%lu",
+                cnmea.volt, cnmea.curr, cnmea.temp, cnmea.kWhp, cnmea.kWhn, cnmea.startTime);
 
             while(fifobuf[i] != '\0')
                 checksum = checksum ^ fifobuf[i++];
