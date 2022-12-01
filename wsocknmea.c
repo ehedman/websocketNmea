@@ -213,6 +213,7 @@ typedef struct {
     float   gvol;       // Grand total consumed volume
     float   tank;       // Tank Volume
     int     tds;        // TDS value
+    float   ttemp;      // Water temp
 #endif
 } collected_nmea;
 
@@ -267,7 +268,8 @@ static int doDigiflow()
                     case 1: cnmea.tvol =  atof(tBuff); break;
                     case 2: cnmea.gvol =  atof(tBuff); break;
                     case 3: cnmea.tank =  atof(tBuff); break;
-                    case 4: cnmea.tds  =  atoi(tBuff);
+                    case 4: cnmea.tds  =  atoi(tBuff); break;
+                    case 5: cnmea.ttemp = atof(tBuff);
                             rval = 0; 
                             break;
                     default: rval = 1; break;
