@@ -11,6 +11,7 @@ PKGS += git
 PKGS += g++
 PKGS += cmake
 PKGS += unzip
+PKGS += wget
 PKGS += php-cgi php-sqlite3
 PKGS += libsqlite3-dev sqlite3
 PKGS += lighttpd
