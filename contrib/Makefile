@@ -15,20 +15,12 @@ hs100:
 	git clone https://github.com/jkbenaim/hs100.git
 	cd hs100 && make
 
-$(eval value=$(shell apt list -a libwebsockets-dev 2>/dev/null |awk  '{ printf "%s", $$(2);  }' | cut -d. -f1))
-
 libwebsockets:
-ifeq ($(shell expr $(value) \>= 3), 1)
-	@echo "Using native libwebsockets"
-else
-	@echo "Building libwebsockets from source:"
-	git clone -b v4.2.0 https://github.com/warmcat/libwebsockets.git
+	git clone -b v3.1-stable https://github.com/warmcat/libwebsockets.git
 	mkdir libwebsockets/build
-	cd libwebsockets/build && cmake ..; make -j; sudo make -j install/local/fast; sudo install lib/libwebsockets.so.18 -m 0755 -g root -o root -D /usr/local/lib
+	cd libwebsockets/build && cmake ..; make -j; sudo make -j install/local/fast; sudo install lib/libwebsockets.so.14 -m 0755 -g root -o root -D /usr/local/lib
 	sudo rm -f /usr/local/lib/libwebsockets.so
-	sudo ln -s /usr/local/lib/libwebsockets.so.18 /usr/local/lib/libwebsockets.so
-endif
-
+	sudo ln -s /usr/local/lib/libwebsockets.so.14 /usr/local/lib/libwebsockets.so
 
 install: kplex aisparser
 	cd kplex && sudo make BINDIR=/usr/local/bin install

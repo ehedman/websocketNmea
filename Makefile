@@ -16,11 +16,6 @@ PKGS += php-cgi php-sqlite3
 PKGS += libsqlite3-dev sqlite3
 PKGS += lighttpd
 
-$(eval value=$(shell apt list -a libwebsockets-dev 2>/dev/null |awk  '{ printf "%s", $$(2);  }' | cut -d. -f1))
-ifeq ($(shell expr $(value) \>= 3), 1)
-PKGS += libwebsockets-dev
-endif
-
 # Source files to be compiled
 SRCS = wsocknmea.c adc-sensors.c ais.c
 HDRS = wsocknmea.h
