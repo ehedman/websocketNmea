@@ -18,7 +18,7 @@ get_ipaddr()
         return
     fi
 
-    a=$(ip address show $1 2> /dev/null | grep -v secondary | grep "inet " | awk -F'[/]' '{ print $1 }' | awk  '{ print $2 }')
+    a=$(ip address show $1 2> /dev/null | grep -v ${1}: | grep "inet " | awk -F'[/]' '{ print $1 }' | awk  '{ print $2 }')
     if [ -z "$a" ]; then
         echo -n "127.0.0.1"
     else
