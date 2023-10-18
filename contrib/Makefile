@@ -1,4 +1,6 @@
-all: kplex aisparser sendemail hs100 libwebsockets
+OSREL = $(shell awk -F\" '/VERSION=/ {printf("%.2s",$$2)}' /etc/os-release)
+
+all: kplex aisparser sendemail hs100 openssl libwebsockets
 
 kplex:
 	git clone https://github.com/stripydog/kplex.git
@@ -14,6 +16,12 @@ sendemail:
 hs100:
 	git clone https://github.com/jkbenaim/hs100.git
 	cd hs100 && make
+
+openssl:
+ifeq ($(shell expr $(OSREL) \> 11), 1)
+	git clone -b OpenSSL_1_1_1w https://github.com/openssl/openssl.git
+	cd openssl && ./config; make -j; sudo make install_sw
+endif
 
 libwebsockets:
 	git clone -b v3.1-stable https://github.com/warmcat/libwebsockets.git
@@ -48,5 +56,5 @@ install-configs:
 	fi
 
 clean:
-	rm -rf kplex aisparser sendemail hs100 libwebsockets .configured
+	rm -rf kplex aisparser sendemail hs100 libwebsockets openssl .configured
 
