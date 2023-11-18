@@ -15,6 +15,7 @@ PKGS += wget
 PKGS += php-cgi php-sqlite3
 PKGS += libsqlite3-dev sqlite3
 PKGS += lighttpd
+PKGS += libssl-dev
 
 # Source files to be compiled
 SRCS = wsocknmea.c adc-sensors.c ais.c
@@ -22,7 +23,7 @@ HDRS = wsocknmea.h
 BIN = wsocknmea
 
 # Where to install web pages
-WWWTOP?=/var/www/html
+WWWTOP?=/var/www
 
 # The web-server's runtime user and group belongings
 WO = www-data

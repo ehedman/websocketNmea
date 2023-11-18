@@ -1,4 +1,5 @@
 OSREL = $(shell awk -F\" '/VERSION=/ {printf("%.2s",$$2)}' /etc/os-release)
+LONG_BIT = $(shell getconf LONG_BIT)
 
 all: kplex aisparser sendemail hs100 openssl libwebsockets
 
@@ -20,7 +21,12 @@ hs100:
 openssl:
 ifeq ($(shell expr $(OSREL) \> 11), 1)
 	git clone -b OpenSSL_1_1_1w https://github.com/openssl/openssl.git
-	cd openssl && ./config; make -j; sudo make install_sw
+ifeq ($(shell expr $(LONG_BIT) \= 32), 1)
+	cd openssl && ./Configure linux-generic32 shared
+else
+	cd openssl && ./config
+endif
+	cd openssl && make -j; sudo make install_sw
 endif
 
 libwebsockets:
