@@ -12,14 +12,25 @@
     putenv('PATH='.getenv('PATH').':'.DOCROOT.'/inc:/usr/local/bin'); 
 
     system("naviSystem.sh check_local_ipaddr ".$_SERVER['REMOTE_ADDR'], $NOSAVE);
+    system("naviSystem.sh check_matching_ipaddr ".$_SERVER['REMOTE_ADDR'], $DOEXIT);
 
     if (count($_GET)) $NIGHT = $_GET['Night']=='y'? 1:0; else  $NIGHT = 0;
     
     $PMESSAGE="";
     $DBH = NULL;
     $KEY = NULL;
+    $BARL = False;
 
-   //if (count($_POST)) {echo "<pre>"; print_r($_POST); echo "</pre>";}
+   //if (count($_POST)) {echo "<pre>"; print_r($_POST); echo "</pre>"; exit;}
+
+    if ( $_GET['Exit'] == "y") {
+        shell_exec('sudo killall chromium-browser');  // www-data must be in /etc/sudoers.d
+        exit;   // Only possible if (this) server and browser are on the same host by value of DOEXIT
+    }
+
+    if ( $_GET['bar'] == "1") { // Enter bar mode i.e., a single row with four instruments
+        $BARL = True;
+    }
 
     if (file_exists (NAVIDBPATH)) {
         if (count($_POST) && ! is_writable(NAVIDBPATH)) {

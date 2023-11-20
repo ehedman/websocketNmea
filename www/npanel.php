@@ -47,7 +47,11 @@
         <meta name="author" content="Erland Hedman">
         <meta name="license" content="GPL">
         <link rel="icon" href="img/icon.ico">
+        <?php if ($BARL==True ) {?>
+        <link rel="stylesheet" type="text/css" href="inc/navi-bar.css">
+        <?php } else {?>
         <link rel="stylesheet" type="text/css" href="inc/navi.css">
+        <?php }?>
         <script src="inc/jquery-2.1.1.min.js"></script>
         <script  src="inc/pako.js"></script>
         <script src="inc/common.js.php"></script>
@@ -383,10 +387,10 @@ function do_background(obj)
         return;
         
     if (obj.options[obj.selectedIndex].value == "Night") {
-        window.location.href = "<?php echo $_SERVER['SCRIPT_NAME']; ?>?Night=y";
+        window.location.href = "<?php echo $_SERVER['SCRIPT_NAME']; ?>?Night=y<?php echo $BARL==True? "&bar=1":""; ?>";
         return;
     } else if (obj.options[obj.selectedIndex].value == "Day") {
-        window.location.href = "<?php echo $_SERVER['SCRIPT_NAME']; ?>?Night=n";
+        window.location.href = "<?php echo $_SERVER['SCRIPT_NAME']; ?>?Night=n<?php echo $BARL==True? "&bar=1":""; ?>";
         return;
     }
     
@@ -395,16 +399,18 @@ function do_background(obj)
 
 function check_overlap()
 {
-    var bottom_div = document.getElementById("show_bottom");
-    var center_div = document.getElementById("center_div");
-    
-    if (collision($('#top_section'), $('#bottom_section'))) {
-        printlog("OVERLAP");
-        center_div.style.display = bottom_div.style.display = "none";
-   }  else {
-        printlog("NO OVERLAP");
-        center_div.style.display = bottom_div.style.display = "block";
-    }
+     <?php if ($BARL==False ) {?>
+        var bottom_div = document.getElementById("show_bottom");
+        var center_div = document.getElementById("center_div");
+        
+        if (collision($('#top_section'), $('#bottom_section'))) {
+            printlog("OVERLAP");
+            center_div.style.display = bottom_div.style.display = "none";
+       }  else {
+            printlog("NO OVERLAP");
+            center_div.style.display = bottom_div.style.display = "block";
+        }
+    <?php }?>
 }
 
 // No need to edit this file for new instruments
@@ -416,12 +422,20 @@ $(document).ready(function()
 
     var maxi = instruments.length;
     var i = 0;
+    <?php if ($BARL==False ) {?>
     var frs = [ document.getElementById("left_fr"),
                 document.getElementById("right_fr"),
                 document.getElementById("right_fr_b<?php echo $u_IsPad; ?>"),
                 document.getElementById("left_fr_b<?php echo $u_IsPad; ?>"),
                 document.getElementById("center_fr")];
-                
+    <?php } else {?>
+
+    var frs = [ document.getElementById("left_fr"),
+                document.getElementById("right_fr"),
+                document.getElementById("most_right_fr"),
+                document.getElementById("center_fr")];
+    <?php }?>
+
     for (i=0; i < maxi; i++) {
         if (i >= frs.length) break;
         frs[i].src = instruments[i];
@@ -662,16 +676,20 @@ function dragElement(elmnt) {
     }
 }
 
+function do_exit() {
+    window.location.href = "<?php echo $_SERVER['SCRIPT_NAME']; ?>?Exit=y";
+}
+
 </script>
 
     </head>
     <body>
  
     <div id="screen_ctrl">
-        <select title="Backgroud" onchange="do_background(this);">
+        <select title="Background" onchange="do_background(this);">
             <option value="Select">Select</option>
             <?php
-                $items = array(); // Place backgrouds in the fs here:
+                $items = array(); // Place backgrounds in the fs here:
                 exec("cd ".DOCROOT."/img/bg; ls -l * | awk '{ print \$NF }'", $items);
                 $n = count($items);
                 for ($i=0; $i<$n; $i++) {
@@ -683,36 +701,46 @@ function dragElement(elmnt) {
             <option value="Night">Night</option>
             <option value="Day">Day</option>
         </select>
+        <?php if ($BARL==False) {?>
         <input title="Settings" type="button" onclick="do_config();" value="Settings">
         <?php if ($u_Agent != "Safari") { ?>
 
         <input title="Fullscreen/F11" type="button" value="Fullscreen" onclick="full_screen()">
 
-        <?php } ?>
+        <?php } } else if ($DOEXIT==0 ) {?>
+            <input title="Exit" type="button" value="Exit" onclick="do_exit();">
+        <?php }?>
     </div>
     
-    <div id="status"></div>  
+    <div id="status"></div>
     <div id="top_section">
-        <div id="left_div">   
+        <div id="left_div">
             <iframe src="<?php echo $NULLPAGE; ?>" id="left_fr"></iframe>
         </div>
-        <div id="right_div">       
+        <div id="right_div">
             <iframe src="<?php echo $NULLPAGE; ?>" id="right_fr"></iframe>
-        </div>     
-         <div id="center_div"<?php if ($u_Agent == "Safari") echo 'style="width:100%";';?>>       
+        </div>
+         <div id="center_div"<?php if ($u_Agent == "Safari") echo 'style="width:100%";';?>>
             <iframe src="<?php echo $NULLPAGE; ?>" id="center_fr"></iframe>
         </div>
+        <?php if ($BARL==True) {?>
+        <div id="most_right_div">
+            <iframe src="<?php echo $NULLPAGE; ?>" id="most_right_fr"></iframe>
+        </div>
+        <?php }?>
     </div>
         
     <div id="bottom_section">
-        <div id="show_bottom">    
+        <div id="show_bottom">
+        <?php if ($BARL==False ) {?> 
             <div id="left_div_b">
-                <iframe src="<?php echo $NULLPAGE; ?>" id="left_fr_b<?php echo $u_IsPad; ?>"></iframe> 
+                <iframe src="<?php echo $NULLPAGE; ?>" id="left_fr_b<?php echo $u_IsPad; ?>"></iframe>
             </div>
-            <div id="right_div_b">       
+            <div id="right_div_b">
                 <iframe src="<?php echo $NULLPAGE; ?>" id="right_fr_b<?php echo $u_IsPad; ?>"></iframe>
-            </div>          
-        </div>  
+            </div> 
+        <?php }?>      
+        </div>
     </div>
                                          
     <div id="config"> <!-- Configuration Page -->

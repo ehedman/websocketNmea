@@ -48,6 +48,14 @@ check_local_ipaddr()
 
 }
 
+check_matching_ipaddr()
+{
+    if [ -z "$1" ]; then exit 1; fi
+
+    ip a s  | awk -F"[/ ]+" '/inet / {print $3}' | grep -q $1
+    exit $?
+}
+
 get_nrecordings()
 {
  
