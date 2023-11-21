@@ -427,13 +427,12 @@ $(document).ready(function()
                 document.getElementById("right_fr"),
                 document.getElementById("right_fr_b<?php echo $u_IsPad; ?>"),
                 document.getElementById("left_fr_b<?php echo $u_IsPad; ?>"),
-                document.getElementById("center_fr")];
+                document.getElementById("center_fr") ];
     <?php } else {?>
-
     var frs = [ document.getElementById("left_fr"),
+                document.getElementById("center_fr"),
                 document.getElementById("right_fr"),
-                document.getElementById("most_right_fr"),
-                document.getElementById("center_fr")];
+                document.getElementById("most_right_fr") ];
     <?php }?>
 
     for (i=0; i < maxi; i++) {
@@ -717,11 +716,11 @@ function do_exit() {
         <div id="left_div">
             <iframe src="<?php echo $NULLPAGE; ?>" id="left_fr"></iframe>
         </div>
-        <div id="right_div">
-            <iframe src="<?php echo $NULLPAGE; ?>" id="right_fr"></iframe>
-        </div>
          <div id="center_div"<?php if ($u_Agent == "Safari") echo 'style="width:100%";';?>>
-            <iframe src="<?php echo $NULLPAGE; ?>" id="center_fr"></iframe>
+           <iframe src="<?php echo $NULLPAGE; ?>" id="center_fr"></iframe>
+        </div>
+        <div id="right_div">
+           <iframe src="<?php echo $NULLPAGE; ?>" id="right_fr"></iframe>
         </div>
         <?php if ($BARL==True) {?>
         <div id="most_right_div">
