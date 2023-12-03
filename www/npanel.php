@@ -700,7 +700,7 @@ function do_exit() {
             <option value="Night">Night</option>
             <option value="Day">Day</option>
         </select>
-        <?php if ($BARL==False) {?>
+        <?php if ($BARL==False && $COMPL==False) {?>
         <input title="Settings" type="button" onclick="do_config();" value="Settings">
         <?php if ($u_Agent != "Safari") { ?>
 

@@ -20,6 +20,7 @@
     $DBH = NULL;
     $KEY = NULL;
     $BARL = False;
+    $COMPL = False;
 
    //if (count($_POST)) {echo "<pre>"; print_r($_POST); echo "</pre>"; exit;}
 
@@ -28,8 +29,14 @@
         exit;   // Only possible if (this) server and browser are on the same host by value of DOEXIT
     }
 
-    if ( $_GET['bar'] == "1") { // Enter bar mode i.e., a single row with four instruments
+    if ( $_GET['bar'] == "1") { // Enter bar layout i.e., a single row with four instruments
         $BARL = True;
+        $COMPL = False;
+    }
+
+    if ( $_GET['compact'] == "1") { // Enter compact layout
+        $COMPL = True;
+        $BARL = False;
     }
 
     if (file_exists (NAVIDBPATH)) {

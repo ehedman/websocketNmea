@@ -59,16 +59,17 @@ div
 
 #top_section
 {
-    position: relative;
+    position: absolute;
     width: 100%;
-    top: 8px;
+    top: 2%;
 }
 
 #bottom_section
 {
-    position: absolute;
+    position: relative;
     bottom: 45%;
     width: 100%;
+    top: 47%;
     padding-top: 10px;
     margin-top:10px;
 }
@@ -146,7 +147,7 @@ div
 #center_fr
 {
     position: absolute;
-    top: 60%;
+    top: 50%;
     width: inherit;
     height: inherit;
     z-index: 1;
