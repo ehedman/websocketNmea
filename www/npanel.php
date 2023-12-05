@@ -387,10 +387,10 @@ function do_background(obj)
         return;
         
     if (obj.options[obj.selectedIndex].value == "Night") {
-        window.location.href = "<?php echo $_SERVER['SCRIPT_NAME']; ?>?Night=y<?php echo $BARL==True? "&bar=1":""; ?>";
+        window.location.href = "<?php echo $_SERVER['SCRIPT_NAME']; ?>?Night=y<?php echo $ALTL!=NULL? "&".$ALTL."=1":""; ?>";
         return;
     } else if (obj.options[obj.selectedIndex].value == "Day") {
-        window.location.href = "<?php echo $_SERVER['SCRIPT_NAME']; ?>?Night=n<?php echo $BARL==True? "&bar=1":""; ?>";
+        window.location.href = "<?php echo $_SERVER['SCRIPT_NAME']; ?>?Night=n<?php echo $ALTL!=NULL? "&".$ALTL."=1":""; ?>";
         return;
     }
     
@@ -683,6 +683,23 @@ function do_exit() {
 
     </head>
     <body>
+
+    <?php if ($COMPL==True) {?>
+    <style>
+    input[type=button], input[type=select]
+    {
+        height: 48px;
+    }
+    select
+    {
+        height: 48px;
+    }
+    #status
+    {
+        top: 60px;
+    }
+    </style>
+    <?php }?>
  
     <div id="screen_ctrl">
         <select title="Background" onchange="do_background(this);">
@@ -700,7 +717,7 @@ function do_exit() {
             <option value="Night">Night</option>
             <option value="Day">Day</option>
         </select>
-        <?php if ($BARL==False && $COMPL==False) {?>
+        <?php if (is_null($ALTL)) {?>
         <input title="Settings" type="button" onclick="do_config();" value="Settings">
         <?php if ($u_Agent != "Safari") { ?>
 
