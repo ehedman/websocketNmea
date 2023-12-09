@@ -21,6 +21,7 @@
     $KEY = NULL;
     $BARL = False;
     $COMPL = False;
+    $ALTL = NULL;
 
    //if (count($_POST)) {echo "<pre>"; print_r($_POST); echo "</pre>"; exit;}
 
@@ -32,11 +33,13 @@
     if ( $_GET['bar'] == "1") { // Enter bar layout i.e., a single row with four instruments
         $BARL = True;
         $COMPL = False;
+        $ALTL = "bar";
     }
 
     if ( $_GET['compact'] == "1") { // Enter compact layout
         $COMPL = True;
         $BARL = False;
+        $ALTL = "compact";
     }
 
     if (file_exists (NAVIDBPATH)) {

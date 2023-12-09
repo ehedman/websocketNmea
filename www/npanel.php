@@ -399,7 +399,7 @@ function do_background(obj)
 
 function check_overlap()
 {
-     <?php if ($BARL==False ) {?>
+     <?php if ($ALTL==False ) {?>
         var bottom_div = document.getElementById("show_bottom");
         var center_div = document.getElementById("center_div");
         
@@ -697,6 +697,12 @@ function do_exit() {
     #status
     {
         top: 60px;
+    }
+    #bottom_section
+    {
+        position: relative;
+        width: 100%;
+        top: 28%;
     }
     </style>
     <?php }?>
