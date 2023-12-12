@@ -118,6 +118,8 @@ var maxangle = 238;
 var offset = 12;
 var maxdepth = 10;
 
+var warnperiod = 8;
+
 var debug = false;
 var connection = true;
 
@@ -130,6 +132,15 @@ function do_update()
     } else {
         window.clearInterval(ut);
         reconnect();
+    }
+}
+
+
+function playAudio()
+{
+    if (! --warnperiod) {
+        document.getElementById("myAudio").play();
+        warnperiod = 8;
     }
 }
 
@@ -156,9 +167,10 @@ function do_poll()
 
     document.getElementById("LEDpanel").innerHTML=val.depth;
 
-    if (val.depth <= val.vwrn)
+    if (val.depth <=  val.vwrn) {
          document.getElementById("instrument").style.backgroundImage = "url('img/depthw.png')";
-    else if (val.depth > 10) {
+         playAudio();
+    } else if (val.depth > 10) {
         document.getElementById("instrument").style.backgroundImage = "url('img/depthx10.png')";
         val.depth /= 10;
     } else
@@ -183,6 +195,9 @@ function do_poll()
 
     </head>
     <body onload="init()">
+        <audio id="myAudio">
+            <source src="shallow-water.wav"type="audio/wav">
+        </audio>
         <div id="main">
             <div id="LEDpanel" title="Click to shift instrument" onclick="nextinstrument();"></div>
             <div id="instrument"><img src="img/needle1.png" alt="" id="needle"></div>
