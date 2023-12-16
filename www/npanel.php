@@ -50,8 +50,10 @@
         <?php if ($BARL==True ) {?>
         <link rel="stylesheet" type="text/css" href="inc/navi-bar.css">
         <?php } else {?>
+
         <link rel="stylesheet" type="text/css" href="inc/navi.css">
         <?php }?>
+
         <script src="inc/jquery-2.1.1.min.js"></script>
         <script  src="inc/pako.js"></script>
         <script src="inc/common.js.php"></script>
@@ -756,9 +758,8 @@ function do_exit() {
     }
     </style>
     <?php }?>
-
     <audio id="wrnAudio">
-      <source src="" autoplay="true" muted="true" type="audio/wav">
+      <source src="nothing.wav" type="audio/wav">
     </audio>
  
     <div id="screen_ctrl">
