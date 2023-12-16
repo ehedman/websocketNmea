@@ -135,15 +135,6 @@ function do_update()
     }
 }
 
-
-function playAudio()
-{
-    if (! --warnperiod) {
-        document.getElementById("myAudio").play();
-        warnperiod = 8;
-    }
-}
-
 function do_poll()
 {  
 
@@ -169,7 +160,6 @@ function do_poll()
 
     if (val.depth <=  val.vwrn) {
          document.getElementById("instrument").style.backgroundImage = "url('img/depthw.png')";
-         playAudio();
     } else if (val.depth > 10) {
         document.getElementById("instrument").style.backgroundImage = "url('img/depthx10.png')";
         val.depth /= 10;
@@ -195,9 +185,6 @@ function do_poll()
 
     </head>
     <body onload="init()">
-        <audio id="myAudio">
-            <source src="shallow-water.wav"type="audio/wav">
-        </audio>
         <div id="main">
             <div id="LEDpanel" title="Click to shift instrument" onclick="nextinstrument();"></div>
             <div id="instrument"><img src="img/needle1.png" alt="" id="needle"></div>
