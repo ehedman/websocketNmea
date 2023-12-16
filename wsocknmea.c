@@ -693,6 +693,12 @@ static int configure(int kpf)
 
                     sqlite3_prepare_v2(conn, "INSERT INTO devadcrelay (relay1tmo,relay2tmo,relay3tmo,relay4tmo) VALUES (0,0,0,0)", -1, &res, &tail);
                     sqlite3_step(res);
+
+                    sqlite3_prepare_v2(conn, "CREATE TABLE limits(Id INTEGER PRIMARY KEY, volt REAL, current REAL)", -1, &res, &tail);
+                    sqlite3_step(res);
+
+                    sqlite3_prepare_v2(conn, "INSERT INTO limits (volt,current) values(11.7,9.0)", -1, &res, &tail);
+                    sqlite3_step(res);
                 
 #ifdef REV
                     sprintf(buf, "INSERT INTO rev (rev) VALUES ('%s')", REV);
@@ -1283,8 +1289,8 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                         }
                     }
 
-                    sprintf(value, "{'relaySts':'%d','tdtSts':'%d','aisTxSts':'%d','nmRec':'%s','nmPlay':'%s','Authen':'%d'}-%d",
-                        relayStatus(), smartplugGet(), cnmea.txs, iconf.fdn_outf, fileFeed==1? basename(iconf.fdn_inf):"", auttmo, req);
+                    sprintf(value, "{'relaySts':'%d','tdtSts':'%d','aisTxSts':'%d','nmRec':'%s','nmPlay':'%s','Authen':'%d','depth':'%1f','volt':'%.1f','curr':'%.1f'}-%d",
+                        relayStatus(), smartplugGet(), cnmea.txs, iconf.fdn_outf, fileFeed==1? basename(iconf.fdn_inf):"", auttmo, cnmea.dbt, cnmea.volt, cnmea.curr, req);
 
                     break;
                 }

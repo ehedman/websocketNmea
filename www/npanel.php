@@ -86,6 +86,9 @@ var aisping = 1;
 var tdtping = 1;
 var relayping = 1;
 var pollitem = 0;
+var muted = true;
+const defWarnperiod = 5;
+var warnperiod = defWarnperiod;
 
 var stled = document.createElement("img");
 stled.setAttribute("height", "46");
@@ -149,6 +152,18 @@ function setTdtStatus(mask)
     }
 }
 
+function mute()
+{
+    if (muted == false) {
+        document.getElementById("audio").src="img/unmute.png";
+        muted = true;
+    } else {
+        document.getElementById("audio").src="img/mute.png";
+        muted = false;
+        warnperiod = 1;
+    }    
+}
+
 function do_poll()
 {
     var val = JSON.parse(target);
@@ -193,6 +208,30 @@ function do_poll()
 
         if (val.nmPlay.length && !val.nmRec.length) {
             document.getElementById("msg").innerHTML=": Replaying of NMEA stream from file " + val.nmPlay;
+        }
+
+        if (warnperiod-- <= 0 && muted == false) {
+            var doPlay = false;
+
+            if (val.curr.length && Math.abs(val.curr) >=<?php echo $current_vwrn; ?>) { // low prio
+                document.getElementById("wrnAudio").src="audio/current-high.wav";
+                doPlay=true;
+            }
+
+            if (val.volt.length && val.volt <=<?php echo $voltage_vwrn; ?>) { // medium prio
+                document.getElementById("wrnAudio").src="audio/low-voltage.wav"; 
+                doPlay=true;
+            }
+
+            if (val.depth.length && val.depth <=<?php echo $depth_vwrn; ?>) { // High prio
+                document.getElementById("wrnAudio").src="audio/shallow-water.wav";
+                doPlay=true; 
+            }
+
+            if (doPlay == true) {
+                document.getElementById("wrnAudio").play();
+                warnperiod = defWarnperiod;
+            }
         }
 
 <?php if ($NOSAVE==1 ) {?>
@@ -635,6 +674,17 @@ function nifstypeset(dev, stat)
     }
 }
 
+function showWRN()
+{
+    var items=3;
+    for (i=1; i<items+1; i++) {
+            document.getElementById("wrnd-"+i).style.display = "none";
+    }
+    var s = document.getElementById("warnList").selectedIndex;
+     if (s<1) return;
+    document.getElementById("wrnd-"+s).style.display = "block"; 
+}
+
 function dragElement(elmnt) {
 
     var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
@@ -706,6 +756,10 @@ function do_exit() {
     }
     </style>
     <?php }?>
+
+    <audio id="wrnAudio">
+      <source src="" autoplay="true" muted="true" type="audio/wav">
+    </audio>
  
     <div id="screen_ctrl">
         <select title="Background" onchange="do_background(this);">
@@ -733,7 +787,11 @@ function do_exit() {
             <input title="Exit" type="button" value="Exit" onclick="do_exit();">
         <?php }?>
     </div>
-    
+
+    <div id="audiodiv">
+        <img src="img/unmute.png" onclick="mute()" id="audio" alt="mute">
+    </div>
+
     <div id="status"></div>
     <div id="top_section">
         <div id="left_div">
@@ -819,28 +877,7 @@ function do_exit() {
             <tr>
                 <td class="contentBox"> 
                     <h2>Depth Sounder</h2>
-                    Warning: <select name="depth_vwrn" title="Visible shallow water warning (metric)">
-                          <option <?php echo $depth_vwrn==2?  "selected ":""; ?>value="2">2</option>
-                          <option <?php echo $depth_vwrn==3?  "selected ":""; ?>value="3">3</option>
-                          <option <?php echo $depth_vwrn==4?  "selected ":""; ?>value="4">4</option>
-                          <option <?php echo $depth_vwrn==5?  "selected ":""; ?>value="5">5</option>
-                          <option <?php echo $depth_vwrn==8?  "selected ":""; ?>value="8">8</option>
-                          <option <?php echo $depth_vwrn==10? "selected ":""; ?>value="10">10</option>
-                          <option <?php echo $depth_vwrn==12? "selected ":""; ?>value="12">12</option>
-                          <option <?php echo $depth_vwrn==14? "selected ":""; ?>value="14">14</option>
-                          <option <?php echo $depth_vwrn==16? "selected ":""; ?>value="16">16</option>
-                    </select> 
-                    Transp: <select name="depth_transp" title="Transponder depth (metric)">
-                          <option <?php echo $depth_transp==0.2? "selected ":""; ?>value="0.2">0.2</option>
-                          <option <?php echo $depth_transp==0.3? "selected ":""; ?>value="0.3">0.3</option>
-                          <option <?php echo $depth_transp==0.4? "selected ":""; ?>value="0.4">0.4</option>
-                          <option <?php echo $depth_transp==0.5? "selected ":""; ?>value="0.5">0.5</option>
-                          <option <?php echo $depth_transp==0.6? "selected ":""; ?>value="0.6">0.6</option>
-                          <option <?php echo $depth_transp==0.7? "selected ":""; ?>value="0.7">0.7</option>
-                          <option <?php echo $depth_transp==0.8? "selected ":""; ?>value="0.8">0.8</option>
-                          <option <?php echo $depth_transp==0.9? "selected ":""; ?>value="0.9">0.9</option>
-                          <option <?php echo $depth_transp==1.0? "selected ":""; ?>value="1.0">1.0</option>
-                    </select> 
+                    <input id="kvalue" name="depth_transp" title="Transponder depth (metric)" type="number" min="0.1" max="2.0" step="0.1" value="<?php echo $depth_transp ?>">        
                 </td>
             </tr>
             <tr>
@@ -948,16 +985,39 @@ function do_exit() {
             </tr>
             <tr>
                 <td class="contentBox">
-                    <h2>NMEA Multiplexer I/O</h2>
+                    <h2 title="Select NMEA input sources">NMEA Multiplexer I/O</h2>
                    <?php print_serInterfaces(); ?>
 
                 </td>
             </tr>
             <tr>
                 <td class="contentBox">
-                    <h2 title="All listeners must be set accordingly">Network  Properties</h2>
+                    <h2 title="All listeners must be set accordingly">Network Properties</h2>
                     <?php print_netInterfaces(); ?>
                     
+                </td>
+            </tr>
+            <tr>
+                <td class="contentBox">
+                    <h2 title="Set audible warning limits">Warning Limits</h2>
+                    <select id="warnList" onchange="showWRN();" title="Show values for:">
+                        <option>Select</option>
+                        <option>Voltage</option>
+                        <option>current</option>
+                        <option>depth</option>
+                    </select><br>
+                    <div style="display:none" id="wrnd-1">
+                        <label title="Min acceptable voltage" >Voltage:&nbsp;</label>
+                        <input type="number" min="10" max="48.0" step="0.5" title="Voltage level 10-48" id="wrn-1" name="voltage_vwrn" value="<?php echo $voltage_vwrn; ?>"><br>
+                    </div>
+                    <div style="display:none" id="wrnd-2">
+                        <label title="Max acceptable current" >Current:&nbsp;</label>
+                        <input type="number" min="1" max="100.0" step="0.5" title="Current level 1-100" id="wrn-2" name="current_vwrn" value="<?php echo $current_vwrn; ?>"><br>
+                    </div>
+                    <div style="display:none" id="wrnd-3">
+                        <label title="Min acceptable depth (metric)" >Depth:&nbsp;</label>
+                        <input type="number" min="1.0" max="10.0" step="0.5" title="Metric depth level 1-10" id="wrn-3" name="depth_vwrn" value="<?php echo $depth_vwrn; ?>"><br>
+                    </div>
                 </td>
             </tr>
 <?php if ($NOSAVE==1 ) {?>

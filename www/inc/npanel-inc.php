@@ -75,6 +75,9 @@
         $sql = "UPDATE `depth` SET `vwrn`='".$_POST['depth_vwrn']."', `tdb`='".$_POST['depth_transp']."' WHERE `id`=1";
         $DBH->exec($sql);
 
+        $sql = "UPDATE `limits` SET `volt`='".$_POST['voltage_vwrn']."', `current`='".$_POST['current_vwrn']."' WHERE `id`=1";
+        $DBH->exec($sql);
+
         $sql = "UPDATE `sumlog` SET `display`='".$_POST['smlog_disp']."', `cal`='".$_POST['smlog_calb']."' WHERE `id`=1";
         $DBH->exec($sql);
 
@@ -197,6 +200,12 @@
         $a2dreltxt2=$row['relay2txt'];
         $a2dreltxt3=$row['relay3txt'];
         $a2dreltxt4=$row['relay4txt'];
+
+        $stmt = $DBH->prepare("SELECT volt,current FROM limits LIMIT 1");
+        $stmt->execute(); 
+        $row = $stmt->fetch();
+        $voltage_vwrn=$row['volt'];
+        $current_vwrn=$row['current'];
 
         $stmt = $DBH->prepare("SELECT relay1tmo,relay2tmo,relay3tmo,relay4tmo FROM devadcrelay LIMIT 1");
         $stmt->execute(); 
@@ -376,7 +385,7 @@ function print_netInterfaces()
     foreach ($ifs as $if)
        echo "<option>$if</option>";
        
-    echo "</select><br><br>";
+    echo "</select><br>";
     
     $dev=1;
     foreach ($ifs as $if) {
