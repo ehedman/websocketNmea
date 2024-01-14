@@ -438,22 +438,6 @@ function do_background(obj)
     document.body.style.backgroundImage = "url('"+obj.options[obj.selectedIndex].value+"')";
 }
 
-function check_overlap()
-{
-     <?php if ($ALTL==False ) {?>
-        var bottom_div = document.getElementById("show_bottom");
-        var center_div = document.getElementById("center_div");
-        
-        if (collision($('#top_section'), $('#bottom_section'))) {
-            printlog("OVERLAP");
-            center_div.style.display = bottom_div.style.display = "none";
-       }  else {
-            printlog("NO OVERLAP");
-            center_div.style.display = bottom_div.style.display = "block";
-        }
-    <?php }?>
-}
-
 // No need to edit this file for new instruments
 // Just place them in the fs here as in-*.php
 var instrument_indx = 0;
@@ -483,36 +467,11 @@ $(document).ready(function()
 
     instrument_indx = i+1;
     
-    window.onresize=check_overlap;
-    check_overlap();
     <?php echo count($_FILES)? 'document.getElementById("config").style.display = "block";':""; ?>
     document.getElementById("msg").innerHTML=": <?php echo $PMESSAGE ?>";
 
     init(); // common.js.php
 });
-
-
-function collision($div1, $div2)
-{
-      var allowed_space = 8; // Test and adjust top collision / bottom collapse
-      
-      var x1 = $div1.offset().left;
-      var y1 = $div1.offset().top+allowed_space;
-      var h1 = $div1.outerHeight(true);
-      var w1 = $div1.outerWidth(true);
-      var b1 = y1 + h1;
-      var r1 = x1 + w1;
-      var x2 = $div2.offset().left;
-      var y2 = $div2.offset().top;
-      var h2 = $div2.outerHeight(true);
-      var w2 = $div2.outerWidth(true);
-      var b2 = y2 + h2;
-      var r2 = x2 + w2;
-
-      if (b1 < y2 || y1 > b2 || r1 < x2 || x1 > r2)
-        return false;
-      return true;
-}
 
 function isDecimal(num)
 {
