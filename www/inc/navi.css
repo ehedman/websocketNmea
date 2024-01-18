@@ -259,6 +259,25 @@ div
     -moz-border-radius:10px;
 }
 
+.checkbox-round {
+    width: 1.0em;
+    height: 1.0em;
+    background-color: LightGray;
+    border-radius: 50%;
+    vertical-align: middle;
+    border: 1px solid black;
+    appearance: none;
+    -webkit-appearance: none;
+    outline: none;
+    cursor: pointer;
+    padding: 4px;
+    margin: 0;
+}
+
+.checkbox-round:checked {
+    background-color: MediumSeaGreen;
+}
+
 #quitb
 {
     position:absolute;

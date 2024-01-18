@@ -681,20 +681,23 @@ static int configure(int kpf)
                     sqlite3_prepare_v2(conn, "CREATE TABLE abuddies (Id INTEGER PRIMARY KEY, userid BIGINT)", -1, &res, &tail);
                     sqlite3_step(res);
 
-                    sqlite3_prepare_v2(conn, "CREATE TABLE devadc(Id INTEGER PRIMARY KEY, device TEXT, relay1txt TEXT, relay2txt TEXT, relay3txt TEXT, relay4txt TEXT, shuntR REAL)", -1, &res, &tail);
+                    sqlite3_prepare_v2(conn, "CREATE TABLE devadc(Id INTEGER PRIMARY KEY, device TEXT, shuntR REAL)", -1, &res, &tail);
                     sqlite3_step(res);
                     
                     sprintf(buf, "INSERT INTO devadc (device,shuntR) VALUES ('%s',%f)", "/dev/null", iconf.shuntR);
                     sqlite3_prepare_v2(conn, buf, -1, &res, &tail);
                     sqlite3_step(res);
 
-                    sqlite3_prepare_v2(conn, "CREATE TABLE devadcrelay(Id INTEGER PRIMARY KEY, relay1tmo INTEGER, relay2tmo INTEGER, relay3tmo INTEGER, relay4tmo INTEGER)", -1, &res, &tail);
+                    sqlite3_prepare_v2(conn, "CREATE TABLE devrelay(Id INTEGER PRIMARY KEY, name TEXT, days TEXT, time TEXT, timeout TEXT);", -1, &res, &tail);
                     sqlite3_step(res);
 
-                    sqlite3_prepare_v2(conn, "INSERT INTO devadcrelay (relay1tmo,relay2tmo,relay3tmo,relay4tmo) VALUES (0,0,0,0)", -1, &res, &tail);
-                    sqlite3_step(res);
+                    for (i=0; i <4; i++) {
+                        sprintf(buf, "INSERT INTO devrelay (time) VALUES ('0');");
+                        sqlite3_prepare_v2(conn, buf, -1, &res, &tail);
+                        sqlite3_step(res);
+                    }
 
-                    sqlite3_prepare_v2(conn, "CREATE TABLE limits(Id INTEGER PRIMARY KEY, volt REAL, current REAL)", -1, &res, &tail);
+                    sqlite3_prepare_v2(conn, "CREATE TABLE limits(Id INTEGER PRIMARY KEY, volt REAL, current REAL);", -1, &res, &tail);
                     sqlite3_step(res);
 
                     sqlite3_prepare_v2(conn, "INSERT INTO limits (volt,current) values(11.7,9.0)", -1, &res, &tail);
@@ -1677,9 +1680,9 @@ int main(int argc ,char **argv)
     wsport = WSPORT;
     memset(&peer_sa, 0, sizeof(struct sockaddr_in));
     memset(interFace, 0 ,sizeof(interFace));
+    memset(iconf.fdn_inf, 0, sizeof(iconf.fdn_inf));
     peer_sa.sin_family = AF_INET;
-    
-    iconf.fdn_inf[0] = '\0';
+     
     (void)unlink(WSREBOOT);
 
     while ((c = getopt (argc, argv, "a:bdf:hi:np:r:s:vw:")) != -1)

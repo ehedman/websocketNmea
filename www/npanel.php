@@ -127,10 +127,10 @@ function do_update()
 
 function setRelayStatus(mask)
 {
-    document.getElementById("relay1").checked = (1 & mask); 
-    document.getElementById("relay2").checked = (2 & mask);
-    document.getElementById("relay3").checked = (4 & mask);
-    document.getElementById("relay4").checked = (8 & mask); 
+    document.getElementById("relay1-stat").checked = (1 & mask); 
+    document.getElementById("relay2-stat").checked = (2 & mask);
+    document.getElementById("relay3-stat").checked = (4 & mask);
+    document.getElementById("relay4-stat").checked = (8 & mask); 
 }
 
 function setTdtStatus(mask)
@@ -270,19 +270,46 @@ function do_poll()
     
 }
 
-function dorelay()
+function rshed(item)
+{
+    
+    for (let i = 1; i <= 4; i++) {
+        if (i == item) continue;
+        document.getElementById("relay"+i+"-sched-div").style.display = "none";
+        document.getElementById("relay"+i+"-sched").checked = false;
+    }
+
+    if (document.getElementById("relay"+item+"-sched").checked == false) {
+        document.getElementById("relay"+item+"-sched-div").style.display="none";
+        document.getElementById("relay"+item+"tmo").readOnly = true;
+    } else {
+        document.getElementById("relay"+item+"-sched-div").style.display="block";
+        document.getElementById("relay"+item+"tmo").readOnly = false;
+    }
+}
+
+function dorelay(item)
 {
     var rlbits = 0;
-    if (document.getElementById("relay1").checked == true) {
+    var mins = document.getElementById("relay"+item+"tmo").value;
+    if (isNaN(mins) || mins.length === 0) {
+            document.getElementById("msg").innerHTML=": Missing timeout value. Define description, value and click save";
+            document.getElementById("relay"+item+"-stat").checked = false;
+            return;
+    }
+
+    document.getElementById("msg").innerHTML=":";
+
+    if (document.getElementById("relay1-stat").checked == true) {
         rlbits |= (1 << 0);
     }
-    if (document.getElementById("relay2").checked == true) {
+    if (document.getElementById("relay2-stat").checked == true) {
         rlbits |= (1 << 1);
     }
-    if (document.getElementById("relay3").checked == true) {
+    if (document.getElementById("relay3-stat").checked == true) {
         rlbits |= (1 << 2);
     }
-    if (document.getElementById("relay4").checked == true) {
+    if (document.getElementById("relay4-stat").checked == true) {
         rlbits |= (1 << 3);
     }
     relayping = 5;
@@ -912,19 +939,26 @@ function do_exit() {
                     <h2>Relay Settings</h2>
                     <input type="text" name="a2dserial" title="UK1104 Data Acquisition Module" id="a2dserial" maxlength="20" value="<?php echo $a2dserial ?>"><br>
                     <div id="relayContent">
-                        Relay-1<input type="checkbox" id="relay1" onclick="relayping = 5;" title="Relay 1 ON/OFF">
-                        <input type="text" title="Description" name="relay1txt" id="relay1txt" size="8" value="<?php echo $a2dreltxt1 ?>">
-                        <input type="text" title="time-out min" name="relay1tmo" id="relay1tmo" size="2" value="<?php echo $a2drel1tmo ?>"><br>
-                        Relay-2<input type="checkbox" id="relay2" onclick="relayping = 5;" title="Relay 2 ON/OFF">
-                        <input type="text" title="Description" name="relay2txt" id="relay2txt" size="8" value="<?php echo $a2dreltxt2 ?>">
-                        <input type="text" title="time-out min" name="relay2tmo" id="relay2tmo" size="2" value="<?php echo $a2drel2tmo ?>"><br>
-                        Relay-3<input type="checkbox" id="relay3" onclick="relayping = 5;" title="Relay 3 ON/OFF">
-                        <input type="text" title="Description" name="relay3txt" id="relay3txt" size="8" value="<?php echo $a2dreltxt3 ?>">
-                        <input type="text" title="time-out min" name="relay3tmo" id="relay3tmo" size="2" value="<?php echo $a2drel3tmo ?>"><br>
-                        Relay-4<input type="checkbox" id="relay4" onclick="relayping = 5;" title="Relay 4 ON/OFF">
-                        <input type="text" title="Description" name="relay4txt" id="relay4txt" size="8" value="<?php echo $a2dreltxt4 ?>">
-                        <input type="text" title="time-out min" name="relay4tmo" id="relay4tmo" size="2" value="<?php echo $a2drel4tmo ?>"><br>
-                        <input type="button"<?php echo $NOSAVE==1? " disabled":""; ?> id="relayAction" value="Send settings" title="Send settings now" onclick="dorelay()">
+    <?php
+        for ($i = 1; $i <= 4; $i++) {
+    ?>
+                        Relay-<?php echo $i ?>&nbsp;<input type="checkbox" class="checkbox-round" id="relay<?php echo $i ?>-stat" name="relay<?php echo $i ?>-stat" <?php echo $NOSAVE==0? 'onclick="dorelay('.$i.')" ':""; ?>title="Relay <?php echo $i ?> ON/OFF Now">
+                        <input type="text" title="Description" name="relay<?php echo $i ?>txt" id="relay<?php echo $i ?>txt" size="8" value="<?php echo $RELAYS[$i][0] ?>">
+                        <input type="text" readonly title="time-out min" name="relay<?php echo $i ?>tmo" id="relay<?php echo $i ?>tmo" size="2" style="width: 20px;" value="<?php echo $RELAYS[$i][3] ?>">
+                        <input type="checkbox" id="relay<?php echo $i ?>-sched" title="Show schedule" onchange="rshed(<?php echo $i ?>)"><br>
+                        <div id="relay<?php echo $i ?>-sched-div" style="display: none; border: 1px solid black; width: fit-content;">&nbsp;
+                            <input type="checkbox" name="relay-<?php echo $i ?>-day-1" id="relay-<?php echo $i ?>-day-1" <?php if ($RELAYS[$i][1] & (1 << 0)) echo "checked"; ?> class="checkbox-round" title="Monday">
+                            <input type="checkbox" name="relay-<?php echo $i ?>-day-2" id="relay-<?php echo $i ?>-day-2" <?php if ($RELAYS[$i][1] & (1 << 1)) echo "checked"; ?> class="checkbox-round" title="Tuesday">
+                            <input type="checkbox" name="relay-<?php echo $i ?>-day-3" id="relay-<?php echo $i ?>-day-3" <?php if ($RELAYS[$i][1] & (1 << 2)) echo "checked"; ?> class="checkbox-round" title="Wednesday">
+                            <input type="checkbox" name="relay-<?php echo $i ?>-day-4" id="relay-<?php echo $i ?>-day-4" <?php if ($RELAYS[$i][1] & (1 << 3)) echo "checked"; ?> class="checkbox-round" title="Thursday">
+                            <input type="checkbox" name="relay-<?php echo $i ?>-day-5" id="relay-<?php echo $i ?>-day-5" <?php if ($RELAYS[$i][1] & (1 << 4)) echo "checked"; ?> class="checkbox-round" title="Friday">
+                            <input type="checkbox" name="relay-<?php echo $i ?>-day-6" id="relay-<?php echo $i ?>-day-6" <?php if ($RELAYS[$i][1] & (1 << 5)) echo "checked"; ?> class="checkbox-round" title="Saturday">
+                            <input type="checkbox" name="relay-<?php echo $i ?>-day-7" id="relay-<?php echo $i ?>-day-7" <?php if ($RELAYS[$i][1] & (1 << 6)) echo "checked"; ?> class="checkbox-round" title="Sunday">&nbsp;&nbsp;
+                            <input type="time" id="relay-<?php echo $i ?>-time" name="relay-<?php echo $i ?>-time" title="H:M" value="<?php echo gmdate("i:s", $RELAYS[$i][2]); ?>">
+                            
+                        </div>
+    <?php } ?>
+
                     </div>
                 </td>
             </tr>
@@ -968,15 +1002,15 @@ function do_exit() {
                     </select><br>
                     <div style="display:none" id="wrnd-1">
                         <label title="Min acceptable voltage" >Voltage:&nbsp;</label>
-                        <input type="number" min="10" max="48.0" step="0.5" title="Voltage level 10-48" id="wrn-1" name="voltage_vwrn" value="<?php echo $voltage_vwrn; ?>"><br>
+                        <input type="number" min="10" max="48.0" step="0.1" title="Voltage level 10-48" name="voltage_vwrn" value="<?php echo $voltage_vwrn; ?>"><br>
                     </div>
                     <div style="display:none" id="wrnd-2">
                         <label title="Max acceptable current" >Current:&nbsp;</label>
-                        <input type="number" min="1" max="100.0" step="0.5" title="Current level 1-100" id="wrn-2" name="current_vwrn" value="<?php echo $current_vwrn; ?>"><br>
+                        <input type="number" min="1" max="100.0" step="0.5" title="Current level 1-100" name="current_vwrn" value="<?php echo $current_vwrn; ?>"><br>
                     </div>
                     <div style="display:none" id="wrnd-3">
                         <label title="Min acceptable depth (metric)" >Depth:&nbsp;</label>
-                        <input type="number" min="1.0" max="10.0" step="0.5" title="Metric depth level 1-10" id="wrn-3" name="depth_vwrn" value="<?php echo $depth_vwrn; ?>"><br>
+                        <input type="number" min="1.0" max="10.0" step="0.5" title="Metric depth level 1-10" name="depth_vwrn" value="<?php echo $depth_vwrn; ?>"><br>
                     </div>
                 </td>
             </tr>

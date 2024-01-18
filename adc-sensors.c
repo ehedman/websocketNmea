@@ -16,6 +16,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
+#include <time.h>
 #include <linux/spi/spidev.h>
 #include <pthread.h>
 #include <termios.h> 
@@ -359,6 +360,7 @@ void *t_devMgm()
             }
             executeCommand(cmdFmt, chn);
         }
+        relaySchedule();
     }
     /* NOT REACHED */
 }
@@ -471,7 +473,7 @@ int relayStatus(void)
 {
     int i, iter;
     int result = 0;
-
+    
     for (i=1, iter=0; i<15; i<<=1, iter++)
     {
         if (adChannel[iter+RELCHA].status == CHAisREADY && adChannel[iter+RELCHA].mode == ON) {
@@ -491,6 +493,71 @@ int relayStatus(void)
     return result;  // A bitmask
 }
 
+/* API */
+void relaySchedule(void)
+{
+    sqlite3 *conn;
+    sqlite3_stmt *res;
+    const char *tail;
+    char cmd[60];
+    int rval;
+    int rtime = 0;
+    int day = 0;
+    int tmo;
+
+    (void)sqlite3_open_v2(NAVIDBPATH, &conn, SQLITE_OPEN_READONLY, 0);
+    if (conn == NULL) {
+        printlog("Failed to open database %s to handle relay timeouts: ", (char*)sqlite3_errmsg(conn));
+        return;
+    }
+
+    for (int rel = 1; rel <= 4; rel++) {
+
+        if (adChannel[(rel-1)+RELCHA].status == CHAisNOTUSED)
+        continue;
+
+        sprintf(cmd, "select time from devrelay where id=%d;", rel);
+        rval = sqlite3_prepare_v2(conn, cmd, -1, &res, &tail);
+        if (rval == SQLITE_OK && sqlite3_step(res) == SQLITE_ROW) {
+            rtime = sqlite3_column_int(res, 0);
+            sqlite3_finalize(res);
+        }
+
+        if (rtime > 0) {
+            sprintf(cmd, "select days from devrelay where id=%d;", rel);
+            rval = sqlite3_prepare_v2(conn, cmd, -1, &res, &tail);
+            if (rval == SQLITE_OK && sqlite3_step(res) == SQLITE_ROW) {
+                day = sqlite3_column_int(res, 0);
+                sqlite3_finalize(res);
+            }
+            if (day > 0) {
+                sprintf(cmd, "select timeout from devrelay where id=%d;", rel);
+                rval = sqlite3_prepare_v2(conn, cmd, -1, &res, &tail);
+                if (rval == SQLITE_OK && sqlite3_step(res) == SQLITE_ROW) {
+                    tmo = sqlite3_column_int(res, 0);
+                    sqlite3_finalize(res);
+                }
+                if (tmo > 0) {
+                    time_t t = time(NULL);
+                    struct tm *now = localtime(&t);
+                    int wday = now->tm_wday == 0? 6 : now->tm_wday-1;
+                    int ts = now->tm_min + now->tm_hour*60;
+
+                   if (day & (1 << wday) && ts >= rtime && rtime+tmo > ts && adChannel[rel+RELCHA].mode != ON) {
+                    //if (day & (1 << wday)) {
+                        adChannel[(rel-1)+RELCHA].mode = ON;
+                        printlog("UK1104: Scheduled duration of %d minutes set on Relay-%d", tmo, rel);
+                        relayTimeout[rel-1] = time(NULL)+tmo*60;
+                    }
+                }
+            }
+        }
+    }
+
+    (void)sqlite3_close(conn);
+
+    relayStatus();
+}
 
 /* API */
 void relaySet(int channels) // A bitmask
@@ -523,7 +590,7 @@ void relaySet(int channels) // A bitmask
         if (channels & i) {
             adChannel[iter+RELCHA].mode = ON;
 
-            sprintf(cmd, "select relay%dtmo from devadcrelay", iter+1);
+            sprintf(cmd, "select timeout from devrelay where id=%d;", iter+1);
             rval = sqlite3_prepare_v2(conn, cmd, -1, &res, &tail);        
             if (rval == SQLITE_OK && sqlite3_step(res) == SQLITE_ROW) {
                     tmo = sqlite3_column_int(res, 0);

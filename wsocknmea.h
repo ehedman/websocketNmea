@@ -19,6 +19,7 @@ extern struct aisShip_struct *getShips(int size);
 extern void relayInit(int nchannels);
 extern void relaySet(int channels);
 extern int relayStatus(void);
+extern void relaySchedule(void);
 
 //#define DIGIFLOW            // Instrument support water tank meter
 //#define MCP3208             // Analog input valtage, current .... etc.

@@ -2,7 +2,7 @@
     /*
      * npanel.php
      *
-     *  Copyright (C) 2013-2014 by Erland Hedman <erland@hedmanshome.se>
+     *  Copyright (C) 2013-2024 by Erland Hedman <erland@hedmanshome.se>
      *
      * This program is free software; you can redistribute it and/or
      * modify it under the terms of the GNU General Public License
@@ -23,20 +23,20 @@
     $COMPL = False;
     $ALTL = NULL;
 
-   //if (count($_POST)) {echo "<pre>"; print_r($_POST); echo "</pre>"; exit;}
+    //if (count($_POST)) {echo "<pre>"; print_r($_POST); echo "</pre>"; exit;}
 
-    if ( $_GET['Exit'] == "y") {
+    if ( isset($_GET['Exit']) && $_GET['Exit'] == "y") {
         shell_exec('sudo killall chromium-browser');  // www-data must be in /etc/sudoers.d
         exit;   // Only possible if (this) server and browser are on the same host by value of DOEXIT
     }
 
-    if ( $_GET['bar'] == "1") { // Enter bar layout i.e., a single row with four instruments
+    if ( isset($_GET['bar']) && $_GET['bar'] == "1") { // Enter bar layout i.e., a single row with four instruments
         $BARL = True;
         $COMPL = False;
         $ALTL = "bar";
     }
 
-    if ( $_GET['compact'] == "1") { // Enter compact layout
+    if ( isset($_GET['compact']) && $_GET['compact'] == "1") { // Enter compact layout
         $COMPL = True;
         $BARL = False;
         $ALTL = "compact";
@@ -84,11 +84,36 @@
         $sql="UPDATE `file` SET `fname`='nofile', `rate`='1', `use`='off' WHERE `Id`=1";
         $DBH->exec($sql);
 
-        $sql="UPDATE `devadc` SET `device`='".$_POST['a2dserial']."',`relay1txt`='".$_POST['relay1txt']."',`relay2txt`='".$_POST['relay2txt']."',`relay3txt`='".$_POST['relay3txt']."',`relay4txt`='".$_POST['relay4txt']."' WHERE `Id`=1";
+        $sql="UPDATE `devadc` SET `device`='".$_POST['a2dserial']."' WHERE `Id`=1";
         $DBH->exec($sql);
 
-        $sql="UPDATE `devadcrelay` SET `relay1tmo`='".$_POST['relay1tmo']."',`relay2tmo`='".$_POST['relay2tmo']."',`relay3tmo`='".$_POST['relay3tmo']."',`relay4tmo`='".$_POST['relay4tmo']."' WHERE `Id`=1";
-        $DBH->exec($sql);
+        for ($i = 1; $i <= 4; $i++) {
+            if (isset($_POST['relay'.$i.'txt']) && isset($_POST['relay'.$i.'tmo'])) {
+                $sql="UPDATE `devrelay` SET `name`='".$_POST['relay'.$i.'txt']."', `timeout`='".$_POST['relay'.$i.'tmo']."' WHERE `id`=".$i;
+                $DBH->exec($sql);
+            } else {
+                $sql="UPDATE `devrelay` SET `name`='', `days`='', `time`='', `timeout`='' WHERE `id`=".$i;
+                $DBH->exec($sql);
+                continue;
+            }
+            $saveit = false;
+            $bits = 0;
+            if (isset($_POST['relay-'.$i.'-time'])) {
+                for ($d = 1; $d <= 7; $d++) {
+                    if (isset($_POST['relay-'.$i.'-day-'.$d])) {
+                        $saveit = true;
+                        $bits |= 1 << $d-1;
+                    }
+                }
+                if ($saveit == true) {
+                    $hmtime = explode(":", $_POST['relay-'.$i.'-time']);
+                    $time = $hmtime[0]*60;
+                    $time += $hmtime[1];
+                    $sql="UPDATE `devrelay` SET `time`='".strval($time)."', `days`='".strval($bits)."'  WHERE `id`=".$i;
+                    $DBH->exec($sql);
+                }
+            }
+        }
 
         $sql="UPDATE `ais` SET `aisname`='".strtoupper($_POST['aisname'])."', `aiscallsign`='".strtoupper($_POST['aiscallsign'])."', `aisid`='".$_POST['aisid']."', `aisuse`='".$_POST['aisuse']."' WHERE `Id`=1";
         $DBH->exec($sql);
@@ -192,28 +217,26 @@
         $aisuse=$row['aisuse'];
         $aisro=$row['ro'];
 
-        $stmt = $DBH->prepare("SELECT device,relay1txt,relay2txt,relay3txt,relay4txt FROM devadc LIMIT 1");
+        $stmt = $DBH->prepare("SELECT device FROM devadc LIMIT 1");
         $stmt->execute(); 
         $row = $stmt->fetch();
         $a2dserial=$row['device'];
-        $a2dreltxt1=$row['relay1txt'];
-        $a2dreltxt2=$row['relay2txt'];
-        $a2dreltxt3=$row['relay3txt'];
-        $a2dreltxt4=$row['relay4txt'];
+
+        for ($i = 1; $i <= 4; $i++) {
+            $stmt = $DBH->prepare("SELECT name,days,time,timeout FROM devrelay WHERE id=".$i.";");
+            $stmt->execute(); 
+            $row = $stmt->fetch();
+            $RELAYS[$i][0] = isset($row['name'])? $row['name'] : "";
+            $RELAYS[$i][1] = isset($row['days'])? $row['days'] : "0";
+            $RELAYS[$i][2] = isset($row['time'])? $row['time'] : "0";
+            $RELAYS[$i][3] = isset($row['timeout'])? $row['timeout'] : "";
+        }
 
         $stmt = $DBH->prepare("SELECT volt,current FROM limits LIMIT 1");
         $stmt->execute(); 
         $row = $stmt->fetch();
         $voltage_vwrn=$row['volt'];
         $current_vwrn=$row['current'];
-
-        $stmt = $DBH->prepare("SELECT relay1tmo,relay2tmo,relay3tmo,relay4tmo FROM devadcrelay LIMIT 1");
-        $stmt->execute(); 
-        $row = $stmt->fetch();
-        $a2drel1tmo=$row['relay1tmo'];
-        $a2drel2tmo=$row['relay2tmo'];
-        $a2drel3tmo=$row['relay3tmo'];
-        $a2drel4tmo=$row['relay4tmo'];
 
         $stmt = $DBH->prepare('SELECT name, baud, dir, use FROM ttys ORDER BY Id');
         $stmt->execute(); 
