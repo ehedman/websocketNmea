@@ -894,7 +894,7 @@ function do_exit() {
         <td style="width:33%;">  <!-- Center Column -->
         <table>
             <tr>
-                <td class="contentBox">
+                <td class="contentBox" style="padding-bottom: 2px;">
                     <h2>Replay NMEA from File</h2>
                     <label title="Select an existing NMEA file">File:&nbsp;&nbsp;<?php print_nmea_recordings(); ?></label>New:
                     <label for="files" title="Upload a new NMEA file" class="fileLabel">&nbsp;&nbsp;File
@@ -916,7 +916,7 @@ function do_exit() {
                 </td>
             </tr>
             <tr>
-                <td class="contentBox">
+                <td class="contentBox" style="padding-bottom: 2px;">
                     <h2>Record NMEA to File</h2>
                     <input type="text" title="Filename to record" id="record_file" maxlength="60"<?php echo $NOSAVE==1? " disabled":""; ?>><br>
                           <select title="Duration" id="record_max">
@@ -935,7 +935,7 @@ function do_exit() {
                 </td>
             </tr>
             <tr>
-                <td class="contentBox" style="padding-right:16px; padding-left:16px">
+                <td class="contentBox" style="padding-right:16px; padding-left:16px; padding-bottom: 1px;">
                     <h2>Relay Settings</h2>
                     <input type="text" name="a2dserial" title="UK1104 Data Acquisition Module" id="a2dserial" maxlength="20" value="<?php echo $a2dserial ?>"><br>
                     <div id="relayContent">
@@ -954,14 +954,20 @@ function do_exit() {
                             <input type="checkbox" name="relay-<?php echo $i ?>-day-5" id="relay-<?php echo $i ?>-day-5" <?php if ($RELAYS[$i][1] & (1 << 4)) echo "checked"; ?> class="checkbox-round" title="Friday">
                             <input type="checkbox" name="relay-<?php echo $i ?>-day-6" id="relay-<?php echo $i ?>-day-6" <?php if ($RELAYS[$i][1] & (1 << 5)) echo "checked"; ?> class="checkbox-round" title="Saturday">
                             <input type="checkbox" name="relay-<?php echo $i ?>-day-7" id="relay-<?php echo $i ?>-day-7" <?php if ($RELAYS[$i][1] & (1 << 6)) echo "checked"; ?> class="checkbox-round" title="Sunday">&nbsp;&nbsp;
-                            <input type="time" id="relay-<?php echo $i ?>-time" name="relay-<?php echo $i ?>-time" title="H:M" value="<?php echo gmdate("i:s", $RELAYS[$i][2]); ?>">
-                            
+                            <input type="time" id="relay-<?php echo $i ?>-time" name="relay-<?php echo $i ?>-time" title="H:M" value="<?php echo gmdate("i:s", $RELAYS[$i][2]); ?>">   
                         </div>
     <?php } ?>
 
                     </div>
                 </td>
             </tr>
+            <tr>
+                <td class="contentBox" style="padding-right:16px; padding-left:16px">
+                    <h2>Shunt Settings</h2>
+                    <input type="number" min="0.00001" max="1.0" step="0.00001" title="Current measuring shunt in Ohm" name="curren_shunt" value="<?php echo $SHUNT_R; ?>">
+                </td>
+            </tr>
+
             <tr><td style="height:100%"></td></tr>
         </table>
         </td>

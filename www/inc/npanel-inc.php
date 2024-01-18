@@ -84,7 +84,7 @@
         $sql="UPDATE `file` SET `fname`='nofile', `rate`='1', `use`='off' WHERE `Id`=1";
         $DBH->exec($sql);
 
-        $sql="UPDATE `devadc` SET `device`='".$_POST['a2dserial']."' WHERE `Id`=1";
+        $sql="UPDATE `devadc` SET `device`='".$_POST['a2dserial']."', `shuntR`='".$_POST['curren_shunt']."' WHERE `Id`=1";
         $DBH->exec($sql);
 
         for ($i = 1; $i <= 4; $i++) {
@@ -217,10 +217,11 @@
         $aisuse=$row['aisuse'];
         $aisro=$row['ro'];
 
-        $stmt = $DBH->prepare("SELECT device FROM devadc LIMIT 1");
+        $stmt = $DBH->prepare("SELECT device, shuntR FROM devadc LIMIT 1");
         $stmt->execute(); 
         $row = $stmt->fetch();
         $a2dserial=$row['device'];
+        $SHUNT_R = isset($row['shuntR'])? $row['shuntR'] : "0.005";
 
         for ($i = 1; $i <= 4; $i++) {
             $stmt = $DBH->prepare("SELECT name,days,time,timeout FROM devrelay WHERE id=".$i.";");
