@@ -84,7 +84,7 @@
         $sql="UPDATE `file` SET `fname`='nofile', `rate`='1', `use`='off' WHERE `Id`=1";
         $DBH->exec($sql);
 
-        $sql="UPDATE `devadc` SET `device`='".$_POST['a2dserial']."', `shuntR`='".$_POST['curren_shunt']."' WHERE `Id`=1";
+        $sql="UPDATE `devadc` SET `device`='".$_POST['a2dserial']."', `shuntRS`='".$_POST['current_shunt']."', `shuntTV`='".$_POST['current_tick']."', `shuntTG`='".$_POST['current_tickg']."' WHERE `Id`=1";
         $DBH->exec($sql);
 
         for ($i = 1; $i <= 4; $i++) {
@@ -217,11 +217,13 @@
         $aisuse=$row['aisuse'];
         $aisro=$row['ro'];
 
-        $stmt = $DBH->prepare("SELECT device, shuntR FROM devadc LIMIT 1");
+        $stmt = $DBH->prepare("SELECT device, shuntRS,shuntTV,shuntTG FROM devadc LIMIT 1");
         $stmt->execute(); 
         $row = $stmt->fetch();
         $a2dserial=$row['device'];
-        $SHUNT_R = isset($row['shuntR'])? $row['shuntR'] : "0.005";
+        $SHUNT_RS = isset($row['shuntRS'])? $row['shuntRS'] : "0.00015";
+        $SHUNT_TV = isset($row['shuntTV'])? $row['shuntTV'] : "0.01356";
+        $SHUNT_TG = isset($row['shuntTG'])? $row['shuntTG'] : "0.004882";
 
         for ($i = 1; $i <= 4; $i++) {
             $stmt = $DBH->prepare("SELECT name,days,time,timeout FROM devrelay WHERE id=".$i.";");
@@ -417,7 +419,7 @@ function print_netInterfaces()
         
                     <div style="display:none" id="nifs-<?php echo $dev; ?>">
                     <label title="Recommended:10110" >Port:&nbsp;</label>
-                    <input type="text" title="Recommended:10110" id="nwport-<?php echo $dev; ?>" name="<?php echo "nifs[$dev][port]"; ?>" value="<?php echo $SNETIFS[$dev]['port']; ?>"><br>
+                    <input type="text" onkeypress="return onlyNumberKey(event)" title="Recommended:10110" id="nwport-<?php echo $dev; ?>" name="<?php echo "nifs[$dev][port]"; ?>" value="<?php echo $SNETIFS[$dev]['port']; ?>"><br>
                     <label title="TCP adress will be set by system" >I.P:&nbsp;&nbsp;&nbsp;</label>
                     <input type="text" title="TCP adress will be set by system"<?php echo $SNETIFS[$dev]['proto']=="tcp"? " readonly ":" "; ?>id="nwaddr-<?php echo $dev; ?>" name="<?php echo "nifs[$dev][addr]"; ?>" value="<?php echo $SNETIFS[$dev]['addr']; ?>"><br>
                     <label title="Protocol: tcp/udp" >Protocol:&nbsp;</label>

@@ -281,26 +281,26 @@ function rshed(item)
 
     if (document.getElementById("relay"+item+"-sched").checked == false) {
         document.getElementById("relay"+item+"-sched-div").style.display="none";
-        document.getElementById("relay"+item+"tmo").readOnly = true;
     } else {
         document.getElementById("relay"+item+"-sched-div").style.display="block";
-        document.getElementById("relay"+item+"tmo").readOnly = false;
     }
 }
 
 function dorelay(item)
 {
     var rlbits = 0;
+    let timestr = ":";
+
     var mins = document.getElementById("relay"+item+"tmo").value;
     if (isNaN(mins) || mins.length === 0) {
-            document.getElementById("msg").innerHTML=": Missing timeout value. Define description, value and click save";
+            document.getElementById("msg").innerHTML=": Missing timeout value.";
             document.getElementById("relay"+item+"-stat").checked = false;
             return;
     }
 
     document.getElementById("msg").innerHTML=":";
 
-    if (document.getElementById("relay1-stat").checked == true) {
+    if (document.getElementById("relay1-stat").checked == true) {  // 
         rlbits |= (1 << 0);
     }
     if (document.getElementById("relay2-stat").checked == true) {
@@ -313,7 +313,13 @@ function dorelay(item)
         rlbits |= (1 << 3);
     }
     relayping = 5;
-    send(Cmd.SensorRelay + "-" + rlbits);
+
+    timestr += "0" +document.getElementById("relay1tmo").value + "|";
+    timestr += "0" +document.getElementById("relay2tmo").value + "|";
+    timestr += "0" +document.getElementById("relay3tmo").value + "|";
+    timestr += "0" +document.getElementById("relay4tmo").value + "|";
+
+    send(Cmd.SensorRelay + "-" + rlbits + timestr);
 }
 
 
@@ -530,6 +536,13 @@ function isIPValid(ip)
     return true;
 }
 
+function onlyNumberKey(evt)
+{
+    let ASCIICode = (evt.which) ? evt.which : evt.keyCode
+    if (ASCIICode > 31 && (ASCIICode < 48 || ASCIICode > 57))
+        return false;
+    return true;
+}
 
 function do_config()
 {
@@ -826,7 +839,7 @@ function do_exit() {
             <td style="text-align:center;" colspan="3"><h1><?php echo $aisname ?> Settings</h1></td>
         </tr>
     <tr>
-        <td style="width:40%;"> <!-- Left Column -->
+        <td style="width:33%;"> <!-- Left Column -->
         <table>
             <tr>
                 <td class="contentBox">
@@ -891,7 +904,7 @@ function do_exit() {
         </table>
         </td>
         
-        <td style="width:33%;">  <!-- Center Column -->
+        <td style="width:36%;">  <!-- Center Column -->
         <table>
             <tr>
                 <td class="contentBox" style="padding-bottom: 2px;">
@@ -943,8 +956,8 @@ function do_exit() {
         for ($i = 1; $i <= 4; $i++) {
     ?>
                         Relay-<?php echo $i ?>&nbsp;<input type="checkbox" class="checkbox-round" id="relay<?php echo $i ?>-stat" name="relay<?php echo $i ?>-stat" <?php echo $NOSAVE==0? 'onclick="dorelay('.$i.')" ':""; ?>title="Relay <?php echo $i ?> ON/OFF Now">
-                        <input type="text" title="Description" name="relay<?php echo $i ?>txt" id="relay<?php echo $i ?>txt" size="8" value="<?php echo $RELAYS[$i][0] ?>">
-                        <input type="text" readonly title="time-out min" name="relay<?php echo $i ?>tmo" id="relay<?php echo $i ?>tmo" size="2" style="width: 20px;" value="<?php echo $RELAYS[$i][3] ?>">
+                        <input type="text" title="Description" name="relay<?php echo $i ?>txt" id="relay<?php echo $i ?>txt" size="9" value="<?php echo $RELAYS[$i][0] ?>">
+                        <input type="text" onkeypress="return onlyNumberKey(event)" maxlength="3" title="time-out min" name="relay<?php echo $i ?>tmo" id="relay<?php echo $i ?>tmo" style="width: 24px;" value="<?php echo $RELAYS[$i][3] ?>">
                         <input type="checkbox" id="relay<?php echo $i ?>-sched" title="Show schedule" onchange="rshed(<?php echo $i ?>)"><br>
                         <div id="relay<?php echo $i ?>-sched-div" style="display: none; border: 1px solid black; width: fit-content;">&nbsp;
                             <input type="checkbox" name="relay-<?php echo $i ?>-day-1" id="relay-<?php echo $i ?>-day-1" <?php if ($RELAYS[$i][1] & (1 << 0)) echo "checked"; ?> class="checkbox-round" title="Monday">
@@ -961,26 +974,51 @@ function do_exit() {
                     </div>
                 </td>
             </tr>
+<script>
+function showShunt()
+{
+    var items=3;
+    for (i=1; i<items+1; i++) {
+            document.getElementById("shunt-"+i).style.display = "none";
+    }
+    var s = document.getElementById("shuntlist").selectedIndex;
+     if (s<1) return;
+    document.getElementById("shunt-"+s).style.display = "block"; 
+}
+</script>
             <tr>
                 <td class="contentBox" style="padding-right:16px; padding-left:16px">
                     <h2>Shunt Settings</h2>
-                    <input type="number" min="0.00001" max="1.0" step="0.00001" title="Current measuring shunt in Ohm" name="curren_shunt" value="<?php echo $SHUNT_R; ?>">
+                    <select id="shuntlist" onchange="showShunt();" title="Show values for:">
+                        <option>Select</option>
+                        <option>Shunt resistance</option>
+                        <option>ADC voltage/step</option>
+                        <option>ADC voltage/step gain</option>
+                    </select><br>
+                    <div style="display:none" id="shunt-1">
+                        <input type="number" min="0.00001" max="1.0" step="0.00001" title="Current measuring shunt in Ohm" name="current_shunt" value="<?php echo $SHUNT_RS; ?>"><br>
+                    </div>
+                    <div style="display:none" id="shunt-2">
+                        <input type="number" min="0.00001" max="1.0" step="0.00001" title="Voltage/tick according to external electrical circuits" name="current_tick" value="<?php echo $SHUNT_TV; ?>"><br>
+                    </div>
+                    <div style="display:none" id="shunt-3">
+                        <input type="number" min="0.000001" max="1.0" step="0.000001" title="Voltage/tick adjusted for circuit gain" name="current_tickg" value="<?php echo $SHUNT_TG; ?>"><br>
+                    </div>
                 </td>
             </tr>
-
             <tr><td style="height:100%"></td></tr>
         </table>
         </td>
         
-        <td style="width:33%;"> <!-- Right Column -->
+        <td style="width:31%;"> <!-- Right Column -->
         <table>
             <tr id="tdt-status-tr">
                 <td class="contentBox">
                     <h2>SmartPlug Settings</h2>
                     <label id="tdt-status-1-label" for="tdt-status-1">Outlet-1</label>
-                    <input type="checkbox"<?php echo $NOSAVE==1? " disabled":""; ?> id="tdt-status-1" title="Send settings now" onchange="doTdt()">
-                    <label id="tdt-status-2-label" for="tdt-status-2">Outlet-2</label>
-                    <input type="checkbox"<?php echo $NOSAVE==1? " disabled":""; ?> id="tdt-status-2" title="Send settings now" onchange="doTdt()">
+                    <input type="checkbox" class="checkbox-round" <?php echo $NOSAVE==1? " disabled":""; ?> id="tdt-status-1" title="Send settings now" onchange="doTdt()">
+                    &nbsp;&nbsp;<label id="tdt-status-2-label" for="tdt-status-2">Outlet-2</label>
+                    <input type="checkbox" class="checkbox-round" <?php echo $NOSAVE==1? " disabled":""; ?> id="tdt-status-2" title="Send settings now" onchange="doTdt()">
                 </td>
             </tr>
             <tr>

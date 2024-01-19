@@ -16,8 +16,9 @@ struct aisShip_struct
 extern int addShip(int msgid, long userid, double lat_dd, double long_ddd, int trueh, double sog, char *name, long buddie);
 extern struct aisShip_struct *getShips(int size);
 
+extern char *strchrnul(const char *s, int c);
 extern void relayInit(int nchannels);
-extern void relaySet(int channels);
+extern void relaySet(int channels, char *tmos);
 extern int relayStatus(void);
 extern void relaySchedule(void);
 

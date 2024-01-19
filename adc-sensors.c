@@ -195,7 +195,7 @@ void *t_smartplug(void *arg)
 
 #ifdef DOADC
 
-#ifdef UK1104   // https://www.canakit.com/
+#ifdef UK1104   // https://www.canakit.com/ 4-Channel USB Relay Board with 6-Channel A/D Interface
 
 static struct serial {
     int fd;
@@ -297,7 +297,7 @@ static void executeCommand(char *cmdFmt, int chn)
             char *ptr=&rbuf[scnt+1];
 
             if (!strncmp(ptr, "ERROR", 5)) {
-                printlog("ERROR: uk1104 rejected command %s", cmdFmt);
+                printlog("UK1104: uk1104 rejected command %s", cmdFmt);
                 break;
             }
             adChannel[chn].age = time(NULL);    // Refresh time stamp
@@ -486,7 +486,7 @@ int relayStatus(void)
     }
 
     if (result < 0 || result > 15) {
-        printlog("Corrupted channel bitmask for relayStatus(%d)", result);
+        printlog("UK1104: Corrupted channel bitmask for relayStatus(%d)", result);
         return 0;
     }
 
@@ -507,7 +507,7 @@ void relaySchedule(void)
 
     (void)sqlite3_open_v2(NAVIDBPATH, &conn, SQLITE_OPEN_READONLY, 0);
     if (conn == NULL) {
-        printlog("Failed to open database %s to handle relay timeouts: ", (char*)sqlite3_errmsg(conn));
+        printlog("UK1104: Failed to open database %s to handle relay timeouts: ", (char*)sqlite3_errmsg(conn));
         return;
     }
 
@@ -560,26 +560,49 @@ void relaySchedule(void)
 }
 
 /* API */
-void relaySet(int channels) // A bitmask
+void relaySet(int channels, char *tmos) // A bitmask and time-out values
 {
-    int i, iter;
-
+    int i, iter, tmcnt=0;
     sqlite3 *conn;
     sqlite3_stmt *res;
     const char *tail;
     char cmd[60];
+    char *args[20];
     int rval;
     int tmo = 0;
 
     if (channels < 0 || channels > 15) {
-        printlog("Corrupted channel bitmask for relaySet(%d)", channels);
+        printlog("UK1104: Corrupted channel bitmask for relaySet(%d)", channels);
         return;
     }
 
-   (void)sqlite3_open_v2(NAVIDBPATH, &conn, SQLITE_OPEN_READONLY, 0);
+   (void)sqlite3_open_v2(NAVIDBPATH, &conn, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX, 0);
     if (conn == NULL) {
-        printlog("Failed to open database %s to handle relay timeouts: ", (char*)sqlite3_errmsg(conn));
+        printlog("UK1104: Failed to open database to handle relay timeouts: %s", (char*)sqlite3_errmsg(conn));
         return;
+    }
+
+    if (tmos !=NULL && strlen(tmos)) {
+        args[tmcnt] = strtok(tmos, "|");
+        while(args[tmcnt] != NULL) {
+            args[++tmcnt] = strtok(NULL, "|");
+        }
+    }
+
+    tmcnt = tmcnt == 4? tmcnt : 0;
+    
+    for(int row=0; row < tmcnt; row++) {
+        if (atoi(args[row]) > 0) {
+            sprintf(cmd, "update devrelay set timeout=%s where id=%d", args[row], row+1);
+            if (sqlite3_prepare_v2(conn, cmd, -1, &res, &tail) == SQLITE_OK) {
+                 if (sqlite3_step(res) != SQLITE_DONE) {
+                    printlog("UK1104: Failed to update relay timeout data: %s", (char*)sqlite3_errmsg(conn));
+                }
+                sqlite3_finalize(res);
+            } else {
+                printlog("UK1104: Failed to update relay timeout data: %s", (char*)sqlite3_errmsg(conn));
+            }         
+        }
     }
 
     for (i=1, iter=0; i<15; i<<=1, iter++)
@@ -648,7 +671,7 @@ void relayInit(int nchannels)
             bm |= i;
     }
 
-    relaySet(bm);
+    relaySet(bm, "");
 
     runThread = ON;
 }
@@ -920,7 +943,7 @@ int relayStatus(void)
     return 0;
 }
 
-void relaySet(int channels) // A bitmask
+void relaySet(int channels, char *tmos) // A bitmask and time-out values
 {
 }
 #endif // UK1104
@@ -931,7 +954,7 @@ int relayStatus(void)
     return 0;
 }
 
-void relaySet(int channels) // A bitmask
+void relaySet(int channels, char *tmos) // A bitmask and time-out values
 {
 }
 #endif // DOADC

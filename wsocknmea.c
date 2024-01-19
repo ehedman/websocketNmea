@@ -148,7 +148,9 @@ typedef struct {
     float   depth_transp;       // Depth of transponer
     char    adc_dev[40];        // ADC in /dev
     char    ais_dev[40];        // AIS in /dev
-    float   shuntR;             // Current shunt resistance
+    float   shuntRS;            // Current shunt resistance
+    float   shuntTV;            // Voltage/tick
+    float   shuntTG;            // Voltage/tick gain
     char    fdn_outf[120];      // NMEA stream output file name
     FILE    *fdn_stream;        // Save NMEA stream file
     time_t  fdn_starttime;      // Start time for recording
@@ -302,12 +304,12 @@ static void do_sensors(time_t ts, collected_nmea *cn)
     static int vcnt;
     static float sampvolt[20];
     static float avvolt;
-    const float tickVolt = 0.01356;     // Volt / tick according to external electrical circuits
-    const float tickcrVolt = 0.004882;   // 10-bit adc over 5V for current messurement
-    float crShunt = iconf.shuntR;       // Current shunt (ohm) according to external electrical circuits
-    const float cGain = 50;             // Current sense amplifier gain for LT1999-50
-    const float cZero = 1.6;            // Sense lines in short-circuit should read 0
-    const int linearize = 0;            // No extra compesation needed
+    const float tickVolt = iconf.shuntTV;       // Volt / tick according to external electrical circuits
+    const float tickcrVolt = iconf.shuntTG;     // 10-bit adc over 5V for current messurement
+    float crShunt = iconf.shuntRS;              // Current shunt (ohm) according to external electrical circuits
+    const float cGain = 50;                     // Current sense amplifier gain for LT1999-50
+    const float cZero = 1.6;                    // Sense lines in short-circuit should read 0
+    const int linearize = 0;                    // No extra compesation needed
 
     ad2Tick = adcRead(voltChannel);
     a2dVal = tick2volt(ad2Tick, tickVolt, 0); // Return voltage, no invert
@@ -602,7 +604,9 @@ static int configure(int kpf)
     iconf.map_updt = 6;
     iconf.depth_vwrn = 4;
     iconf.client_ip[0] = '\0';
-    iconf.shuntR = 0.00015;
+    iconf.shuntRS = 0.00015;
+    iconf.shuntTV = 0.01356;
+    iconf.shuntTG = 0.004882;
 
     // If kplex.conf and/or a config database file is missing, create templates so that
     // we keep the system going. The user has then to create his own profile from the web gui.
@@ -681,10 +685,10 @@ static int configure(int kpf)
                     sqlite3_prepare_v2(conn, "CREATE TABLE abuddies (Id INTEGER PRIMARY KEY, userid BIGINT)", -1, &res, &tail);
                     sqlite3_step(res);
 
-                    sqlite3_prepare_v2(conn, "CREATE TABLE devadc(Id INTEGER PRIMARY KEY, device TEXT, shuntR REAL)", -1, &res, &tail);
+                    sqlite3_prepare_v2(conn, "CREATE TABLE devadc(Id INTEGER PRIMARY KEY, device TEXT, shuntRS REAL, shuntTV REAL, shuntTG REAL)", -1, &res, &tail);
                     sqlite3_step(res);
                     
-                    sprintf(buf, "INSERT INTO devadc (device,shuntR) VALUES ('%s',%f)", "/dev/null", iconf.shuntR);
+                    sprintf(buf, "INSERT INTO devadc (device,shuntRS,shuntTV,shuntTG) VALUES ('%s',%f,%f,%f)", "/dev/null", iconf.shuntRS, iconf.shuntTV, iconf.shuntTG);
                     sqlite3_prepare_v2(conn, buf, -1, &res, &tail);
                     sqlite3_step(res);
 
@@ -727,7 +731,7 @@ static int configure(int kpf)
                     sqlite3_prepare_v2(conn, "INSERT INTO ais (aisname,aiscallsign,aisid,aisuse,ro) VALUES ('my yacht','my call',366881180,1,0)", -1, &res, &tail);
                     sqlite3_step(res);
 
-                    sqlite3_prepare_v2(conn, "INSERT INTO file (fname,rate,use) VALUES ('nofile',1,'off')", -1, &res, &tail);
+                    sqlite3_prepare_v2(conn, "INSERT INTO file (fname,rate,use) VALUES ('',1,'off')", -1, &res, &tail);
                     sqlite3_step(res);
 
                     for (i=0; i < MAX_TTYS; i++) {
@@ -782,10 +786,12 @@ static int configure(int kpf)
     }
 
     // ADC device
-    rval = sqlite3_prepare_v2(conn, "select device,shuntR from devadc", -1, &res, &tail);        
+    rval = sqlite3_prepare_v2(conn, "select device,shuntRS,shuntTV,shuntTG from devadc", -1, &res, &tail);        
     if (rval == SQLITE_OK && sqlite3_step(res) == SQLITE_ROW) {
             (void)strcpy(iconf.adc_dev, (char*)sqlite3_column_text(res, 0));
-            iconf.shuntR = sqlite3_column_double(res, 1);
+            iconf.shuntRS = sqlite3_column_double(res, 1);
+            iconf.shuntTV = sqlite3_column_double(res, 2);
+            iconf.shuntTG = sqlite3_column_double(res, 3);
     }
 
     // AIS
@@ -1068,16 +1074,14 @@ static int strm_init(z_stream * strm)
 }
 
 
-static int callback_http(struct lws *wsi, enum lws_callback_reasons reason, void *user,
-                  void *in, size_t len)
+static int callback_http(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len)
 {
     return 0;
 }
 
 // Handle all requests from remote virtual instruments.
 
-static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reason, void *user,
-                  void *in, size_t len)
+static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len)
 {
     int  i, cnt, req, rval, maxz = 0;
     char value [MAX_LWSZ];
@@ -1100,13 +1104,15 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
 
             char clientName[40];
             char clientIp[20] = { '\0' };
+            char *instr = in;
 
             lws_get_peer_addresses(wsi, lws_get_socket_fd(wsi), clientName, sizeof(clientName), clientIp, sizeof(clientIp));
 
-            if ((args=index(in, '-')) != NULL)
+            instr[len] = '\0';
+            if ((args=strchr(instr, '-')) != NULL)
                 *args++ = '\0';
 
-            switch ((req=atoi((char*)in)))
+            switch ((req=atoi((char*)instr)))
             {   // Handle client (virtual instruments) enumerated requests.
                 // Reply with simple JSON 
                 // js example:
@@ -1300,7 +1306,12 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
 
                 case SensorRelay: {
                     if (args != NULL && strlen(args)) {
-                        relaySet(atoi(args));
+                        char *d;
+                        int pos;
+                        d = strchrnul(args, ':');
+                        pos = (int)(d - args);
+                        args[pos] = '\0';
+                        relaySet(atoi(args), &args[pos+1]);
                         sprintf(value, "{'relaySet':'%d'}-%d", relayStatus(), req);
                     }
                     break;
@@ -1816,7 +1827,7 @@ int main(int argc ,char **argv)
     pthread_attr_setdetachstate(&attr, detachstate);
     
     // Thread for the file re-play service
-    if (strlen(iconf.fdn_inf)) {  
+    if (strlen(iconf.fdn_inf)) {
         fileFeed = 1;
         pthread_create(&t1, &attr, t_fileFeed, NULL);         
     }
