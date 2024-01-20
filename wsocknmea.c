@@ -1,7 +1,7 @@
 /*
  * wsocknmea.c
  *
- *  Copyright (C) 2013-2023 by Erland Hedman <erland@hedmanshome.se>
+ *  Copyright (C) 2013-2024 by Erland Hedman <erland@hedmanshome.se>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -151,6 +151,7 @@ typedef struct {
     float   shuntRS;            // Current shunt resistance
     float   shuntTV;            // Voltage/tick
     float   shuntTG;            // Voltage/tick gain
+    float   voltLow;            // Voltage low warning level
     char    fdn_outf[120];      // NMEA stream output file name
     FILE    *fdn_stream;        // Save NMEA stream file
     time_t  fdn_starttime;      // Start time for recording
@@ -334,7 +335,7 @@ static void do_sensors(time_t ts, collected_nmea *cn)
 
     // Alert about low voltage/ENV
     if (! firstTurn ) {
-        a2dNotice(voltChannel, cn->volt, 11.5, 12.5);
+        a2dNotice(voltChannel, cn->volt, iconf.voltLow, iconf.voltLow*1.06);
         firstTurn = 1;
     }
 
@@ -792,6 +793,12 @@ static int configure(int kpf)
             iconf.shuntRS = sqlite3_column_double(res, 1);
             iconf.shuntTV = sqlite3_column_double(res, 2);
             iconf.shuntTG = sqlite3_column_double(res, 3);
+    }
+
+    // Limits
+    rval = sqlite3_prepare_v2(conn, "select volt from limits", -1, &res, &tail);
+    if (rval == SQLITE_OK && sqlite3_step(res) == SQLITE_ROW) {
+            iconf.voltLow = sqlite3_column_double(res, 0);
     }
 
     // AIS
