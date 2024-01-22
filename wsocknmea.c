@@ -1305,13 +1305,13 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                         }
                     }
 
-                    sprintf(value, "{'relaySts':'%d','tdtSts':'%d','aisTxSts':'%d','nmRec':'%s','nmPlay':'%s','Authen':'%d','depth':'%1f','volt':'%.1f','curr':'%.1f'}-%d",
-                        relayStatus(), smartplugGet(), cnmea.txs, iconf.fdn_outf, fileFeed==1? basename(iconf.fdn_inf):"", auttmo, cnmea.dbt, cnmea.volt, cnmea.curr, req);
-
+                    sprintf(value, "{'relaySts':'%d','tdtSts':'%d','aisTxSts':'%d','nmRec':'%s','nmPlay':'%s','Authen':'%d','depth':'%1f','volt':'%.1f','curr':'%.1f',%s}-%d",
+                        relayStatus(), smartplugGet(), cnmea.txs, iconf.fdn_outf, fileFeed==1? basename(iconf.fdn_inf):"", auttmo, cnmea.dbt, cnmea.volt, cnmea.curr, relayTimeouts(), req);
                     break;
                 }
 
                 case SensorRelay: {
+
                     if (args != NULL && strlen(args)) {
                         char *d;
                         int pos;

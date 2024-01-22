@@ -278,6 +278,14 @@ div
     background-color: MediumSeaGreen;
 }
 
+.timers
+{
+    padding: 0;
+    margin: 0;
+    width: fit-content;
+    display: inline-block;
+}
+
 #quitb
 {
     position:absolute;

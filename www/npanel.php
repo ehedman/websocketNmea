@@ -2,7 +2,7 @@
     /*
      * npanel.php
      *
-     *  Copyright (C) 2013-2019 by Erland Hedman <erland@hedmanshome.se>
+     *  Copyright (C) 2013-2024 by Erland Hedman <erland@hedmanshome.se>
      *
      * This program is free software; you can redistribute it and/or
      * modify it under the terms of the GNU General Public License
@@ -95,6 +95,20 @@ var warnperiod = defWarnperiod;
 var stled = document.createElement("img");
 stled.setAttribute("height", "46");
 stled.setAttribute("width", "46");
+
+const rtimer = {
+  end:   0,
+  rend:  0,
+  rem:   0,
+  now:   0,
+  timer: 0,
+};
+
+const rtimers = new Array();
+rtimers[0] = Object.create(rtimer);
+rtimers[1] = Object.create(rtimer);
+rtimers[2] = Object.create(rtimer);
+rtimers[3] = Object.create(rtimer);
 
 function do_update()
 {
@@ -236,6 +250,23 @@ function do_poll()
             }
         }
 
+        if (val.relayTm1.length && val.relayTm1 != '0' && rtimers[0].rend == 0) {
+            rtimers[0].rend = parseInt(val.relayTm1)/60;
+            do_timer(1);
+        }
+        if (val.relayTm2.length && val.relayTm2 != '0' && rtimers[1].rend == 0) {
+            rtimers[1].rend = parseInt(val.relayTm2)/60;
+            do_timer(2);
+        }
+        if (val.relayTm3.length && val.relayTm3 != '0' && rtimers[2].rend == 0) {
+            rtimers[2].rend = parseInt(val.relayTm3)/60;
+            do_timer(3);
+        }
+        if (val.relayTm4.length && val.relayTm4 != '0' && rtimers[3].rend == 0) {
+            rtimers[3].rend = parseInt(val.relayTm4)/60;
+            do_timer(4);
+        }
+
 <?php if ($NOSAVE==1 ) {?>
         if (val.Authen.length) {
             docheckpw(val.Authen);
@@ -284,6 +315,39 @@ function rshed(item)
     } else {
         document.getElementById("relay"+item+"-sched-div").style.display="block";
     }
+}
+
+function do_timer(item)
+{
+
+    if (rtimers[item-1].rend > 0)
+        rtimers[item-1].end = new Date().getTime() + rtimers[item-1].rend * 60000;
+    else
+        rtimers[item-1].end = new Date().getTime() + document.getElementById("relay"+item+"tmo").value * 60000;
+
+    rtimers[item-1].timer = setInterval(function ()
+    {
+        // Getting current time in required format
+        rtimers[item-1].now = new Date().getTime();
+
+        // Calculating the difference
+        rtimers[item-1].rem  = rtimers[item-1].end - rtimers[item-1].now;
+
+        // Getting value of hours, minutes, seconds
+        let hours = Math.floor((rtimers[item-1].rem % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        let minutes = Math.floor((rtimers[item-1].rem % (1000 * 60 * 60)) / (1000 * 60));
+        let seconds = Math.floor((rtimers[item-1].rem % (1000 * 60)) / 1000);
+
+        // Output the remaining time
+        document.getElementById("timer-"+item).innerHTML = hours + ":" + minutes + ":"  + seconds;
+
+        // Output for over time
+        if (rtimers[item-1].rem < 0) {
+            clearInterval(rtimers[item-1].timer);
+            rtimers[item-1].rend = 0;
+            document.getElementById("timer-"+item).innerHTML = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
+        }
+    }, 1000);
 }
 
 function dorelay(item)
@@ -904,7 +968,7 @@ function do_exit() {
         </table>
         </td>
         
-        <td style="width:36%;">  <!-- Center Column -->
+        <td style="width:38%;">  <!-- Center Column -->
         <table>
             <tr>
                 <td class="contentBox" style="padding-bottom: 2px;">
@@ -948,7 +1012,7 @@ function do_exit() {
                 </td>
             </tr>
             <tr>
-                <td class="contentBox" style="padding-right:16px; padding-left:16px; padding-bottom: 1px;">
+                <td class="contentBox" style="padding-right: 0; margin: 0;">
                     <h2>Relay Settings</h2>
                     <input type="text" name="a2dserial" title="UK1104 Data Acquisition Module" id="a2dserial" maxlength="20" value="<?php echo $a2dserial ?>"><br>
                     <div id="relayContent">
@@ -958,7 +1022,8 @@ function do_exit() {
                         Relay-<?php echo $i ?>&nbsp;<input type="checkbox" class="checkbox-round" id="relay<?php echo $i ?>-stat" name="relay<?php echo $i ?>-stat" <?php echo $NOSAVE==0? 'onclick="dorelay('.$i.')" ':""; ?>title="Relay <?php echo $i ?> ON/OFF Now">
                         <input type="text" title="Description" name="relay<?php echo $i ?>txt" id="relay<?php echo $i ?>txt" size="9" value="<?php echo $RELAYS[$i][0] ?>">
                         <input type="text" onkeypress="return onlyNumberKey(event)" maxlength="3" title="time-out min" name="relay<?php echo $i ?>tmo" id="relay<?php echo $i ?>tmo" style="width: 24px;" value="<?php echo $RELAYS[$i][3] ?>">
-                        <input type="checkbox" id="relay<?php echo $i ?>-sched" title="Show schedule" onchange="rshed(<?php echo $i ?>)"><br>
+                        <input type="checkbox" id="relay<?php echo $i ?>-sched" title="Show schedule" onchange="rshed(<?php echo $i ?>)">
+                        <div class="timers" title="time remaining" id="timer-<?php echo $i ?>">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
                         <div id="relay<?php echo $i ?>-sched-div" style="display: none; border: 1px solid black; width: fit-content;">&nbsp;
                             <input type="checkbox" name="relay-<?php echo $i ?>-day-1" id="relay-<?php echo $i ?>-day-1" <?php if ($RELAYS[$i][1] & (1 << 0)) echo "checked"; ?> class="checkbox-round" title="Monday">
                             <input type="checkbox" name="relay-<?php echo $i ?>-day-2" id="relay-<?php echo $i ?>-day-2" <?php if ($RELAYS[$i][1] & (1 << 1)) echo "checked"; ?> class="checkbox-round" title="Tuesday">
@@ -1010,7 +1075,7 @@ function showShunt()
         </table>
         </td>
         
-        <td style="width:31%;"> <!-- Right Column -->
+        <td> <!-- Right Column -->
         <table>
             <tr id="tdt-status-tr">
                 <td class="contentBox">

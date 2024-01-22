@@ -213,6 +213,7 @@ struct adData
 
 static struct adData adChannel[IOMAX];
 static time_t relayTimeout[4];
+static time_t relayTimeoutSec[4];
 
 static int runThread = ON;
 
@@ -481,6 +482,9 @@ int relayStatus(void)
             if (relayTimeout[iter] > 0 && time(NULL) >= relayTimeout[iter]) {
                 printlog("UK1104: Relay-%d expired", iter+1);
                 adChannel[iter+RELCHA].mode = OFF;
+                relayTimeoutSec[iter] = relayTimeout[iter] = 0;
+            }  else {
+                relayTimeoutSec[iter] = relayTimeout[iter] - time(NULL);
             }
         }
     }
@@ -491,6 +495,13 @@ int relayStatus(void)
     }
 
     return result;  // A bitmask
+}
+
+char *relayTimeouts(void)
+{
+    static char buf[100];
+    sprintf(buf, "'relayTm1':'%ld','relayTm2':'%ld','relayTm3':'%ld','relayTm4':'%ld'", relayTimeoutSec[0], relayTimeoutSec[1], relayTimeoutSec[2] ,relayTimeoutSec[3]);
+    return buf;
 }
 
 /* API */
@@ -543,7 +554,7 @@ void relaySchedule(void)
                     int wday = now->tm_wday == 0? 6 : now->tm_wday-1;
                     int ts = now->tm_min + now->tm_hour*60;
 
-                   if (day & (1 << wday) && ts >= rtime && rtime+tmo > ts && adChannel[rel+RELCHA].mode != ON) {
+                   if (day & (1 << wday) && ts >= rtime && rtime+tmo > ts && adChannel[(rel-1)+RELCHA].mode != ON) {
                     //if (day & (1 << wday)) {
                         adChannel[(rel-1)+RELCHA].mode = ON;
                         printlog("UK1104: Scheduled duration of %d minutes set on Relay-%d", tmo, rel);
@@ -611,8 +622,7 @@ void relaySet(int channels, char *tmos) // A bitmask and time-out values
             continue;
 
         if (channels & i) {
-            adChannel[iter+RELCHA].mode = ON;
-
+            
             sprintf(cmd, "select timeout from devrelay where id=%d;", iter+1);
             rval = sqlite3_prepare_v2(conn, cmd, -1, &res, &tail);        
             if (rval == SQLITE_OK && sqlite3_step(res) == SQLITE_ROW) {
@@ -626,6 +636,7 @@ void relaySet(int channels, char *tmos) // A bitmask and time-out values
             if (tmo > 0 && relayTimeout[iter] < time(NULL)) {
                 printlog("UK1104: Timeout of %d minutes set on Relay-%d", tmo, iter+1);
                 relayTimeout[iter] = time(NULL)+tmo*60;
+                adChannel[iter+RELCHA].mode = ON;
             }
 
         } else {

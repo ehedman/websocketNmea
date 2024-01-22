@@ -1,5 +1,5 @@
 # websocketNmea
-README Oct 2023
+README Jan 2024
 
 The wsocknmea application package is a marine glass cockpit solution that features electronic marine instrument displays, typically used on private sailing yachts.
 The look and feel of the visualized instruments tries to mimic the look of real physical instrumnts and will by design avoid a digital look.
@@ -39,7 +39,7 @@ Currently there are twelve virtual instrument working:
 ### Tested runtime environment
 
 - X86 (Linux Mint 20/21)
-- Raspberry Pi Model 3/4 (Debian buster/bullseye/bookworm-32/64)
+- Raspberry Pi Model 3/4/5 (Debian buster/bullseye/bookworm-32/64)
 - Browsers: Firefox, IE (with some limitations), Chrome (Chrome & Firefox also on Android), Safari (iPad/iPhone)
 
 For the ADC to work properly I recommend the Pi with the MCP3208 SPI Chip 12 bit ADC 8 channels.

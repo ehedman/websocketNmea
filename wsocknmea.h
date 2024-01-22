@@ -21,6 +21,7 @@ extern void relayInit(int nchannels);
 extern void relaySet(int channels, char *tmos);
 extern int relayStatus(void);
 extern void relaySchedule(void);
+extern char *relayTimeouts(void);
 
 //#define DIGIFLOW            // Instrument support water tank meter
 //#define MCP3208             // Analog input valtage, current .... etc.
