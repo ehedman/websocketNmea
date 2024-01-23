@@ -957,6 +957,7 @@ int relayStatus(void)
 void relaySet(int channels, char *tmos) // A bitmask and time-out values
 {
 }
+
 #endif // UK1104
 #endif // MCP3208
 #else
@@ -968,4 +969,12 @@ int relayStatus(void)
 void relaySet(int channels, char *tmos) // A bitmask and time-out values
 {
 }
+
+char *relayTimeouts(void)
+{
+    static char buf[100];
+    sprintf(buf, "'relayTm1':'0','relayTm2':'0','relayTm3':'0','relayTm4':'0'");
+    return buf;
+}
+
 #endif // DOADC
