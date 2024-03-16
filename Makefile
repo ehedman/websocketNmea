@@ -16,6 +16,7 @@ PKGS += php-cgi php-sqlite3
 PKGS += libsqlite3-dev sqlite3
 PKGS += lighttpd
 PKGS += libssl-dev
+PKGS += libjson-c-dev
 
 # Source files to be compiled
 SRCS = wsocknmea.c adc-sensors.c ais.c
@@ -23,7 +24,7 @@ HDRS = wsocknmea.h
 BIN = wsocknmea
 
 # Where to install web pages
-WWWTOP?=/var/www/html
+WWWTOP?=/var/www/navi
 
 # The web-server's runtime user and group belongings
 WO = www-data
@@ -68,7 +69,7 @@ CFLAGS+= -Wall -g -std=gnu99 -pedantic  -D_REENTRANT
 CFLAGS+= -DUID=$(UID) -DGID=$(GID) -I$(INCDIR) -DUPLOADPATH=\"$(UPLOADPATH)\"
 CFLAGS+= -DNAVIDBPATH=\"$(NAVIDBPATH)\" -DKPCONFPATH=\"$(KPCONFPATH)\"
 
-LDFLAGS=-L$(LIBDIR) -lwebsockets -lsqlite3 -lais -lpthread -lrt -lz -lm -Wl,-rpath=$(LIBDIR)
+LDFLAGS=-L$(LIBDIR) -lwebsockets -lsqlite3 -lais -lpthread -ljson-c -lrt -lz -lm -Wl,-rpath=$(LIBDIR)
 
 all: $(BIN)
 

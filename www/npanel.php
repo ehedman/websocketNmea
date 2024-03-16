@@ -790,6 +790,23 @@ function dragElement(elmnt) {
     }
 }
 
+function showShunt()
+{
+    var items=3
+    document.getElementById("venus").value = "0"
+
+    for (i=1; i<items+1; i++) {
+            document.getElementById("shunt-"+i).style.display = "none";
+    }
+    var s = document.getElementById("shuntlist").selectedIndex;
+     if (s<1) return;
+    if (s < 4)
+        document.getElementById("shunt-"+s).style.display = "block"; 
+    if (s == 4) {
+        document.getElementById("venus").value = "1"
+    }
+}
+
 function do_exit() {
     window.location.href = "<?php echo $_SERVER['SCRIPT_NAME']; ?>?Exit=y";
 }
@@ -824,7 +841,7 @@ function do_exit() {
     <audio id="wrnAudio">
       <source src="nothing.wav" type="audio/wav">
     </audio>
- 
+
     <div id="screen_ctrl">
         <select title="Background" onchange="do_background(this);">
             <option value="Select">Select</option>
@@ -889,12 +906,13 @@ function do_exit() {
                                          
     <div id="config"> <!-- Configuration Page -->
     <form name="form" id="form" method="post" action="<?php echo $_SERVER['SCRIPT_NAME']; ?>" onsubmit="return done_config(1);">
-    <input name="POST_ACTION" value="OK" type="hidden">
+    <input type="hidden" name="POST_ACTION" value="OK">
     <input type="hidden" name="MAX_FILE_SIZE" value="<?php echo MAXFILESIZE; ?>">
-    <input id="nttys" name="nttys" value="0" type="hidden">
-    <input id="nnetifs" name="nnetifs" value="0" type="hidden">
+    <input type="hidden" id="nttys" name="nttys" value="0">
+    <input type="hidden" id="nnetifs" name="nnetifs" value="0">
     <input type="hidden" name="aisuse" id="aisuse" value="<?php echo $aisuse; ?>">
     <input type="hidden" name="gkey" id="gkey" value="">
+    <input type="hidden" name="venus" id="venus" value="<?php echo $SHUNT_VN; ?>">
     <input type="button" id="quitb" value="quit" onclick="done_config(0);">
  
                         
@@ -1039,18 +1057,7 @@ function do_exit() {
                     </div>
                 </td>
             </tr>
-<script>
-function showShunt()
-{
-    var items=3;
-    for (i=1; i<items+1; i++) {
-            document.getElementById("shunt-"+i).style.display = "none";
-    }
-    var s = document.getElementById("shuntlist").selectedIndex;
-     if (s<1) return;
-    document.getElementById("shunt-"+s).style.display = "block"; 
-}
-</script>
+
             <tr>
                 <td class="contentBox" style="padding-right:16px; padding-left:16px">
                     <h2>Shunt Settings</h2>
@@ -1059,6 +1066,7 @@ function showShunt()
                         <option>Shunt resistance</option>
                         <option>ADC voltage/step</option>
                         <option>ADC voltage/step gain</option>
+                        <option <?php echo $SHUNT_VN >0? "selected" : "" ?> title="Victron Venus integration">Victron</option>
                     </select><br>
                     <div style="display:none" id="shunt-1">
                         <input type="number" min="0.00001" max="1.0" step="0.00001" title="Current measuring shunt in Ohm" name="current_shunt" value="<?php echo $SHUNT_RS; ?>"><br>

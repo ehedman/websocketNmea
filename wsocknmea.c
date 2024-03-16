@@ -37,6 +37,7 @@
 #include <sqlite3.h>
 #include <sys/mman.h>
 #include <libwebsockets.h>
+#include <json-c/json.h>
 #include <syslog.h>
 #include <math.h>
 #include <portable.h>
@@ -151,6 +152,7 @@ typedef struct {
     float   shuntRS;            // Current shunt resistance
     float   shuntTV;            // Voltage/tick
     float   shuntTG;            // Voltage/tick gain
+    int     venus;              // Shunt values from Victron Venus
     float   voltLow;            // Voltage low warning level
     char    fdn_outf[120];      // NMEA stream output file name
     FILE    *fdn_stream;        // Save NMEA stream file
@@ -312,57 +314,80 @@ static void do_sensors(time_t ts, collected_nmea *cn)
     const float cZero = 1.6;                    // Sense lines in short-circuit should read 0
     const int linearize = 0;                    // No extra compesation needed
 
-    ad2Tick = adcRead(voltChannel);
-    a2dVal = tick2volt(ad2Tick, tickVolt, 0); // Return voltage, no invert
+    if (iconf.venus == 1) {
+        // Assuming that Victron Venus@rpi is running in a docker container on this host
+        char string[300];
+        FILE *fd;
+        json_object *jobj, *results_obj;
 
-    // Calculate an average in case of ADC drifts.
-    if (a2dVal >= VOLTLOWLEVEL) {
-        if (linearize) {
-            sampvolt[vcnt++] = a2dVal;
-            if (vcnt >= sizeof(sampvolt)/sizeof(float)) {
-                vcnt = 0;
-                for (int i=0; i < sizeof(sampvolt)/sizeof(float); i++) {
-                    avvolt += sampvolt[i];
+        if ((fd = fopen("/run/udev/data/pico.json", "r")) != NULL) {
+            if (fread(string, sizeof(char), sizeof(string), fd) > 0) {
+                // printf ("JSON string: %s\n", string);
+                jobj = json_tokener_parse(string);
+
+                if (json_object_object_get_ex(jobj,"/Dc/0/Voltage",&results_obj)) {
+                    cn->volt = atof(json_object_get_string(results_obj));
+                    if (json_object_object_get_ex(jobj,"/Dc/0/Current",&results_obj)) {
+                        cn->curr = atof(json_object_get_string(results_obj));
+                        cn->volt_ts = cn->curr_ts = ts;
+                    }
                 }
-                avvolt /= sizeof(sampvolt)/sizeof(float);
             }
-        } else {
-            avvolt = a2dVal;
+            fclose(fd);
         }
-        cn->volt = avvolt;
-        cn->volt_ts = ts;
-    }
+    } else {
+        ad2Tick = adcRead(voltChannel);
+        a2dVal = tick2volt(ad2Tick, tickVolt, 0); // Return voltage, no invert
 
-    // Alert about low voltage/ENV
-    if (! firstTurn ) {
-        a2dNotice(voltChannel, cn->volt, iconf.voltLow, iconf.voltLow*1.06);
-        firstTurn = 1;
-    }
-
-    //ad2Tick = adcRead(crefChannel); // Read volt refrerence from current sensor
-    //crefVal = tick2volt(ad2Tick, tickcrVolt, 0); // Return voltage, no invert
-    crefVal = 2.486;    // Reference voltage measured by hand
-
-    ad2Tick = adcRead(currChannel);
-    a2dVal = tick2current(ad2Tick, tickcrVolt, crefVal, crShunt, cGain, 0)-cZero;   // Return current, no invert
-
-    // Calculate an average in case of ADC drifts.
-    if (a2dVal >= CURRLOWLEVEL) {
-        if (linearize+1) {
-            int i;
-            sampcurr[ccnt++] = a2dVal;
-            if (ccnt >= sizeof(sampcurr)/sizeof(float)) {
-                ccnt =  0;
-                for (i=0; i < sizeof(sampcurr)/sizeof(float); i++) {
-                    avcurr += sampcurr[i];
+        // Calculate an average in case of ADC drifts.
+        if (a2dVal >= VOLTLOWLEVEL) {
+            if (linearize) {
+                sampvolt[vcnt++] = a2dVal;
+                if (vcnt >= sizeof(sampvolt)/sizeof(float)) {
+                    vcnt = 0;
+                    for (int i=0; i < sizeof(sampvolt)/sizeof(float); i++) {
+                        avvolt += sampvolt[i];
+                    }
+                    avvolt /= sizeof(sampvolt)/sizeof(float);
                 }
-                avcurr /= sizeof(sampcurr)/sizeof(float);
+            } else {
+                avvolt = a2dVal;
             }
-        } else {
-            avcurr = a2dVal;
+            cn->volt = avvolt;
+            cn->volt_ts = ts;
         }
-        cn->curr = avcurr;
-        cn->curr_ts = ts;
+
+        // Alert about low voltage/ENV
+        if (! firstTurn ) {
+            a2dNotice(voltChannel, cn->volt, iconf.voltLow, iconf.voltLow*1.06);
+            firstTurn = 1;
+        }
+
+        //ad2Tick = adcRead(crefChannel); // Read volt refrerence from current sensor
+        //crefVal = tick2volt(ad2Tick, tickcrVolt, 0); // Return voltage, no invert
+        crefVal = 2.486;    // Reference voltage measured by hand
+
+        ad2Tick = adcRead(currChannel);
+        a2dVal = tick2current(ad2Tick, tickcrVolt, crefVal, crShunt, cGain, 0)-cZero;   // Return current, no invert
+
+        // Calculate an average in case of ADC drifts.
+        if (a2dVal >= CURRLOWLEVEL) {
+            if (linearize+1) {
+                int i;
+                sampcurr[ccnt++] = a2dVal;
+                if (ccnt >= sizeof(sampcurr)/sizeof(float)) {
+                    ccnt =  0;
+                    for (i=0; i < sizeof(sampcurr)/sizeof(float); i++) {
+                        avcurr += sampcurr[i];
+                    }
+                    avcurr /= sizeof(sampcurr)/sizeof(float);
+                }
+            } else {
+                avcurr = a2dVal;
+            }
+            cn->curr = avcurr;
+            cn->curr_ts = ts;
+        }
     }
 
     a2dVal = adcRead(tempChannel);
@@ -595,7 +620,7 @@ static int configure(int kpf)
     sqlite3 *conn;
     sqlite3_stmt *res;
     const char *tail, *cast;
-    char *ptr, buf[100];
+    char *ptr, buf[200];
     int rval = 0;
     int i, fd;
     struct stat sb;
@@ -686,10 +711,10 @@ static int configure(int kpf)
                     sqlite3_prepare_v2(conn, "CREATE TABLE abuddies (Id INTEGER PRIMARY KEY, userid BIGINT)", -1, &res, &tail);
                     sqlite3_step(res);
 
-                    sqlite3_prepare_v2(conn, "CREATE TABLE devadc(Id INTEGER PRIMARY KEY, device TEXT, shuntRS REAL, shuntTV REAL, shuntTG REAL)", -1, &res, &tail);
+                    sqlite3_prepare_v2(conn, "CREATE TABLE devadc(Id INTEGER PRIMARY KEY, device TEXT, shuntRS REAL, shuntTV REAL, shuntTG REAL, venus INTEGER)", -1, &res, &tail);
                     sqlite3_step(res);
                     
-                    sprintf(buf, "INSERT INTO devadc (device,shuntRS,shuntTV,shuntTG) VALUES ('%s',%f,%f,%f)", "/dev/null", iconf.shuntRS, iconf.shuntTV, iconf.shuntTG);
+                    sprintf(buf, "INSERT INTO devadc (device,shuntRS,shuntTV,shuntTG,venus) VALUES ('%s',%f,%f,%f,0)", "/dev/null", iconf.shuntRS, iconf.shuntTV, iconf.shuntTG);
                     sqlite3_prepare_v2(conn, buf, -1, &res, &tail);
                     sqlite3_step(res);
 
@@ -787,12 +812,13 @@ static int configure(int kpf)
     }
 
     // ADC device
-    rval = sqlite3_prepare_v2(conn, "select device,shuntRS,shuntTV,shuntTG from devadc", -1, &res, &tail);        
+    rval = sqlite3_prepare_v2(conn, "select device,shuntRS,shuntTV,shuntTG,venus from devadc", -1, &res, &tail);        
     if (rval == SQLITE_OK && sqlite3_step(res) == SQLITE_ROW) {
             (void)strcpy(iconf.adc_dev, (char*)sqlite3_column_text(res, 0));
             iconf.shuntRS = sqlite3_column_double(res, 1);
             iconf.shuntTV = sqlite3_column_double(res, 2);
             iconf.shuntTG = sqlite3_column_double(res, 3);
+            iconf.venus   = sqlite3_column_int(res,    4);
     }
 
     // Limits
