@@ -331,6 +331,8 @@ static void do_sensors(time_t ts, collected_nmea *cn)
                         cn->curr = atof(json_object_get_string(results_obj));
                         cn->volt_ts = cn->curr_ts = ts;
                     }
+                    json_object_put(jobj);
+                    json_object_put(results_obj);
                 }
             }
             fclose(fd);
@@ -1937,7 +1939,7 @@ int main(int argc ,char **argv)
         uint8_t checksum;
         socklen_t socklen = sizeof(peer_sa);
         struct stat sb;
-        int ais_rval;
+        static int ais_rval;
         long  userid = 0;
         int trueh = 0;
         int cog = 0;

@@ -514,7 +514,7 @@ void relaySchedule(void)
     int rval;
     int rtime = 0;
     int day = 0;
-    int tmo;
+    int tmo = 0;
 
     (void)sqlite3_open_v2(NAVIDBPATH, &conn, SQLITE_OPEN_READONLY, 0);
     if (conn == NULL) {
