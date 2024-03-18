@@ -326,9 +326,9 @@ static void do_sensors(time_t ts, collected_nmea *cn)
                 jobj = json_tokener_parse(string);
 
                 if (json_object_object_get_ex(jobj,"/Dc/0/Voltage",&results_obj)) {
-                    cn->volt = atof(json_object_get_string(results_obj));
+                    cn->volt = json_object_get_double(results_obj);
                     if (json_object_object_get_ex(jobj,"/Dc/0/Current",&results_obj)) {
-                        cn->curr = atof(json_object_get_string(results_obj));
+                        cn->curr = json_object_get_double(results_obj);
                         cn->volt_ts = cn->curr_ts = ts;
                     }
                     json_object_put(jobj);
