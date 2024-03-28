@@ -792,7 +792,7 @@ function dragElement(elmnt) {
 
 function showShunt()
 {
-    var items=3
+    var items=4
     document.getElementById("venus").value = "0"
 
     for (i=1; i<items+1; i++) {
@@ -800,7 +800,7 @@ function showShunt()
     }
     var s = document.getElementById("shuntlist").selectedIndex;
      if (s<1) return;
-    if (s < 4)
+    if (s < 5)
         document.getElementById("shunt-"+s).style.display = "block"; 
     if (s == 4) {
         document.getElementById("venus").value = "1"
@@ -1076,6 +1076,9 @@ function do_exit() {
                     </div>
                     <div style="display:none" id="shunt-3">
                         <input type="number" min="0.000001" max="1.0" step="0.000001" title="Voltage/tick adjusted for circuit gain" name="current_tickg" value="<?php echo $SHUNT_TG; ?>"><br>
+                    </div>
+                    <div style="display:none" id="shunt-4">
+                        <input type="text" title="Name of battery bank" name="battery_bank" value="<?php echo $SHUNT_BA; ?>"><br>
                     </div>
                 </td>
             </tr>

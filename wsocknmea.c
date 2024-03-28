@@ -152,7 +152,8 @@ typedef struct {
     float   shuntRS;            // Current shunt resistance
     float   shuntTV;            // Voltage/tick
     float   shuntTG;            // Voltage/tick gain
-    int     venus;              // Shunt values from Victron Venus
+    int     venus;              // Use Victron Venus flag
+    char    venusBA[40];        // Venus battery bank name
     float   voltLow;            // Voltage low warning level
     char    fdn_outf[120];      // NMEA stream output file name
     FILE    *fdn_stream;        // Save NMEA stream file
@@ -315,28 +316,53 @@ static void do_sensors(time_t ts, collected_nmea *cn)
     const int linearize = 0;                    // No extra compesation needed
 
     if (iconf.venus == 1) {
-        // Assuming that Victron Venus@rpi is running in a docker container on this host
-        char string[300];
-        FILE *fd;
-        json_object *jobj, *results_obj;
+        /*
+         * Assuming that Victron Venus@rpi is running in a docker container on this host.
+         * The json data is dumped to a shared area in /run and it originates from a Simarine Pico device.
+         * See project @ https://github.com/ehedman/pico2venus and https://github.com/ehedman/victron-venus-container
+         */
 
-        if ((fd = fopen("/run/udev/data/pico.json", "r")) != NULL) {
-            if (fread(string, sizeof(char), sizeof(string), fd) > 0) {
-                // printf ("JSON string: %s\n", string);
-                jobj = json_tokener_parse(string);
+        char *json_string;
+        FILE *fd = NULL;
+        struct stat st_buf;
+        struct json_object *obj, *json_obj, *name_obj, *voltage_obj, *current_obj;
+        char *jsFile = "/run/udev/data/pico-data.json";
 
-                if (json_object_object_get_ex(jobj,"/Dc/0/Voltage",&results_obj)) {
-                    cn->volt = json_object_get_double(results_obj);
-                    if (json_object_object_get_ex(jobj,"/Dc/0/Current",&results_obj)) {
-                        cn->curr = json_object_get_double(results_obj);
-                        cn->volt_ts = cn->curr_ts = ts;
-                    }
-                    json_object_put(jobj);
-                    json_object_put(results_obj);
-                }
-            }
+         if (!stat(jsFile, &st_buf) && st_buf.st_size > 10 && (fd = fopen(jsFile, "r")) != NULL) {
+
+            json_string = malloc(st_buf.st_size);
+            fread(json_string, sizeof(char), st_buf.st_size, fd);
             fclose(fd);
+
+           // Parse JSON string
+            if ((json_obj = json_tokener_parse(json_string)) != NULL) {
+
+                // Iterate through each key-value pair
+                json_object_object_foreach(json_obj, key, val) {
+                    //printf("Key: %s\n", key);
+                    // Get the object corresponding to the current key
+                    obj = json_object_object_get(json_obj, key);
+
+                    if (json_object_object_get_ex(obj, "name", &name_obj)) {
+                        if (!strcmp(json_object_get_string(name_obj), iconf.venusBA)) {
+                            //printf("Found Name: %s\n", json_object_get_string(name_obj));
+                            json_object_object_get_ex(obj, "voltage", &voltage_obj);
+                            json_object_object_get_ex(obj, "current", &current_obj);
+                            cn->volt = json_object_get_double(voltage_obj);
+                            cn->curr = json_object_get_double(current_obj);
+                            cn->volt_ts = cn->curr_ts = ts;
+                        }
+                    }
+                }
+
+                // Free the JSON object
+                json_object_put(json_obj);
+                free(json_string);
+            } else {
+                free(json_string);
+            }
         }
+
     } else {
         ad2Tick = adcRead(voltChannel);
         a2dVal = tick2volt(ad2Tick, tickVolt, 0); // Return voltage, no invert
@@ -713,10 +739,10 @@ static int configure(int kpf)
                     sqlite3_prepare_v2(conn, "CREATE TABLE abuddies (Id INTEGER PRIMARY KEY, userid BIGINT)", -1, &res, &tail);
                     sqlite3_step(res);
 
-                    sqlite3_prepare_v2(conn, "CREATE TABLE devadc(Id INTEGER PRIMARY KEY, device TEXT, shuntRS REAL, shuntTV REAL, shuntTG REAL, venus INTEGER)", -1, &res, &tail);
+                    sqlite3_prepare_v2(conn, "CREATE TABLE devadc(Id INTEGER PRIMARY KEY, device TEXT, shuntRS REAL, shuntTV REAL, shuntTG REAL, venusBA TEXT, venus INTEGER)", -1, &res, &tail);
                     sqlite3_step(res);
                     
-                    sprintf(buf, "INSERT INTO devadc (device,shuntRS,shuntTV,shuntTG,venus) VALUES ('%s',%f,%f,%f,0)", "/dev/null", iconf.shuntRS, iconf.shuntTV, iconf.shuntTG);
+                    sprintf(buf, "INSERT INTO devadc (device,shuntRS,shuntTV,shuntTG,venusBA,venus) VALUES ('%s',%f,%f,%f,'undef',0)", "/dev/null", iconf.shuntRS, iconf.shuntTV, iconf.shuntTG);
                     sqlite3_prepare_v2(conn, buf, -1, &res, &tail);
                     sqlite3_step(res);
 
@@ -814,13 +840,14 @@ static int configure(int kpf)
     }
 
     // ADC device
-    rval = sqlite3_prepare_v2(conn, "select device,shuntRS,shuntTV,shuntTG,venus from devadc", -1, &res, &tail);        
+    rval = sqlite3_prepare_v2(conn, "select device,shuntRS,shuntTV,shuntTG,venusBA,venus from devadc", -1, &res, &tail);
     if (rval == SQLITE_OK && sqlite3_step(res) == SQLITE_ROW) {
             (void)strcpy(iconf.adc_dev, (char*)sqlite3_column_text(res, 0));
             iconf.shuntRS = sqlite3_column_double(res, 1);
             iconf.shuntTV = sqlite3_column_double(res, 2);
             iconf.shuntTG = sqlite3_column_double(res, 3);
-            iconf.venus   = sqlite3_column_int(res,    4);
+            (void)strcpy(iconf.venusBA, (char*)sqlite3_column_text(res, 4));
+            iconf.venus   = sqlite3_column_int(res,    5);
     }
 
     // Limits
@@ -1991,6 +2018,7 @@ int main(int argc ,char **argv)
                 cnt = recvfrom(muxFd, nmeastr_p1, sizeof(nmeastr_p1), 0,(struct sockaddr *) &peer_sa, &socklen);
             }
         }
+
        
         if (cnt < 0) {
             if (errno == EAGAIN) {

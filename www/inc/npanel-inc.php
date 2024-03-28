@@ -23,7 +23,7 @@
     $COMPL = False;
     $ALTL = NULL;
 
-    //if (count($_POST)) {echo "<pre>"; print_r($_POST); echo "</pre>"; exit;}
+   // if (count($_POST)) {echo "<pre>"; print_r($_POST); echo "</pre>"; exit;}
 
     if ( isset($_GET['Exit']) && $_GET['Exit'] == "y") {
         shell_exec('sudo killall chromium-browser');  // www-data must be in /etc/sudoers.d
@@ -84,7 +84,7 @@
         $sql="UPDATE `file` SET `fname`='nofile', `rate`='1', `use`='off' WHERE `Id`=1";
         $DBH->exec($sql);
 
-        $sql="UPDATE `devadc` SET `device`='".$_POST['a2dserial']."', `shuntRS`='".$_POST['current_shunt']."', `shuntTV`='".$_POST['current_tick']."', `shuntTG`='".$_POST['current_tickg']."',`venus`='".$_POST['venus']."' WHERE `Id`=1";
+        $sql="UPDATE `devadc` SET `device`='".$_POST['a2dserial']."', `shuntRS`='".$_POST['current_shunt']."', `shuntTV`='".$_POST['current_tick']."', `shuntTG`='".$_POST['current_tickg']."', `venusBA`='".  $_POST['battery_bank']."', `venus`='".$_POST['venus']."' WHERE `Id`=1";
         $DBH->exec($sql);
 
         for ($i = 1; $i <= 4; $i++) {
@@ -217,14 +217,15 @@
         $aisuse=$row['aisuse'];
         $aisro=$row['ro'];
 
-        $stmt = $DBH->prepare("SELECT device, shuntRS,shuntTV,shuntTG,venus FROM devadc LIMIT 1");
+        $stmt = $DBH->prepare("SELECT device, shuntRS,shuntTV,shuntTG,venusBA,venus FROM devadc LIMIT 1");
         $stmt->execute(); 
         $row = $stmt->fetch();
         $a2dserial=$row['device'];
         $SHUNT_RS = $row['shuntRS'] >=0.000001 ? $row['shuntRS'] : "0.00015";
         $SHUNT_TV = $row['shuntTV'] >=0.000001 ? $row['shuntTV'] : "0.01356";
         $SHUNT_TG = $row['shuntTG'] >=0.000001 ? $row['shuntTG'] : "0.004882";
-        $SHUNT_VN = isset($row['venus'])? $row['venus'] : "0";
+        $SHUNT_BA = isset($row['venusBA'])? $row['venusBA'] : "Undef";
+        $SHUNT_VN = isset($row['venus'])?   $row['venus']   : "0";
 
         for ($i = 1; $i <= 4; $i++) {
             $stmt = $DBH->prepare("SELECT name,days,time,timeout FROM devrelay WHERE id=".$i.";");
