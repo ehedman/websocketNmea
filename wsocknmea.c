@@ -349,7 +349,7 @@ static void do_sensors(time_t ts, collected_nmea *cn)
                             json_object_object_get_ex(obj, "voltage", &voltage_obj);
                             json_object_object_get_ex(obj, "current", &current_obj);
                             cn->volt = json_object_get_double(voltage_obj);
-                            cn->curr = json_object_get_double(current_obj);
+                            cn->curr = (1.0-json_object_get_double(current_obj)-1.0);
                             cn->volt_ts = cn->curr_ts = ts;
                         }
                     }
