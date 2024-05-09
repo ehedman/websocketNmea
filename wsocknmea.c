@@ -140,6 +140,7 @@ static int socketCast = 0;
 static char *programName;
 static int unusedInt __attribute__((unused));   // To make -Wall shut up
 static FILE * unusedFd __attribute__((unused));
+static int adcFd;
 
 typedef struct {
     // Static configs from GUI sql db
@@ -1639,6 +1640,7 @@ static void *threadKplex_run()
         if (pidKplex == 0) {  
             /* child */
             sleep(1);
+            if (adcFd > 0) close(adcFd);
             char *args[] = {"kplex", "-f", KPCONFPATH, NULL};
             execvp("kplex", args);
             printlog("Failed to execute kplex %s:", strerror(errno));
@@ -1935,11 +1937,16 @@ int main(int argc ,char **argv)
 
 #ifdef DOADC
     if (strcmp(iconf.adc_dev, "/dev/null")) {
-        (void)adcInit(iconf.adc_dev, voltChannel);
+        int afd;
+        afd = adcInit(iconf.adc_dev, voltChannel);
         (void)adcInit(iconf.adc_dev, currChannel);
         (void)adcInit(iconf.adc_dev, crefChannel); 
         (void)adcInit(iconf.adc_dev, tempChannel);
-        (void)relayInit(4);      
+        (void)relayInit(4);
+        if (afd > 0) {
+            printf("kalle\n");
+            adcFd = afd;
+        }      
     }
 #endif
     

@@ -424,22 +424,22 @@ int adcInit(char *device, int a2dChannel)
 
     if (a2dChannel > RELCHA) {
         printlog("UK1104: Error channel must be less than %d not  %d", IOMAX, a2dChannel+1);
-        return 1;
+        return -1;
     }
     
     if (adChannel[a2dChannel].status) {
         printlog("UK1104: ADC Channel %d already claimed", a2dChannel);
-        return 0;
+        return -1;
     }
 
     if (!serialDev.fd) {
         if ((fd = open(device, O_RDWR | O_NOCTTY | O_NDELAY )) <0) {
             printlog("UK1104: ADC Could not open device %s", device);
-            return 1;
+            return -1;
         }
         if (portConfigure(fd, device)) {
             (void)close(fd);
-            return 1;
+            return -1;
         }
         serialDev.fd = fd;
         (void)fcntl(serialDev.fd, F_SETFL, FNDELAY);  // Non-blockning
@@ -449,7 +449,7 @@ int adcInit(char *device, int a2dChannel)
  
     adChannel[a2dChannel].status = CHAisCLAIMED;
 
-    return 0;
+    return serialDev.fd;
 }
 
 /* API */
@@ -881,7 +881,7 @@ int adcInit(char *device, int a2dChannel)
     // check channel for adc
     if (a2dChannel > 7) {
         printlog("MCP3208: Channel must be less than 8 not  %d", a2dChannel);
-        return 1;
+        return -1;
     }
 
     if (!spiDev.status) {
@@ -889,7 +889,7 @@ int adcInit(char *device, int a2dChannel)
         if ( mcp3208SpiInit(device, SPI_MODE_0, 1000000, 8) ) {
             spiDev.status = 0;
             printlog("MCP3208: ADC Could not open device %s", device);
-            return 1;
+            return -1;
         }
     }
     spiDev.status = 1;
