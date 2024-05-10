@@ -640,7 +640,10 @@ void relaySet(int channels, char *tmos) // A bitmask and time-out values
             }
 
         } else {
+            if (adChannel[iter+RELCHA].mode == ON)
+                printlog("UK1104: Relay-%d status is set to OFF", iter+1);
             adChannel[iter+RELCHA].mode = OFF;
+            relayTimeoutSec[iter] = relayTimeout[iter] = 0;
         }
     }
 
