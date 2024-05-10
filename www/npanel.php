@@ -480,6 +480,9 @@ function docheckpw(seq)
     document.getElementById("tdt-status-2").disabled = status;
     document.getElementById("ais-use-cb").disabled = status;
     document.getElementById("relayAction").disabled = status;  
+    document.getElementById("gmapKey").disabled = status;  
+    document.getElementById("gmapDelKey").disabled = status;  
+    document.getElementById("files").disabled = status;  
     document.getElementById("dosavePw").disabled = status;   
 }
 
@@ -941,8 +944,8 @@ function do_exit() {
                           <option <?php echo $map_updt==10? "selected ":""; ?>value="10">10</option>
                           <option <?php echo $map_updt==12? "selected ":""; ?>value="12">12</option>
                     </select><br>
-                        Enter : <input type="button" value="key" title="Enter a Google Map Key" <?php echo $NOSAVE==1? " disabled":""; ?> onclick="enter_key();">
-                        <?php if (strlen($KEY)) { ?>Delete : <input type="button" value="key" title="Delete the Google Map Key" onclick="delete_key();"><?php } ?>
+                        Enter : <input type="button" id="gmapKey" value="key" title="Enter a Google Map Key" <?php echo $NOSAVE==1? " disabled":""; ?> onclick="enter_key();">
+                        <?php if (strlen($KEY)) { ?>Delete : <input type="button" id="gmapDelKey" value="key" title="Delete the Google Map Key" <?php echo $NOSAVE==1? " disabled":""; ?> onclick="delete_key();"><?php } ?>
                 </td>
             </tr>
              <tr>
@@ -1032,7 +1035,7 @@ function do_exit() {
             </tr>
             <tr>
                 <td class="contentBox" style="padding-right: 0; margin: 0;">
-                    <fieldset <?php echo $NOSAVE==1? " disabled":""; ?> style="border:0;padding:0">
+                    <fieldset id="relayAction" <?php echo $NOSAVE==1? " disabled":""; ?> style="border:0;padding:0">
                         <h2>Relay Settings</h2>
                         <input type="text" name="a2dserial" title="UK1104 Data Acquisition Module" id="a2dserial" maxlength="20" value="<?php echo $a2dserial ?>"><br>
                         <div id="relayContent">
