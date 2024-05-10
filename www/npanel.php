@@ -344,6 +344,7 @@ function do_timer(item)
         // Output for over time
         if (rtimers[item-1].rem < 0) {
             clearInterval(rtimers[item-1].timer);
+            rtimers[item-1].timer = null;
             rtimers[item-1].rend = 0;
             document.getElementById("timer-"+item).innerHTML = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
         }
@@ -940,7 +941,7 @@ function do_exit() {
                           <option <?php echo $map_updt==10? "selected ":""; ?>value="10">10</option>
                           <option <?php echo $map_updt==12? "selected ":""; ?>value="12">12</option>
                     </select><br>
-                        Enter : <input type="button" value="key" title="Enter a Google Map Key" onclick="enter_key();">
+                        Enter : <input type="button" value="key" title="Enter a Google Map Key" <?php echo $NOSAVE==1? " disabled":""; ?> onclick="enter_key();">
                         <?php if (strlen($KEY)) { ?>Delete : <input type="button" value="key" title="Delete the Google Map Key" onclick="delete_key();"><?php } ?>
                 </td>
             </tr>
@@ -993,7 +994,7 @@ function do_exit() {
                     <h2>Replay NMEA from File</h2>
                     <label title="Select an existing NMEA file">File:&nbsp;&nbsp;<?php print_nmea_recordings(); ?></label>New:
                     <label for="files" title="Upload a new NMEA file" class="fileLabel">&nbsp;&nbsp;File
-                        <input style="max-width:4%;visibility:hidden" id="files" name="uploaded_file" type="file" accept="text/plain"></label>
+                        <input style="max-width:4%;visibility:hidden" id="files" name="uploaded_file" type="file" <?php echo $NOSAVE==1? " disabled":""; ?> accept="text/plain"></label>
                     <label title="Sentences per second">Rate:&nbsp;<select name="nmea_rate">
                           <option value="2">2</option>
                           <option value="4">4</option>
@@ -1031,30 +1032,32 @@ function do_exit() {
             </tr>
             <tr>
                 <td class="contentBox" style="padding-right: 0; margin: 0;">
-                    <h2>Relay Settings</h2>
-                    <input type="text" name="a2dserial" title="UK1104 Data Acquisition Module" id="a2dserial" maxlength="20" value="<?php echo $a2dserial ?>"><br>
-                    <div id="relayContent">
-    <?php
-        for ($i = 1; $i <= 4; $i++) {
-    ?>
-                        Relay-<?php echo $i ?>&nbsp;<input type="checkbox" class="checkbox-round" id="relay<?php echo $i ?>-stat" name="relay<?php echo $i ?>-stat" <?php echo $NOSAVE==0? 'onclick="dorelay('.$i.')" ':""; ?>title="Relay <?php echo $i ?> ON/OFF Now">
-                        <input type="text" title="Description" name="relay<?php echo $i ?>txt" id="relay<?php echo $i ?>txt" size="9" value="<?php echo $RELAYS[$i][0] ?>">
-                        <input type="text" onkeypress="return onlyNumberKey(event)" maxlength="3" title="time-out min" name="relay<?php echo $i ?>tmo" id="relay<?php echo $i ?>tmo" style="width: 24px;" value="<?php echo $RELAYS[$i][3] ?>">
-                        <input type="checkbox" id="relay<?php echo $i ?>-sched" title="Show schedule" onchange="rshed(<?php echo $i ?>)">
-                        <div class="timers" title="time remaining" id="timer-<?php echo $i ?>">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
-                        <div id="relay<?php echo $i ?>-sched-div" style="display: none; border: 1px solid black; width: fit-content;">&nbsp;
-                            <input type="checkbox" name="relay-<?php echo $i ?>-day-1" id="relay-<?php echo $i ?>-day-1" <?php if ($RELAYS[$i][1] & (1 << 0)) echo "checked"; ?> class="checkbox-round" title="Monday">
-                            <input type="checkbox" name="relay-<?php echo $i ?>-day-2" id="relay-<?php echo $i ?>-day-2" <?php if ($RELAYS[$i][1] & (1 << 1)) echo "checked"; ?> class="checkbox-round" title="Tuesday">
-                            <input type="checkbox" name="relay-<?php echo $i ?>-day-3" id="relay-<?php echo $i ?>-day-3" <?php if ($RELAYS[$i][1] & (1 << 2)) echo "checked"; ?> class="checkbox-round" title="Wednesday">
-                            <input type="checkbox" name="relay-<?php echo $i ?>-day-4" id="relay-<?php echo $i ?>-day-4" <?php if ($RELAYS[$i][1] & (1 << 3)) echo "checked"; ?> class="checkbox-round" title="Thursday">
-                            <input type="checkbox" name="relay-<?php echo $i ?>-day-5" id="relay-<?php echo $i ?>-day-5" <?php if ($RELAYS[$i][1] & (1 << 4)) echo "checked"; ?> class="checkbox-round" title="Friday">
-                            <input type="checkbox" name="relay-<?php echo $i ?>-day-6" id="relay-<?php echo $i ?>-day-6" <?php if ($RELAYS[$i][1] & (1 << 5)) echo "checked"; ?> class="checkbox-round" title="Saturday">
-                            <input type="checkbox" name="relay-<?php echo $i ?>-day-7" id="relay-<?php echo $i ?>-day-7" <?php if ($RELAYS[$i][1] & (1 << 6)) echo "checked"; ?> class="checkbox-round" title="Sunday">&nbsp;&nbsp;
-                            <input type="time" id="relay-<?php echo $i ?>-time" name="relay-<?php echo $i ?>-time" title="H:M" value="<?php echo gmdate("i:s", $RELAYS[$i][2]); ?>">   
-                        </div>
-    <?php } ?>
+                    <fieldset <?php echo $NOSAVE==1? " disabled":""; ?> style="border:0;padding:0">
+                        <h2>Relay Settings</h2>
+                        <input type="text" name="a2dserial" title="UK1104 Data Acquisition Module" id="a2dserial" maxlength="20" value="<?php echo $a2dserial ?>"><br>
+                        <div id="relayContent">
+        <?php
+            for ($i = 1; $i <= 4; $i++) {
+        ?>
+                            Relay-<?php echo $i ?>&nbsp;<input type="checkbox" class="checkbox-round" id="relay<?php echo $i ?>-stat" name="relay<?php echo $i ?>-stat" onclick="dorelay(<?php echo $i ?>)" title="Relay <?php echo $i ?> ON/OFF Now">
+                            <input type="text" title="Description" name="relay<?php echo $i ?>txt" id="relay<?php echo $i ?>txt" size="9" value="<?php echo $RELAYS[$i][0] ?>">
+                            <input type="text" onkeypress="return onlyNumberKey(event)" maxlength="3" title="time-out min" name="relay<?php echo $i ?>tmo" id="relay<?php echo $i ?>tmo" style="width: 24px;" value="<?php echo $RELAYS[$i][3] ?>">
+                            <input type="checkbox" id="relay<?php echo $i ?>-sched" title="Show schedule" onchange="rshed(<?php echo $i ?>)">
+                            <div class="timers" title="time remaining" id="timer-<?php echo $i ?>">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+                            <div id="relay<?php echo $i ?>-sched-div" style="display: none; border: 1px solid black; width: fit-content;">&nbsp;
+                                <input type="checkbox" name="relay-<?php echo $i ?>-day-1" id="relay-<?php echo $i ?>-day-1" <?php if ($RELAYS[$i][1] & (1 << 0)) echo "checked"; ?> class="checkbox-round" title="Monday">
+                                <input type="checkbox" name="relay-<?php echo $i ?>-day-2" id="relay-<?php echo $i ?>-day-2" <?php if ($RELAYS[$i][1] & (1 << 1)) echo "checked"; ?> class="checkbox-round" title="Tuesday">
+                                <input type="checkbox" name="relay-<?php echo $i ?>-day-3" id="relay-<?php echo $i ?>-day-3" <?php if ($RELAYS[$i][1] & (1 << 2)) echo "checked"; ?> class="checkbox-round" title="Wednesday">
+                                <input type="checkbox" name="relay-<?php echo $i ?>-day-4" id="relay-<?php echo $i ?>-day-4" <?php if ($RELAYS[$i][1] & (1 << 3)) echo "checked"; ?> class="checkbox-round" title="Thursday">
+                                <input type="checkbox" name="relay-<?php echo $i ?>-day-5" id="relay-<?php echo $i ?>-day-5" <?php if ($RELAYS[$i][1] & (1 << 4)) echo "checked"; ?> class="checkbox-round" title="Friday">
+                                <input type="checkbox" name="relay-<?php echo $i ?>-day-6" id="relay-<?php echo $i ?>-day-6" <?php if ($RELAYS[$i][1] & (1 << 5)) echo "checked"; ?> class="checkbox-round" title="Saturday">
+                                <input type="checkbox" name="relay-<?php echo $i ?>-day-7" id="relay-<?php echo $i ?>-day-7" <?php if ($RELAYS[$i][1] & (1 << 6)) echo "checked"; ?> class="checkbox-round" title="Sunday">&nbsp;&nbsp;
+                                <input type="time" id="relay-<?php echo $i ?>-time" name="relay-<?php echo $i ?>-time" title="H:M" value="<?php echo gmdate("i:s", $RELAYS[$i][2]); ?>">
+                            </div>
+        <?php } ?>
 
-                    </div>
+                        </div>
+                    </fieldset>
                 </td>
             </tr>
 
