@@ -1944,7 +1944,6 @@ int main(int argc ,char **argv)
         (void)adcInit(iconf.adc_dev, tempChannel);
         (void)relayInit(4);
         if (afd > 0) {
-            printf("kalle\n");
             adcFd = afd;
         }      
     }
