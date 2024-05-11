@@ -328,7 +328,10 @@ function do_timer(item)
     rtimers[item-1].timer = setInterval(function ()
     {
         // Getting current time in required format
-        rtimers[item-1].now = new Date().getTime();
+        if (document.getElementById("relay"+item+"-stat").checked == false) // User abort
+            rtimers[item-1].now = rtimers[item-1].end;
+        else
+            rtimers[item-1].now = new Date().getTime();
 
         // Calculating the difference
         rtimers[item-1].rem  = rtimers[item-1].end - rtimers[item-1].now;
@@ -342,7 +345,7 @@ function do_timer(item)
         document.getElementById("timer-"+item).innerHTML = hours + ":" + minutes + ":"  + seconds;
 
         // Output for over time
-        if (rtimers[item-1].rem < 0) {
+        if (rtimers[item-1].rem <= 0) {
             clearInterval(rtimers[item-1].timer);
             rtimers[item-1].timer = null;
             rtimers[item-1].rend = 0;
