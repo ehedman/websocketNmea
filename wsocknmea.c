@@ -2166,6 +2166,7 @@ int main(int argc ,char **argv)
                     // HDG - Heading - Deviation and Variation 
                     if (NMPARSE(nmeastr_p1, "HDG")) {
                         cnmea.hdm=atof(getf(1, nmeastr_p1));
+                        cnmea.hdm += atof(getf(4, nmeastr_p1));
                         cnmea.hdm_ts = ts;
                         continue;
                     }
