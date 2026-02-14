@@ -500,7 +500,7 @@ int relayStatus(void)
 char *relayTimeouts(void)
 {
     static char buf[100];
-    sprintf(buf, "'relayTm1':'%ld','relayTm2':'%ld','relayTm3':'%ld','relayTm4':'%ld'", relayTimeoutSec[0], relayTimeoutSec[1], relayTimeoutSec[2] ,relayTimeoutSec[3]);
+    sprintf(buf, "'relayTm1':'%lld','relayTm2':'%lld','relayTm3':'%lld','relayTm4':'%lld'", relayTimeoutSec[0], relayTimeoutSec[1], relayTimeoutSec[2] ,relayTimeoutSec[3]);
     return buf;
 }
 

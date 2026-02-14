@@ -1384,7 +1384,7 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                 case WaterTankData: {
                         if (!doDigiflow()) {    // Only on demand from instrument
                             sprintf(value,
-                                "{'tvol':'%.0f','tank':'%.0f','fdate':'%lu','tds':'%d','date':'%lu'}-%d",
+                                "{'tvol':'%.0f','tank':'%.0f','fdate':'%llu','tds':'%d','date':'%llu'}-%d",
                                     cnmea.tvol, cnmea.tank, cnmea.fdate, cnmea.tds, time(NULL), req);
                         } else sprintf(value, "Exp-%d", req);
                     break;
@@ -1584,7 +1584,7 @@ static void *threadPnmea_run()
             }
 
             // Format: GPENV,volt,bank,current,bank,temp,where,kWhp,kWhn,startTimr*cs
-            sprintf(fifobuf, "$GPENV,%.1f,1,%.1f,1,%.1f,1,%.3f,%.3f,%lu",
+            sprintf(fifobuf, "$GPENV,%.1f,1,%.1f,1,%.1f,1,%.3f,%.3f,%llu",
                 cnmea.volt, cnmea.curr, cnmea.temp, cnmea.kWhp, cnmea.kWhn, cnmea.startTime);
 
             while(fifobuf[i] != '\0')

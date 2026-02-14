@@ -31,6 +31,7 @@ endif
 
 libwebsockets:
 	git clone -b v3.1-stable https://github.com/warmcat/libwebsockets.git
+	sed -i 's/-Wall//g' libwebsockets/CMakeLists.txt
 	mkdir libwebsockets/build
 	cd libwebsockets/build && cmake ..; make -j; sudo make -j install/local/fast; sudo install lib/libwebsockets.so.14 -m 0755 -g root -o root -D /usr/local/lib
 	sudo rm -f /usr/local/lib/libwebsockets.so
