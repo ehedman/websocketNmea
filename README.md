@@ -1,5 +1,5 @@
 # websocketNmea
-README Jan 2024
+README Jan 2026
 
 The wsocknmea application package is a marine glass cockpit solution that features electronic marine instrument displays, typically used on private sailing yachts.
 The look and feel of the visualized instruments tries to mimic the look of real physical instrumnts and will by design avoid a digital look.
@@ -38,8 +38,8 @@ Currently there are twelve virtual instrument working:
 
 ### Tested runtime environment
 
-- X86 (Linux Mint 20/21)
-- Raspberry Pi Model 3/4/5 (Debian buster/bullseye/bookworm-32/64)
+- X86 (Linux Mint)
+- Raspberry Pi Model 3/4/5 (Debian bookworm/trixie-32/64)
 - Browsers: Firefox, IE (with some limitations), Chrome (Chrome & Firefox also on Android), Safari (iPad/iPhone)
 
 For the ADC to work properly I recommend the Pi with the MCP3208 SPI Chip 12 bit ADC 8 channels.
@@ -47,7 +47,7 @@ For a more comprehensive I/O Solution use the UK1104 driver instead. See https:/
 
 ### My configuration
 
-I have a Raymarine E97 Network Multifunction Display that feeds kplex with NMEA-183 through a serial line with wind, speed, water temp, gps etc.
+I have a Raymarine Axiom2 Pro 9 Network Multifunction Display and a Digital Yacht iKonvert NMEA 2000 to NMEA 0183 Gateway Converter that feeds kplex with NMEA-183 through a USB line with wind, speed, water temp, gps etc.
 Also included in my set-up is the OpenCPN chart plotter that connects to the kplex traffic on the local WiFi on the yacht.
 Obviously the yacht has to be connected to the internet for the Google Map view.
 To access your vessel as an IOT (to remotely acess all instruemnts and remote relay control) I recommend to define ip-table rules with "shorewall" (https://shorewall.org/) in order to establish your device as an firewall with virtual host rules to open ports 80 and 8080 to the internet.
