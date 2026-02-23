@@ -1,7 +1,7 @@
 <?php
 
     if ( isset($_GET['Exit']) && $_GET['Exit'] == "y") {
-        shell_exec('killall  -TERM chromium');  
+        shell_exec('sudo pkill -TERM chromium');  // www-data must be in /etc/sudoers.d
         exit;   // Only possible if (this) server and browser are on the same host by value of DOEXIT
     }
 

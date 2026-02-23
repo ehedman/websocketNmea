@@ -26,7 +26,7 @@
    // if (count($_POST)) {echo "<pre>"; print_r($_POST); echo "</pre>"; exit;}
 
     if ( isset($_GET['Exit']) && $_GET['Exit'] == "y") {
-        shell_exec('sudo killall chromium-browser');  // www-data must be in /etc/sudoers.d
+        shell_exec('sudo pkill -INT chromium');  // www-data must be in /etc/sudoers.d
         exit;   // Only possible if (this) server and browser are on the same host by value of DOEXIT
     }
 
