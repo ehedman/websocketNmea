@@ -7,7 +7,7 @@ endif
 
 DEST=$(TOP)
 
-SUBDIRS= img inc upload
+SUBDIRS= img inc upload audio
 
 install: $(APPS)
 	@for i in $(APPS); do \
