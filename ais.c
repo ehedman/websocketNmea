@@ -15,6 +15,7 @@
 #include <time.h>
 #include <ctype.h>
 #include <sqlite3.h>
+#include <inttypes.h>
 #include "wsocknmea.h"
 
 #define MAX_INACTIVE    240      // Aging vessel signals hidden after # seconds
@@ -104,11 +105,11 @@ int addShip(int msgid, long userid, double lat_dd, double long_ddd, int trueh, d
 
         if (sqlite3_prepare_v2(conn, sql, -1, &res, &tail) == SQLITE_OK && sqlite3_step(res) == SQLITE_ROW) {
             if (trueh) {
-                (void)sprintf(sql, "UPDATE ais SET msgid = '%d', userid = %ld, lat_dd = %0.6f, long_ddd = %0.6f, sog = %0.1f, trueh = %d, ts = %lld WHERE userid = %ld", \
-                msgid, userid, lat_dd, long_ddd, sog, trueh, time(NULL), userid);
+                (void)sprintf(sql, "UPDATE ais SET msgid = '%d', userid = %ld, lat_dd = %0.6f, long_ddd = %0.6f, sog = %0.1f, trueh = %d, ts = %jd WHERE userid = %ld", \
+                msgid, userid, lat_dd, long_ddd, sog, trueh,  (intmax_t)time(NULL), userid);
             } else {
-                (void)sprintf(sql, "UPDATE ais SET msgid = '%d', userid = %ld, lat_dd = %0.6f, long_ddd = %0.6f, sog = %0.1f, ts = %lld WHERE userid = %ld", \
-                msgid, userid, lat_dd, long_ddd, sog, time(NULL), userid);
+                (void)sprintf(sql, "UPDATE ais SET msgid = '%d', userid = %ld, lat_dd = %0.6f, long_ddd = %0.6f, sog = %0.1f, ts = %jd WHERE userid = %ld", \
+                msgid, userid, lat_dd, long_ddd, sog, (intmax_t)time(NULL), userid);
             }
 
             if (sqlite3_prepare_v2(conn, sql, -1, &res1, &tail) != SQLITE_OK)
@@ -122,8 +123,8 @@ int addShip(int msgid, long userid, double lat_dd, double long_ddd, int trueh, d
         } else {
             (void)sqlite3_finalize(res);
 
-            (void)sprintf(sql, "INSERT INTO ais (msgid,userid,lat_dd,long_ddd,sog,trueh,name,ts) VALUES (%d,%ld,%0.6f,%0.6f,%0.1f,%d,'n.n',%lld)", \
-                msgid, userid, lat_dd, long_ddd, sog, trueh, time(NULL));
+            (void)sprintf(sql, "INSERT INTO ais (msgid,userid,lat_dd,long_ddd,sog,trueh,name,ts) VALUES (%d,%ld,%0.6f,%0.6f,%0.1f,%d,'n.n',%jd)", \
+                msgid, userid, lat_dd, long_ddd, sog, trueh, (intmax_t)time(NULL));
 
             if (sqlite3_prepare_v2(conn, sql, -1, &res, &tail) != SQLITE_OK)
                 printlog("sqlite3 insert: %s", (char*)sqlite3_errmsg(conn));
@@ -163,12 +164,12 @@ int addShip(int msgid, long userid, double lat_dd, double long_ddd, int trueh, d
         }
         
         if (upd) {
-            (void)sprintf(sql, "UPDATE ais SET name = '%s', ts = %lld  WHERE userid = %ld", name, time(NULL), userid);
+            (void)sprintf(sql, "UPDATE ais SET name = '%s', ts = %jd  WHERE userid = %ld", name, (intmax_t)time(NULL), userid);
             if (sqlite3_prepare_v2(conn, sql, -1, &res, &tail) == SQLITE_OK)
                 (void)sqlite3_step(res);    
             (void)sqlite3_finalize(res); 
         }  else {
-            (void)sprintf(sql, "INSERT INTO ais (lat_dd,long_ddd,userid,name,ts) VALUES (0,0,%ld,'%s',%lld)", userid, name, time(NULL));
+            (void)sprintf(sql, "INSERT INTO ais (lat_dd,long_ddd,userid,name,ts) VALUES (0,0,%ld,'%s',%jd)", userid, name, (intmax_t)time(NULL));
             if (sqlite3_prepare_v2(conn, sql, -1, &res, &tail) == SQLITE_OK)
                 (void)sqlite3_step(res);   
             (void)sqlite3_finalize(res); 
@@ -192,7 +193,7 @@ int addShip(int msgid, long userid, double lat_dd, double long_ddd, int trueh, d
         }
     }
 
-    (void)sprintf(sql, "DELETE from ais WHERE ts < %lld", time(NULL)-MAX_LIVE);
+    (void)sprintf(sql, "DELETE from ais WHERE ts < %jd", (intmax_t)time(NULL)-MAX_LIVE);
 
     if (sqlite3_prepare_v2(conn, sql, -1, &res, &tail) != SQLITE_OK) {
         printlog("sqlite3 delete old: %s", (char*)sqlite3_errmsg(conn));
@@ -227,7 +228,7 @@ struct aisShip_struct *getShips(int maxSize)
         if (!cnt) return NULL;
     }
 
-    (void)sprintf(sql, "DELETE from ais WHERE ts < %lld", time(NULL)-MAX_LIVE);
+    (void)sprintf(sql, "DELETE from ais WHERE ts < %jd", (intmax_t)time(NULL)-MAX_LIVE);
 
     if (sqlite3_prepare_v2(conn, sql, -1, &res, &tail) != SQLITE_OK) {
         printlog("sqlite3 delete old: %s", (char*)sqlite3_errmsg(conn));
@@ -237,7 +238,7 @@ struct aisShip_struct *getShips(int maxSize)
 
     (void)sqlite3_finalize(res);
 
-    (void)sprintf(sql, "SELECT B.userid, A.* FROM ais A LEFT OUTER JOIN [buddies] B USING (userid) WHERE A.lat_dd > 0.0 AND A.ts > %lld", time(NULL)-MAX_INACTIVE);
+    (void)sprintf(sql, "SELECT B.userid, A.* FROM ais A LEFT OUTER JOIN [buddies] B USING (userid) WHERE A.lat_dd > 0.0 AND A.ts > %jd", (intmax_t)time(NULL)-MAX_INACTIVE);
     
     if (sqlite3_prepare_v2(conn, sql, -1, &res, &tail) != SQLITE_OK) {
         printlog("sqlite3 select for row: %s", (char*)sqlite3_errmsg(conn));

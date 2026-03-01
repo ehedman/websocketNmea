@@ -16,6 +16,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
+#include <inttypes.h>
 #include <time.h>
 #include <linux/spi/spidev.h>
 #include <pthread.h>
@@ -500,7 +501,7 @@ int relayStatus(void)
 char *relayTimeouts(void)
 {
     static char buf[100];
-    sprintf(buf, "'relayTm1':'%lld','relayTm2':'%lld','relayTm3':'%lld','relayTm4':'%lld'", relayTimeoutSec[0], relayTimeoutSec[1], relayTimeoutSec[2] ,relayTimeoutSec[3]);
+    sprintf(buf, "'relayTm1':'%jd','relayTm2':'%jd','relayTm3':'%jd','relayTm4':'%jd'", (intmax_t)relayTimeoutSec[0], (intmax_t)relayTimeoutSec[1], (intmax_t)relayTimeoutSec[2] ,(intmax_t)relayTimeoutSec[3]);
     return buf;
 }
 

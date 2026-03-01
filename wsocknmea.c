@@ -33,6 +33,7 @@
 #include <string.h>
 #include <zlib.h>
 #include <ctype.h>
+#include <inttypes.h>
 #include <pthread.h>
 #include <sqlite3.h>
 #include <sys/mman.h>
@@ -1384,8 +1385,8 @@ static int callback_nmea_parser(struct lws *wsi, enum lws_callback_reasons reaso
                 case WaterTankData: {
                         if (!doDigiflow()) {    // Only on demand from instrument
                             sprintf(value,
-                                "{'tvol':'%.0f','tank':'%.0f','fdate':'%llu','tds':'%d','date':'%llu'}-%d",
-                                    cnmea.tvol, cnmea.tank, cnmea.fdate, cnmea.tds, time(NULL), req);
+                                "{'tvol':'%.0f','tank':'%.0f','fdate':'%jd','tds':'%d','date':'%jd'}-%d",
+                                    cnmea.tvol, cnmea.tank, (intmax_t)cnmea.fdate, cnmea.tds, (intmax_t)time(NULL), req);
                         } else sprintf(value, "Exp-%d", req);
                     break;
                 }
@@ -1584,8 +1585,8 @@ static void *threadPnmea_run()
             }
 
             // Format: GPENV,volt,bank,current,bank,temp,where,kWhp,kWhn,startTimr*cs
-            sprintf(fifobuf, "$GPENV,%.1f,1,%.1f,1,%.1f,1,%.3f,%.3f,%llu",
-                cnmea.volt, cnmea.curr, cnmea.temp, cnmea.kWhp, cnmea.kWhn, cnmea.startTime);
+            sprintf(fifobuf, "$GPENV,%.1f,1,%.1f,1,%.1f,1,%.3f,%.3f,%jd",
+                cnmea.volt, cnmea.curr, cnmea.temp, cnmea.kWhp, cnmea.kWhn, (intmax_t)cnmea.startTime);
 
             while(fifobuf[i] != '\0')
                 checksum = checksum ^ fifobuf[i++];
