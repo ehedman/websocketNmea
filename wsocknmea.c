@@ -47,7 +47,6 @@
 #include <vdm_parse.h>
 #include "wsocknmea.h"
 
-
 // Configuration
 #define NMEAPORT 10110          // Port 10110 is designated by IANA for "NMEA-0183 Navigational Data"
 #define NMEAADDR "127.0.0.1"    // localhost for TCP for UDP use 239.194.4.4 for a multicast address
@@ -1565,9 +1564,6 @@ static void *threadPnmea_run()
 
         if (!(mSts/1000 - cnmea.volt_ts > INVALID*10)) {
 
-            int checksum = 0;
-            int i = 1; 
-
             if (curr >= 0) {
                 if (volt*curr > 0.2) {
                     npkWp = (pkWhp * (samplesp-1) + volt * curr) / samplesp;
@@ -1585,23 +1581,26 @@ static void *threadPnmea_run()
             }
 
             // Format: GPENV,volt,bank,current,bank,temp,where,kWhp,kWhn,startTimr*cs
-            sprintf(fifobuf, "$GPENV,%.1f,1,%.1f,1,%.1f,1,%.3f,%.3f,%jd",
+            sprintf(fifobuf, "$GPENV,%.1f,Bank 1,%.1f,Bank 1,%.1f,Indoor,%.3f,%.3f,%jd",
                 cnmea.volt, cnmea.curr, cnmea.temp, cnmea.kWhp, cnmea.kWhn, (intmax_t)cnmea.startTime);
 
+            int checksum = 0;
+            int i = 1; 
             while(fifobuf[i] != '\0')
                 checksum = checksum ^ fifobuf[i++];
 
             sprintf(outbuf,"%s*%x\r\n", fifobuf, checksum);
             write(pnmeafd, outbuf, strlen(outbuf));
-#ifdef XDRTEST
-            sprintf(fifobuf, "$IIXDR,U,%.1f,V,VAH30", cnmea.volt);
+
+            checksum = 0;
             i=1;
+            // $IIXDR,U,13.2,V,BATT1,I,-2.4,A,BATT1,C,21.0,C,BATT1*54
+            sprintf(fifobuf, "$IIXDR,U,%.1f,V,Bank 1,I,%.1f,A,Bank 1,C,%.1f,C,Indoor", cnmea.volt, cnmea.curr, cnmea.temp);           
             while(fifobuf[i] != '\0')
                 checksum = checksum ^ fifobuf[i++];
 
             sprintf(outbuf,"%s*%x\r\n", fifobuf, checksum);
             write(pnmeafd, outbuf, strlen(outbuf));
-#endif
         }
         prevmSts = ms_timestamp();
         sleep(1);
